@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<entity name="FFT">
+  <structure>
+    <processor name="Processor0">
+      <entity class="FFT.Actor.Butterfly" name="T0">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T1">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T4">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T5">
+        <property name="W" value="0.0 - 256.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T8">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T9">
+        <property name="W" value="181.0 - 181.0i"/>
+      </entity>
+    </processor>
+    <processor name="Processor1">
+      <entity class="FFT.Actor.Butterfly" name="T2">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T3">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T6">
+        <property name="W" value="256.0 + 0.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T7">
+        <property name="W" value="0.0 - 256.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T10">
+        <property name="W" value="0.0 - 256.0i"/>
+      </entity>
+      <entity class="FFT.Actor.Butterfly" name="T11">
+        <property name="W" value="-181.0 - 181.0i"/>
+      </entity>
+    </processor>
+    <relation name="r0"/>
+    <relation name="r1"/>
+    <relation name="r2"/>
+    <relation name="r3"/>
+    <relation name="r4"/>
+    <relation name="r5"/>
+    <relation name="r6"/>
+    <relation name="r7"/>
+    <relation name="r8"/>
+    <relation name="r9"/>
+    <relation name="r10"/>
+    <relation name="r11"/>
+    <relation name="r12"/>
+    <relation name="r13"/>
+    <relation name="r14"/>
+    <relation name="r15"/>
+    <relation name="r16"/>
+    <relation name="r17"/>
+    <relation name="r18"/>
+    <relation name="r19"/>
+    <relation name="r20"/>
+    <relation name="r21"/>
+    <relation name="r22"/>
+    <relation name="r23"/>
+    <relation name="r24"/>
+    <relation name="r25"/>
+    <relation name="r26"/>
+    <relation name="r27"/>
+    <relation name="r28"/>
+    <relation name="r29"/>
+    <relation name="r30"/>
+    <relation name="r31"/>
+    <link port="SOURCE" relation="r0"/>
+    <link port="T0.i0" relation="r0"/>
+    <link port="SOURCE" relation="r1"/>
+    <link port="T0.i1" relation="r1"/>
+    <link port="SOURCE" relation="r2"/>
+    <link port="T1.i0" relation="r2"/>
+    <link port="SOURCE" relation="r3"/>
+    <link port="T1.i1" relation="r3"/>
+    <link port="SOURCE" relation="r4"/>
+    <link port="T2.i0" relation="r4"/>
+    <link port="SOURCE" relation="r5"/>
+    <link port="T2.i1" relation="r5"/>
+    <link port="SOURCE" relation="r6"/>
+    <link port="T3.i0" relation="r6"/>
+    <link port="SOURCE" relation="r7"/>
+    <link port="T3.i1" relation="r7"/>
+    <link port="T0.o0" relation="r8"/>
+    <link port="T4.i0" relation="r8"/>
+    <link port="T1.o0" relation="r9"/>
+    <link port="T4.i1" relation="r9"/>
+    <link port="T0.o1" relation="r10"/>
+    <link port="T5.i0" relation="r10"/>
+    <link port="T1.o1" relation="r11"/>
+    <link port="T5.i1" relation="r11"/>
+    <link port="T2.o0" relation="r12"/>
+    <link port="T6.i0" relation="r12"/>
+    <link port="T3.o0" relation="r13"/>
+    <link port="T6.i1" relation="r13"/>
+    <link port="T2.o1" relation="r14"/>
+    <link port="T7.i0" relation="r14"/>
+    <link port="T3.o1" relation="r15"/>
+    <link port="T7.i1" relation="r15"/>
+    <link port="T4.o0" relation="r16"/>
+    <link port="T8.i0" relation="r16"/>
+    <link port="T6.o0" relation="r17"/>
+    <link port="T8.i1" relation="r17"/>
+    <link port="T4.o1" relation="r18"/>
+    <link port="T10.i0" relation="r18"/>
+    <link port="T6.o1" relation="r19"/>
+    <link port="T10.i1" relation="r19"/>
+    <link port="T5.o0" relation="r20"/>
+    <link port="T9.i0" relation="r20"/>
+    <link port="T7.o0" relation="r21"/>
+    <link port="T9.i1" relation="r21"/>
+    <link port="T5.o1" relation="r22"/>
+    <link port="T11.i0" relation="r22"/>
+    <link port="T7.o1" relation="r23"/>
+    <link port="T11.i1" relation="r23"/>
+    <link port="T8.o0" relation="r24"/>
+    <link port="SINK" relation="r24"/>
+    <link port="T8.o1" relation="r25"/>
+    <link port="SINK" relation="r25"/>
+    <link port="T9.o0" relation="r26"/>
+    <link port="SINK" relation="r26"/>
+    <link port="T9.o1" relation="r27"/>
+    <link port="SINK" relation="r27"/>
+    <link port="T10.o0" relation="r28"/>
+    <link port="SINK" relation="r28"/>
+    <link port="T10.o1" relation="r29"/>
+    <link port="SINK" relation="r29"/>
+    <link port="T11.o0" relation="r30"/>
+    <link port="SINK" relation="r30"/>
+    <link port="T11.o1" relation="r31"/>
+    <link port="SINK" relation="r31"/>
+  </structure>
+  <interface>
+    <port name="SOURCE"/>
+    <port name="SINK"/>
+  </interface>
+</entity>
+

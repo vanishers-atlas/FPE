@@ -1,0 +1,97 @@
+SETDMWBINIT_0 2048
+SETDMRBINIT_C0 1024
+SETDMRBINIT_1 2048
+SETDMRBAUTOINCSIZE_1 32
+SETDMSIZE 3072
+
+// clear output dm areas for next 1024x1024 frame
+RPT 32
+NOP
+NOP
+  RPT 29
+  ADDMUL &(0!), ZERO, ZERO, ZERO
+  ADDMUL &(0!), ZERO, ZERO, ZERO
+    ADDMUL &(0!), ZERO, ZERO, ZERO
+  RPTEND
+  ADDMUL &(0!), ZERO, ZERO, ZERO
+RPTEND
+
+// 0-3072
+INCDMWB_0 -3072
+
+// read two blocks Asub:32x32 Bsub:32x32
+RPT 32
+NOP
+NOP
+  RPT 30
+  GET &(0!), ^0
+  GET &(0!), ^0
+    GET &(0!), ^0
+    GET &(0!), ^0
+  RPTEND
+  GET &(0!), ^0
+  GET &(0!), ^0
+RPTEND
+
+RPT 32
+NOP
+NOP
+  RPT 32
+  NOP
+  NOP
+    ADDMUL R10, ONE, &(1!), ZERO
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    // To save BRAM. A slot for BRAM writing.
+    ADDMULFWD R10, ZERO, ZERO
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD R10, &(0!), &(0!)
+    ADDMULFWD &(0!), &(0!), &(0!)
+    INCDMRB_0 -32
+    // -1024+1
+    INCDMRB_C0 -1023
+  RPTEND
+  INCDMRB_0 32
+  INCDMRB_C0 -32
+RPTEND
+INCDMWB_0 -3072
+INCDMRB_1 -1024
+
+// Output stages
+RPT 32
+INCDMRB_0 1024
+NOP
+  RPT 29
+  PUT &(0!), ^0
+  PUT &(0!), ^0
+    PUT &(0!), ^0
+  RPTEND
+  PUT &(0!), ^0
+RPTEND

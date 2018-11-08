@@ -1,0 +1,20 @@
+NOP
+RPT 32
+MOV R0, R29
+NOP
+  BARRIERM 0
+  MOV R1, ZERO
+  RPT 32
+  NOP
+  NOP
+    SETMASKLT R0, ^p(0)
+      MOV R0, ^(0!)
+      SUB R21, R28, R2
+      SUB R20, R28, R1
+    ADD R1, R1, ONE
+    NOP
+  ADD R2, R2, ONE
+MOV R2, ZERO
+PUT R20, ^0
+PUT R21, ^0
+BARRIERM 1

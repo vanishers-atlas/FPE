@@ -1,0 +1,183 @@
+// For case matrix is 1024x1024, block is 32x32, total blocks is 32x32, 16 PEs
+SETINFIFODEPTH 2048
+SETOUTFIFODEPTH 32
+SETEMRBAUTOINCSIZE_0 32
+SETEMRBAUTOINCSIZE_1 32
+
+RPT 32
+NOP
+NOP
+  // Get Asub
+  RPT 32
+  NOP
+  NOP
+    // broadcast to 16 PEs
+    RPT 4
+    NOP
+    NOP
+      LDEXMEM ~(0!)
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      SHIFTCACHELINE
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+    RPTEND
+    // (-32+1024)*4, to next line
+    INCEMRB_0 3968
+  RPTEND
+  // (-32*1024+32)*4, to next block in row
+  INCEMRB_0 -130944
+  
+  // Get BSub
+  RPT 32
+  NOP
+  NOP
+    // 16 PEs
+    RPT 16
+    NOP
+    NOP
+      RPT 4
+      NOP
+      NOP
+        LDEXMEM ~(1!)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        SHIFTCACHELINE
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+      RPTEND
+      INCTXIDXBY1
+    RPTEND
+    RESETTXIDX
+    // (-16*32+1024)*4
+    INCEMRB_1 2048
+  RPTEND
+  
+  // Stop to start SPUs
+  BARRIER
+RPTEND
+
+// Unload data 16 blocks
+BARRIER
+RPT 32
+NOP
+NOP
+  // 16 PEs
+  RPT 16
+  NOP
+  NOP
+    RPT 8
+    NOP
+    NOP
+      STCACHE ^(0)
+      STCACHE ^(0)
+      STCACHE ^(0)
+      STCACHE ^(0)
+      STEXMEM ~(0!)
+    RPTEND
+    INCRXIDXBY1
+  RPTEND
+  // (-512+1024)*4, to next line
+  INCEMWB_0 2048
+RPTEND
+
+// (-1024)*4, to beginning block
+INCEMRB_0 -4096
+// (-1024*1024+512)*4, to B0_16
+INCEMRB_1 -4192256
+// (-32*1024+512)*4, to C0_16
+INCEMWB_0 -129024
+
+// Next 16 blocks in a row (e.g. C0_16 to C0_31)
+RPT 32
+NOP
+NOP
+  // Get Asub
+  RPT 32
+  NOP
+  NOP
+    // broadcast to 16 PEs
+    RPT 8
+    NOP
+    NOP
+      LDEXMEM ~(0!)
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+      LDCACHE_BROADCAST
+    RPTEND
+    // (-32+1024)*4
+    INCEMRB_0 3968
+  RPTEND
+  // (-32*1024+32)*4, to next block in row
+  INCEMRB_0 -130944
+  
+  // Get BSub
+  RPT 32
+  NOP
+  NOP
+    // 16 PEs
+    RPT 16
+    NOP
+    NOP
+      RPT 8
+      NOP
+      NOP
+        LDEXMEM ~(1!)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+        LDCACHE ^(0)
+      RPTEND
+      INCTXIDXBY1
+    RPTEND
+    RESETTXIDX
+    // (-16*32+1024)*4
+    INCEMRB_1 2048
+  RPTEND
+  
+  // Stop to start SPUs
+  BARRIER
+RPTEND
+
+// Unload data 16 blocks
+RPT 32
+NOP
+NOP
+  // 16 PEs
+  RPT 16
+  BARRIER
+  NOP
+    RPT 8
+    NOP
+    NOP
+      STCACHE ^(0)
+      STCACHE ^(0)
+      STCACHE ^(0)
+      STCACHE ^(0)
+      STEXMEM ~(0!)
+    RPTEND
+    INCRXIDXBY1
+  RPTEND
+  // (-512+1024)*4, to next line
+  INCEMWB_0 2048
+RPTEND
+
+// (-1024+32*1024)*4, to next row of block A1_0
+INCEMRB_0 126976
+// (-1024)*4, to B0_0
+INCEMRB_1 -4096
+// (-1024+32*1024)*4, to C1_0
+INCEMWB_0 126976
+
+// If we want to repeat running this, add another level of repeat, and repeat 
+// for 32 times. It then finished a frame of 1024x1024 data, and adjust pointer
+// for B. No need to adjust A and C, they are right.

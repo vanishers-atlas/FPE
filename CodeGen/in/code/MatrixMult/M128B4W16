@@ -1,0 +1,78 @@
+SETDMWBINIT_0 2048
+SETDMRBINIT_1 1024
+SETDMRBINIT_2 2048
+SETDMRBAUTOINCSIZE_1 32
+SETDMSIZE 3072
+
+RPT 32
+NOP
+NOP
+  RPT 29
+  ADDMUL &(0!), ZERO, ZERO, ZERO
+  ADDMUL &(0!), ZERO, ZERO, ZERO
+    ADDMUL &(0!), ZERO, ZERO, ZERO
+  RPTEND
+  ADDMUL &(0!), ZERO, ZERO, ZERO
+RPTEND
+INCDMWB_0 -3072
+
+RPT 4
+NOP
+NOP
+  RPT 32
+  NOP
+  NOP
+    RPT 30
+    GET &(0!), ^0
+    GET &(0!), ^0
+      GET &(0!), ^0
+      GET &(0!), ^0
+    RPTEND
+    GET &(0!), ^0
+    GET &(0!), ^0
+  RPTEND
+    
+  RPT 32
+  NOP
+  NOP
+    RPT 32
+    NOP
+    NOP
+      ADDMUL R5, ONE, &(0!), ZERO
+      RPT 6
+      ADDMUL R6, ONE, &(0!), ZERO
+      ADDMUL R10, ONE, &(2!), ZERO
+        ADDMUL R0, ONE, &(0!), ZERO
+        ADDMUL R1, ONE, &(0!), ZERO
+        ADDMUL R2, ONE, &(0!), ZERO
+        ADDMUL R3, ONE, &(0!), ZERO
+        ADDMUL R4, ONE, &(0!), ZERO
+        ADDMUL R10, R0, &(1!), R10
+        ADDMULFWD R10, R1, &(1!)
+        ADDMULFWD R10, R2, &(1!)
+        ADDMULFWD R10, R3, &(1!)
+        ADDMULFWD R10, R4, &(1!)
+      RPTEND      
+      ADDMULFWD R10, R5, &(1!)
+      ADDMULFWD &(0!), R6, &(1!)
+      INCDMRB_0 -32
+      INCDMRB_1 -1023
+    RPTEND
+    INCDMRB_0 32
+    INCDMRB_1 -32
+  RPTEND
+  INCDMRB_0 -1024
+  INCDMWB_0 -3072
+  INCDMRB_2 -1024
+RPTEND
+
+RPT 32
+INCDMRB_0 2048
+NOP
+  RPT 29
+  PUT &(0!), ^0
+  PUT &(0!), ^0
+    PUT &(0!), ^0
+  RPTEND
+  PUT &(0!), ^0
+RPTEND

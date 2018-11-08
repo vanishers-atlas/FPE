@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="warning" file="NetListWriters" num="697" delta="unknown" >Xilinx supports PrimeTime for post PAR STA  when targeting to VE, V2, V2P and S-3 devices. PrimeTime is NOT golden STA for Xilinx.PrimeTime result must be checked against TRCE.
+</msg>
+
+<msg type="warning" file="NetListWriters" num="687" delta="unknown" >There are no plans to further enhance the flow and support additional devices e.g. V-4 and beyond.
+</msg>
+
+<msg type="warning" file="NetListWriters" num="696" delta="unknown" >Xilinx continues enhancing its golden STA tool, TRCE, to analyze designs thoroughly and improve result reporting as complexity increases.
+</msg>
+
+<msg type="warning" file="NetListWriters" num="677" delta="unknown" >Netgen has detected a port, <arg fmt="%s" index="1">o_pop_ch_data&lt;0&gt;[15]</arg>, at instance, <arg fmt="%s" index="2">m_fft8_wrap</arg>, that is declared as an array. Ports declared as arrays are not supported by NetGen and can not be properly reconstructed in the netlist. The array will be reconstructed as 1-D array
+</msg>
+
+<msg type="warning" file="NetListWriters" num="677" delta="unknown" >Netgen has detected a port, <arg fmt="%s" index="1">i_push_ch_data&lt;0&gt;[15]</arg>, at instance, <arg fmt="%s" index="2">m_fft8_wrap</arg>, that is declared as an array. Ports declared as arrays are not supported by NetGen and can not be properly reconstructed in the netlist. The array will be reconstructed as 1-D array
+</msg>
+
+</messages>
+

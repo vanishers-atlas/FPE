@@ -1,0 +1,9 @@
+xst -intstyle ise -ifn "/home/CLUSTER/SOC/2094746/Workspace/ISE/spu trunk/fft/802.11ac/20mhz/8streams/ssp_wrap.xst" -ofn "/home/CLUSTER/SOC/2094746/Workspace/ISE/spu trunk/fft/802.11ac/20mhz/8streams/ssp_wrap.syr" 
+ngdbuild -intstyle ise -dd _ngo -nt timestamp -a -i -p xc7k70t-fbg676-3 "ssp_wrap.ngc" ssp_wrap.ngd  
+map -intstyle ise -p xc7k70t-fbg676-3 -w -logic_opt off -ol high -t 5 -xt 0 -register_duplication off -r 4 -mt 2 -ir off -ignore_keep_hierarchy -pr off -lc off -power off -o ssp_wrap_map.ncd ssp_wrap.ngd ssp_wrap.pcf 
+xst -intstyle ise -ifn "/home/CLUSTER/SOC/2094746/Workspace/ISE/spu trunk/fft/802.11ac/20mhz/8streams/ssp_wrap.xst" -ofn "/home/CLUSTER/SOC/2094746/Workspace/ISE/spu trunk/fft/802.11ac/20mhz/8streams/ssp_wrap.syr" 
+xst -intstyle ise -ifn "/home/CLUSTER/SOC/2094746/Workspace/ISE/spu trunk/fft/802.11ac/20mhz/8streams/ssp_wrap.xst" -ofn "/home/CLUSTER/SOC/2094746/Workspace/ISE/spu trunk/fft/802.11ac/20mhz/8streams/ssp_wrap.syr" 
+ngdbuild -intstyle ise -dd _ngo -nt timestamp -a -i -p xc7k70t-fbg676-3 "ssp_wrap.ngc" ssp_wrap.ngd  
+map -intstyle ise -p xc7k70t-fbg676-3 -w -logic_opt off -ol high -t 5 -xt 0 -register_duplication off -r 4 -mt 2 -ir off -ignore_keep_hierarchy -pr off -u -lc off -power off -o ssp_wrap_map.ncd ssp_wrap.ngd ssp_wrap.pcf 
+par -w -intstyle ise -ol std -mt 4 ssp_wrap_map.ncd ssp_wrap.ncd ssp_wrap.pcf 
+trce -intstyle ise -e 5 -s 2 -n 3 -xml ssp_wrap.twx ssp_wrap.ncd -o ssp_wrap.twr ssp_wrap.pcf 

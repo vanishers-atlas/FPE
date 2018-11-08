@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<DeviceUsageSummary rev="1">
+<DesignStatistics TimeStamp="Thu Mar 19 13:48:04 2015"><group name="MiscellaneousStatistics">
+<item name="AGG_SLICE" rev="1">
+<attrib name="value" value="531"/></item>
+<item name="NUM_BSFULL" rev="1">
+<attrib name="value" value="647"/></item>
+<item name="NUM_BSLUTONLY" rev="1">
+<attrib name="value" value="414"/></item>
+<item name="NUM_BSREGONLY" rev="1">
+<attrib name="value" value="370"/></item>
+<item name="NUM_BSUSED" rev="1">
+<attrib name="value" value="1431"/></item>
+<item name="NUM_DSP48E1" rev="1">
+<attrib name="value" value="12"/></item>
+<item name="NUM_LOGIC_O5ANDO6" rev="1">
+<attrib name="value" value="81"/></item>
+<item name="NUM_LOGIC_O6ONLY" rev="1">
+<attrib name="value" value="592"/></item>
+<item name="NUM_LUT_RT_DRIVES_FLOP" rev="1">
+<attrib name="value" value="52"/></item>
+<item name="NUM_LUT_RT_EXO5" rev="1">
+<attrib name="value" value="52"/></item>
+<item name="NUM_RAMB18E1" rev="1">
+<attrib name="value" value="8"/></item>
+<item name="NUM_RAMB36E1" rev="1">
+<attrib name="value" value="1"/></item>
+<item name="NUM_SLICEL" rev="1">
+<attrib name="value" value="406"/></item>
+<item name="NUM_SLICEM" rev="1">
+<attrib name="value" value="125"/></item>
+<item name="NUM_SLICE_CARRY4" rev="1">
+<attrib name="value" value="3"/></item>
+<item name="NUM_SLICE_CONTROLSET" rev="1">
+<attrib name="value" value="31"/></item>
+<item name="NUM_SLICE_CYINIT" rev="1">
+<attrib name="value" value="1286"/></item>
+<item name="NUM_SLICE_FF" rev="1">
+<attrib name="value" value="1168"/></item>
+<item name="NUM_SLICE_UNUSEDCTRL" rev="1">
+<attrib name="value" value="39"/></item>
+<item name="NUM_SPRAM_O5ANDO6" rev="1">
+<attrib name="value" value="16"/></item>
+<item name="NUM_SRL_O5ANDO6" rev="1">
+<attrib name="value" value="128"/></item>
+<item name="NUM_SRL_O6ONLY" rev="1">
+<attrib name="value" value="192"/></item>
+<item name="NUM_UNUSABLE_FF_BELS" rev="1">
+<attrib name="value" value="80"/></item>
+</group>
+</DesignStatistics>
+<CmdHistory>
+</CmdHistory>
+</DeviceUsageSummary>
