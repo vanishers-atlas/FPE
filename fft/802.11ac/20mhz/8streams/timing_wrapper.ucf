@@ -1,4 +1,0 @@
-NET "clk" TNM_NET = "clk_x_group";
-TIMESPEC TS_clk = PERIOD "clk_x_group" 2.0 ns HIGH 50%;
-
-

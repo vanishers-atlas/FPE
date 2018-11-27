@@ -1,0 +1,33 @@
+# sFPE_PC
+
+## Generics
+*	OPCODE_WIDTH, *integer*,
+*	PM_ADDR_WIDTH, *integer*,
+*	PM_DATA_WIDTH, *integer*,
+*	BRANCH_EN, *boolean*,
+*	JMP_EN, *boolean*,
+*	RPT_EN, *boolean*,
+*	RPT_SPEC_1, *boolean*,
+*	RPT_LEVELS, *integer*,
+*	RPT_CNT_LEN0, *integer*,
+*	RPT_CNT_LEN1, *integer*,
+*	RPT_CNT_LEN2, *integer*,
+*	RPT_CNT_LEN3, *integer*,
+*	RPT_CNT_LEN4, *integer*,
+*	RPT_BLK_LEN0, *integer*,
+*	RPT_BLK_LEN1, *integer*,
+*	RPT_BLK_LEN2, *integer*,
+*	RPT_BLK_LEN3, *integer*,
+*	RPT_BLK_LEN4, *integer*,
+
+## Ports
+*	clk, *in std_logic*,
+*	rst, *in std_logic*,
+*	i_en, *in std_logic*,
+*	i_inst_data, *in std_logic_vector(PM_DATA_WIDTH-OPCODE_WIDTH-1 downto 0)*,
+*	i_brc_taken, *in std_logic*,
+*	i_brc_addr, *in std_logic_vector(PM_ADDR_WIDTH-1 downto 0)*,
+*	i_jmp_taken, *in std_logic*,
+*	i_jmp_addr, *in std_logic_vector(PM_ADDR_WIDTH-1 downto 0)*,
+*	i_rpt_taken, *in std_logic*,
+*	o_pc, *out std_logic_vector(PM_ADDR_WIDTH-1 downto 0)*,
