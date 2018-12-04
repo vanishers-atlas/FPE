@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<entity name="SADcombine">
+  <port name="sad4x4_in">
+    <property name="direction" value="in"/>
+    <property name="mathtype" value="real"/>
+    <property name="datatype" value="int"/>
+    <property name="tokentype" value="vector">
+    	<property name="dim0" value="16"/>
+    </property>
+  </port>
+  <port name="sad_out">
+    <property name="direction" value="out"/>
+    <property name="mathtype" value="real"/>
+    <property name="datatype" value="int"/>
+    <property name="tokentype" value="vector">
+    	<property name="dim0" value="82"/>
+    </property>
+  </port>
+</entity>
