@@ -1,0 +1,23 @@
+int dataWidth;
+int paramWidth;
+
+code
+{
+^s
+  library ieee;
+  use ieee.std_logic_1164.ALL;
+
+  entity generic_mux_2to1 is
+    port (
+      i_d0    : in  std_logic_vector(@(round_up lg (Data_Width - -1) + ) downto 0);
+      i_d1    : in  std_logic_vector(@(Data_Width-1) downto 0);
+      sel     : in std_logic;
+      o_d     : out std_logic_vector(@Data_Width-1 downto 0)
+    );
+  end entity;
+
+  architecture behav of generic_mux_2to1 is
+  begin
+    o_d <= i_d0 when (sel = '0') else  i_d1;
+  end architecture;
+}
