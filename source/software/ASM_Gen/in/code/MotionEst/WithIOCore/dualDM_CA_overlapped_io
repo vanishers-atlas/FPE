@@ -1,0 +1,123 @@
+// For case when there 22 cores, image is 18x22 blocks
+SETOUTFIFODEPTH 2
+SETINFIFODEPTH 4096
+// Get reference blocks in row direction
+RPT 16
+NOP
+NOP
+  RPT 22
+  NOP
+  NOP
+    LDEXMEM ~(0!)
+    RPT 13
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDCACHE ^(0!)
+  RPTEND
+  RESETTXIDX
+RPTEND
+
+// Get current blocks in row direction
+RPT 47
+NOP
+NOP
+  RPT 22
+  NOP
+  NOP
+    LDEXMEM ~(1!)
+    RPT 14
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDEXMEM ~(1!)
+    RPT 14
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDEXMEM ~(1!)
+    RPT 13
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDCACHE ^(0!)
+    // -3*16+16
+    INCEMRB_1 -32 
+  RPTEND
+  RESETTXIDX
+RPTEND
+
+// Stop to start SPUs
+BARRIER
+
+// When SPU is computing, buffer next block of data
+// Here is also the loop start point.
+RPT 16
+NOP
+NOP
+  RPT 22
+  NOP
+  NOP
+    LDEXMEM ~(0!)
+    RPT 13
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDCACHE ^(0!)
+  RPTEND
+  RESETTXIDX
+RPTEND
+
+RPT 47
+NOP
+NOP
+  RPT 22
+  NOP
+  NOP
+    LDEXMEM ~(1!)
+    RPT 14
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDEXMEM ~(1!)
+    RPT 14
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDEXMEM ~(1!)
+    RPT 13
+    LDCACHE ^(0)
+    LDCACHE ^(0)
+      LDCACHE ^(0)
+    RPTEND
+    LDCACHE ^(0!)
+    // -3*16+16
+    INCEMRB_1 -32 
+  RPTEND
+  RESETTXIDX
+RPTEND
+
+// When SPU can work again, here starts to get data. 2*22 data to get.
+BARRIER
+RPT 3
+// -47*384+16*384
+INCEMRB_1 -11904
+NOP
+  RPT 7
+  STCACHE (0)
+  STCACHE (0!)
+    STCACHE (0)
+    STCACHE (0!)
+  RPTEND
+  STEXMEM ~(0!)
+RPTEND
+RESETRXIDX
+// -48+44
+INCEMWB_0 -4

@@ -1,0 +1,7 @@
+static inline void butterfly(int i0, int i1, int *o0, int *o1, int W) {
+asm ("ADDMULSRA1 %[A0], %[b0], %[w0], %[a0]\n\t"
+     "SUBMULSRA1 %[B0], %[b0], %[w0], %[a0]\n\t"
+     : [A0]"=&r"(*o0), [B0]"=&r"(*o1)
+     : [b0]"r"(i1), [w0]"m"(W), [a0]"r"(i0)
+      );
+}

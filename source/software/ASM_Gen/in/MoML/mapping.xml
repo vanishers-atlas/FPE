@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mapping name="FFT">
+  <processor name="Processor0">
+    <entity name="T0"/>
+    <entity name="T1"/>
+    <entity name="T4"/>
+    <entity name="T5"/>
+    <entity name="T8"/>
+    <entity name="T9"/>
+  </processor>
+  <processor name="Processor1">
+    <entity name="T2"/>
+    <entity name="T3"/>
+    <entity name="T6"/>
+    <entity name="T7"/>
+    <entity name="T10"/>
+    <entity name="T11"/>
+  </processor>
+</mapping>
+

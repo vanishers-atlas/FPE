@@ -1,0 +1,72 @@
+#-----------------------------------------------------------
+# Vivado v2016.1 (64-bit)
+# SW Build 1538259 on Fri Apr  8 15:45:27 MDT 2016
+# IP Build 1537824 on Fri Apr  8 04:28:57 MDT 2016
+# Start of session at: Fri Mar 15 18:16:52 2019
+# Process ID: 12800
+# Current directory: D:/sfpe/projects/generated_VHDL_testing/enerated_VHDL_testing.runs/synth_1
+# Command line: vivado.exe -log test.vds -mode batch -messageDb vivado.pb -notrace -source test.tcl
+# Log file: D:/sfpe/projects/generated_VHDL_testing/enerated_VHDL_testing.runs/synth_1/test.vds
+# Journal file: D:/sfpe/projects/generated_VHDL_testing/enerated_VHDL_testing.runs/synth_1\vivado.jou
+#-----------------------------------------------------------
+source test.tcl -notrace
+Command: synth_design -top test -part xc7k70tfbg484-3
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7k70t'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7k70t'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 17732 
+---------------------------------------------------------------------------------
+Starting Synthesize : Time (s): cpu = 00:00:05 ; elapsed = 00:00:07 . Memory (MB): peak = 304.711 ; gain = 97.418
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-2519] partially associated formal p cannot have actual OPEN [D:/sfpe/projects/generated_VHDL_testing/src/test_ALU.vhd:91]
+INFO: [Synth 8-638] synthesizing module 'test' [D:/sfpe/projects/generated_VHDL_testing/src/test.vhd:92]
+INFO: [Synth 8-3491] module 'test_comm_get' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:47' bound to instance 'comm_get' of component 'test_comm_get' [D:/sfpe/projects/generated_VHDL_testing/src/test.vhd:203]
+INFO: [Synth 8-638] synthesizing module 'test_comm_get' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:76]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/reg_FFEA.vhd:25' bound to instance 'FIFO_0_buff' of component 'reg_FFEA' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:90]
+INFO: [Synth 8-638] synthesizing module 'reg_FFEA' [D:/sfpe/projects/generated_VHDL_testing/src/reg_FFEA.vhd:37]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'reg_FFEA' (1#1) [D:/sfpe/projects/generated_VHDL_testing/src/reg_FFEA.vhd:37]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/reg_FFEA.vhd:25' bound to instance 'FIFO_1_buff' of component 'reg_FFEA' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:97]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/reg_FFEA.vhd:25' bound to instance 'FIFO_2_buff' of component 'reg_FFEA' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:104]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/reg_FFEA.vhd:25' bound to instance 'FIFO_3_buff' of component 'reg_FFEA' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:111]
+	Parameter data_width bound to: 1 - type: integer 
+INFO: [Synth 8-3491] module 'demux_4' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/demux_4.vhd:27' bound to instance 'update_demux_0' of component 'demux_4' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:126]
+INFO: [Synth 8-638] synthesizing module 'demux_4' [D:/sfpe/projects/generated_VHDL_testing/src/demux_4.vhd:41]
+	Parameter data_width bound to: 1 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'demux_4' (2#1) [D:/sfpe/projects/generated_VHDL_testing/src/demux_4.vhd:41]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'mux_4' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/mux_4.vhd:27' bound to instance 'read_mux_0' of component 'mux_4' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:138]
+INFO: [Synth 8-638] synthesizing module 'mux_4' [D:/sfpe/projects/generated_VHDL_testing/src/mux_4.vhd:41]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'mux_4' (3#1) [D:/sfpe/projects/generated_VHDL_testing/src/mux_4.vhd:41]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'mux_4' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/mux_4.vhd:27' bound to instance 'read_mux_1' of component 'mux_4' [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:148]
+INFO: [Synth 8-256] done synthesizing module 'test_comm_get' (4#1) [D:/sfpe/projects/generated_VHDL_testing/src/test_comm_get.vhd:76]
+	Parameter default_value bound to: 0 - type: integer 
+	Parameter data_width bound to: 8 - type: integer 
+	Parameter data_depth bound to: 1 - type: integer 
+INFO: [Synth 8-3491] module 'test_delay' declared at 'D:/sfpe/projects/generated_VHDL_testing/src/test_delay.vhd:29' bound to instance 'a_GET_buff' of component 'test_delay' [D:/sfpe/projects/generated_VHDL_testing/src/test.vhd:225]
+INFO: [Synth 8-638] synthesizing module 'test_delay' [D:/sfpe/projects/generated_VHDL_testing/src/test_delay.vhd:43]
+	Parameter default_value bound to: 0 - type: integer 
+	Parameter data_width bound to: 8 - type: integer 
+	Parameter data_depth bound to: 1 - type: integer 
+WARNING: [Synth 8-614] signal 'reset' is read in the process but is not in the sensitivity list [D:/sfpe/projects/generated_VHDL_testing/src/test_delay.vhd:67]
+WARNING: [Synth 8-5827] expecting unsigned expression [D:/sfpe/projects/generated_VHDL_testing/src/test_delay.vhd:78]
+INFO: [Synth 8-256] done synthesizing module 'test_delay' (5#1) [D:/sfpe/projects/generated_VHDL_testing/src/test_delay.vhd:43]
+ERROR: [Synth 8-549] port width mismatch for port 'data_out': port width = 8, actual width = 15 [D:/sfpe/projects/generated_VHDL_testing/src/test.vhd:235]
+ERROR: [Synth 8-690] width mismatch in assignment; target has 15 bits, source has 7 bits [D:/sfpe/projects/generated_VHDL_testing/src/test.vhd:238]
+ERROR: [Synth 8-285] failed synthesizing module 'test' [D:/sfpe/projects/generated_VHDL_testing/src/test.vhd:92]
+---------------------------------------------------------------------------------
+Finished Synthesize : Time (s): cpu = 00:00:05 ; elapsed = 00:00:08 . Memory (MB): peak = 342.895 ; gain = 135.602
+---------------------------------------------------------------------------------
+synthesize failed
+INFO: [Common 17-83] Releasing license: Synthesis
+22 Infos, 3 Warnings, 0 Critical Warnings and 4 Errors encountered.
+synth_design failed
+ERROR: [Common 17-69] Command failed: Vivado Synthesis failed
+INFO: [Common 17-206] Exiting Vivado at Fri Mar 15 18:17:01 2019...

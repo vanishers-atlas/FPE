@@ -1,0 +1,74 @@
+// R0 - min_diff, R1 - k, R2 - l, R3 - diff, R4 - ref, R5 - tmp, R6 - blk_x, R7 - blk_y
+SETDMSIZE 2500
+SETDMRBINIT_C0 256
+SETREGVALUE 29, 30000
+SETREGVALUE 28, 16
+
+RPT 63
+ADDMUL R0, ONE, R29, ZERO
+GET &(0!), ^0
+  GET &(0!), ^0
+  GET &(0!), ^0
+  GET &(0!), ^0
+  GET &(0!), ^0
+RPTEND
+GET &(0!), ^0
+RPT 47
+GET &(0!), ^0
+GET &(0!), ^0
+  RPT 44
+  GET &(0!), ^0
+  GET &(0!), ^0
+    GET &(0!), ^0
+  RPTEND
+  GET &(0!), ^0
+RPTEND
+ADDMUL R1, ZERO, ZERO, ZERO
+RPT 32
+INCDMWB_0 -2465
+NOP
+  RPT 32 
+  ADDMUL R2, ZERO, ZERO, ZERO
+  ADDMUL R1, ONE, ONE, R1          
+    RPT 16 
+    ADDMUL R3, ZERO, ZERO, ZERO
+    NOP      
+      RPT 2 
+      NOP
+      NOP
+        ABSDIFFACCUM R6, &(0!), &(0!)
+        ABSDIFFACCUM R7, &(0!), &(0!)
+        ABSDIFFACCUM R8, &(0!), &(0!)
+        ABSDIFFACCUM R9, &(0!), &(0!)
+        ABSDIFFACCUM R10, &(0!), &(0!)
+        ABSDIFFACCUM R11, &(0!), &(0!)
+        ABSDIFFACCUM R12, &(0!), &(0!)
+        ABSDIFFACCUM R13, &(0!), &(0!)
+        ADDMUL R3, ONE, R6, R3
+        ADDMULFWD R3, ONE, R7
+        ADDMULFWD R3, ONE, R8
+        ADDMULFWD R3, ONE, R9
+        ADDMULFWD R3, ONE, R10
+        ADDMULFWD R3, ONE, R11
+        ADDMULFWD R3, ONE, R12
+        ADDMULFWD R3, ONE, R13
+      RPTEND
+      INCDMRB_C0 31
+    RPTEND
+    ADDMUL R2, ONE, ONE, R2
+    NOP
+    INCDMRB_0 -256
+    INCDMRB_C0 -751
+    SETMASKLT R0, R3
+    ADDMUL R0, ONE, R3, ZERO
+    SUBMUL R20, ONE, R28, R1
+    SUBMUL R21, ONE, R28, R2
+    MASKEND
+  RPTEND
+  INCDMRB_C0 15
+RPTEND
+INCDMRB_C0 -1504
+NOP
+NOP
+PUT R20, ^0
+PUT R21, ^0

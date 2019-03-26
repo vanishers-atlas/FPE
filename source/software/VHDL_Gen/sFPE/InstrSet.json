@@ -1,0 +1,33 @@
+{
+  "MOV_c:IMM_res:REG" : 101,
+  "MOV_c:IMM_res:MEM" : 102,
+  "MOV_c:IMM_res:PUT" : 103,
+  "MOV_c:REG_res:REG" : 111,
+  "MOV_c:REG_res:MEM" : 112,
+  "MOV_c:REG_res:PUT" : 113,
+  "MOV_c:MEM_res:REG" : 121,
+  "MOV_c:MEM_res:MEM" : 122,
+  "MOV_c:MEM_res:PUT" : 123,
+  "MOV_c:GET_res:REG" : 131,
+  "MOV_c:GET_res:MEM" : 132,
+  "MOV_c:GET_res:PUT" : 133,
+  "MOV_c:GET'update_res:REG" : 141,
+  "MOV_c:GET'update_res:MEM" : 142,
+  "MOV_c:GET'update_res:PUT" : 143,
+
+  "JMP_c:IMM"   : 200,
+  "JMP_c:REG"   : 201,
+  "JMP_c:MEM"   : 202,
+  "JMP_c:GET"   : 203,
+  "JMP_c:GET'update" : 204,
+
+  "JEQ_c:IMM"   : 300,
+  "JEQ_c:REG"   : 301,
+  "JEQ_c:MEM"   : 302,
+  "JEQ_c:GET"   : 303,
+  "JEQ_c:GET'update" : 304,
+
+  "CMP_c:IMM_a:REG"  : 410,
+  "CMP_c:IMM_a:MEM"  : 420,
+  "CMP_c:IMM_a:GET"  : 430
+}

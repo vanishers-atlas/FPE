@@ -1,0 +1,78 @@
+#-----------------------------------------------------------
+# Vivado v2018.3 (64-bit)
+# SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+# IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+# Start of session at: Mon Mar 25 16:48:02 2019
+# Process ID: 35932
+# Current directory: C:/Users/stclarke/Documents/sfpe/projects/sFPE_testing/sFPE_testing.runs/synth_1
+# Command line: vivado.exe -log sFPE.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source sFPE.tcl
+# Log file: C:/Users/stclarke/Documents/sfpe/projects/sFPE_testing/sFPE_testing.runs/synth_1/sFPE.vds
+# Journal file: C:/Users/stclarke/Documents/sfpe/projects/sFPE_testing/sFPE_testing.runs/synth_1\vivado.jou
+#-----------------------------------------------------------
+source sFPE.tcl -notrace
+Command: synth_design -top sFPE -part xcvu3p-ffvc1517-3-e
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xcvu3p'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xcvu3p'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 36752 
+---------------------------------------------------------------------------------
+Starting Synthesize : Time (s): cpu = 00:00:01 ; elapsed = 00:00:02 . Memory (MB): peak = 349.945 ; gain = 80.191
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-2519] partially associated formal p cannot have actual OPEN [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_ALU.vhd:91]
+INFO: [Synth 8-638] synthesizing module 'sFPE' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE.vhd:92]
+INFO: [Synth 8-3491] module 'sFPE_comm_get' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:47' bound to instance 'comm_get' of component 'sFPE_comm_get' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE.vhd:203]
+INFO: [Synth 8-638] synthesizing module 'sFPE_comm_get' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:76]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/reg_FFEA.vhd:25' bound to instance 'FIFO_0_buff' of component 'reg_FFEA' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:90]
+INFO: [Synth 8-638] synthesizing module 'reg_FFEA' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/reg_FFEA.vhd:37]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'reg_FFEA' (1#1) [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/reg_FFEA.vhd:37]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/reg_FFEA.vhd:25' bound to instance 'FIFO_1_buff' of component 'reg_FFEA' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:97]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/reg_FFEA.vhd:25' bound to instance 'FIFO_2_buff' of component 'reg_FFEA' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:104]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'reg_FFEA' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/reg_FFEA.vhd:25' bound to instance 'FIFO_3_buff' of component 'reg_FFEA' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:111]
+	Parameter data_width bound to: 1 - type: integer 
+INFO: [Synth 8-3491] module 'demux_4' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/demux_4.vhd:27' bound to instance 'update_demux_0' of component 'demux_4' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:126]
+INFO: [Synth 8-638] synthesizing module 'demux_4' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/demux_4.vhd:41]
+	Parameter data_width bound to: 1 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'demux_4' (2#1) [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/demux_4.vhd:41]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'mux_4' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/mux_4.vhd:27' bound to instance 'read_mux_0' of component 'mux_4' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:138]
+INFO: [Synth 8-638] synthesizing module 'mux_4' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/mux_4.vhd:41]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'mux_4' (3#1) [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/mux_4.vhd:41]
+	Parameter data_width bound to: 8 - type: integer 
+INFO: [Synth 8-3491] module 'mux_4' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/mux_4.vhd:27' bound to instance 'read_mux_1' of component 'mux_4' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:148]
+INFO: [Synth 8-256] done synthesizing module 'sFPE_comm_get' (4#1) [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_comm_get.vhd:76]
+	Parameter default_value bound to: 0 - type: integer 
+	Parameter data_width bound to: 8 - type: integer 
+	Parameter data_depth bound to: 1 - type: integer 
+INFO: [Synth 8-3491] module 'sFPE_delay' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_delay.vhd:29' bound to instance 'c_GET_buff' of component 'sFPE_delay' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE.vhd:225]
+INFO: [Synth 8-638] synthesizing module 'sFPE_delay' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_delay.vhd:43]
+	Parameter default_value bound to: 0 - type: integer 
+	Parameter data_width bound to: 8 - type: integer 
+	Parameter data_depth bound to: 1 - type: integer 
+WARNING: [Synth 8-614] signal 'reset' is read in the process but is not in the sensitivity list [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_delay.vhd:67]
+INFO: [Synth 8-256] done synthesizing module 'sFPE_delay' (5#1) [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_delay.vhd:43]
+	Parameter default_value bound to: 0 - type: integer 
+	Parameter data_width bound to: 8 - type: integer 
+	Parameter data_depth bound to: 1 - type: integer 
+INFO: [Synth 8-3491] module 'sFPE_delay' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_delay.vhd:29' bound to instance 'a_GET_buff' of component 'sFPE_delay' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE.vhd:238]
+INFO: [Synth 8-3491] module 'sFPE_IMM' declared at 'C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_IMM.vhd:26' bound to instance 'IMM_ROM' of component 'sFPE_IMM' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE.vhd:255]
+INFO: [Synth 8-638] synthesizing module 'sFPE_IMM' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_IMM.vhd:36]
+ERROR: [Synth 8-3302] unable to open file 'IMM_values.mif' in 'r' mode [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_IMM.vhd:40]
+ERROR: [Synth 8-421] mismatched array sizes in rhs and lhs of assignment [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_IMM.vhd:57]
+ERROR: [Synth 8-285] failed synthesizing module 'sFPE_IMM' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE_IMM.vhd:36]
+ERROR: [Synth 8-285] failed synthesizing module 'sFPE' [C:/Users/stclarke/Documents/sfpe/source/software/VHDL_Gen/sFPE/testing/sFPE.vhd:92]
+---------------------------------------------------------------------------------
+Finished Synthesize : Time (s): cpu = 00:00:02 ; elapsed = 00:00:03 . Memory (MB): peak = 404.672 ; gain = 134.918
+---------------------------------------------------------------------------------
+synthesize failed
+INFO: [Common 17-83] Releasing license: Synthesis
+25 Infos, 2 Warnings, 0 Critical Warnings and 5 Errors encountered.
+synth_design failed
+ERROR: [Common 17-69] Command failed: Vivado Synthesis failed
+INFO: [Common 17-206] Exiting Vivado at Mon Mar 25 16:48:27 2019...
