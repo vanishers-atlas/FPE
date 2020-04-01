@@ -1,0 +1,18 @@
+{
+  "data_width": 4,
+
+  "fetch_decode": {},
+
+  "address_sources": {},
+
+  "data_memories": {
+      "IMM": {},
+      "PUT": {
+          "depth": 1
+      }
+  },
+
+  "execute_units": {
+      "ALU": {}
+  }
+}

@@ -1,0 +1,18 @@
+{
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+  MOV (GET_ADV[0], PUT[0]);
+}

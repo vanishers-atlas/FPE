@@ -1,0 +1,38 @@
+Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2019.1 (win64) Build 2552052 Fri May 24 14:49:42 MDT 2019
+| Date         : Wed Apr  1 10:59:22 2020
+| Host         : NatishiaDesktop running 64-bit Service Pack 1  (build 7601)
+| Command      : report_timing -file timing.rpt
+| Design       : sFPE_inst
+| Device       : 7k160ti-ffv676
+| Speed File   : -2L  PRODUCTION 1.12 2017-02-17
+------------------------------------------------------------------------------------
+
+Timing Report
+
+Slack:                    inf
+  Source:                 sFPE_instance/PC/FSM_onehot_last_state_reg[2]/C
+                            (rising edge-triggered cell FDRE)
+  Destination:            running
+                            (output port)
+  Path Group:             (none)
+  Path Type:              Max at Slow Process Corner
+  Data Path Delay:        3.647ns  (logic 2.748ns (75.335%)  route 0.900ns (24.665%))
+  Logic Levels:           3  (FDRE=1 LUT3=1 OBUF=1)
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         FDRE                         0.000     0.000 r  sFPE_instance/PC/FSM_onehot_last_state_reg[2]/C
+                         FDRE (Prop_fdre_C_Q)         0.233     0.233 r  sFPE_instance/PC/FSM_onehot_last_state_reg[2]/Q
+                         net (fo=3, unplaced)         0.434     0.667    sFPE_instance/PC/value_reg/p_0_in
+                         LUT3 (Prop_lut3_I0_O)        0.123     0.790 r  sFPE_instance/PC/value_reg/running_OBUF_inst_i_1/O
+                         net (fo=5, unplaced)         0.466     1.256    running_OBUF
+                         OBUF (Prop_obuf_I_O)         2.392     3.647 r  running_OBUF_inst/O
+                         net (fo=0)                   0.000     3.647    running
+                                                                      r  running (OUT)
+  -------------------------------------------------------------------    -------------------
+
+
+
+

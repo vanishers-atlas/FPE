@@ -1,0 +1,22 @@
+{
+  "data_width": 4,
+
+  "fetch_decode": {},
+
+  "address_sources": {
+      "BAM_0": {}
+  },
+
+  "data_memories": {
+      "PUT": {
+          "depth": 1
+      },
+      "ROM": {
+          "depth": 16
+      }
+  },
+
+  "execute_units": {
+      "ALU": {}
+  }
+}

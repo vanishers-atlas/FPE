@@ -1,7 +1,0 @@
-{
-  "use_BRAM"   : false,
-  "write_mode" : 1,
-  "conc_reads" : 2,
-  "data_width" : 8,
-  "depth" : 64
-}

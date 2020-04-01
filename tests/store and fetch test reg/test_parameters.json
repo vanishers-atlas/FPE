@@ -1,0 +1,21 @@
+{
+  "data_width": 4,
+
+  "fetch_decode": {},
+
+  "address_sources": {},
+  "data_memories": {
+      "GET": {
+          "depth": 1
+      },
+      "PUT": {
+          "depth": 1
+      },
+      "REG": {
+          "depth": 16
+      }
+  },
+  "execute_units": {
+      "ALU": {}
+  }
+}
