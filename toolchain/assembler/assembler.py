@@ -4,6 +4,8 @@ from antlr4 import ParseTreeWalker
 # Import json for reading/writing json files
 import json
 
+import re
+
 # import FPE assembly handling module
 from .. import FPE_assembly as asm_utils
 from ..HDL_generation import utils  as gen_utils
@@ -11,16 +13,22 @@ from .. import utils  as tc_utils
 
 from . import label_handling
 from . import IMM_handling
-from . import program_handling
+from . import PM_handling
+from . import ZOL_handling
+
 
 def determine_require_generics(interface):
     generics = {}
     for generic in interface["generics"]:
+        # Skipped handled generics
         if generic["name"] in [
             "IMM_mem_file",
             "PM_mem_file",
             "PC_end_value",
         ]:
+            pass
+        # Skipped handled ZOL generics
+        elif re.search(r"ZOL_loop_\d*_(delay_tally|start_value|end_value)", generic["name"]) != None:
             pass
         else:
             generics[generic["name"]] = None
@@ -89,28 +97,48 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
         raise ValueError("No generics file given, a blank one was created, please replace the nulls")
 
     # Prepare for processing assembly
-    assembly = asm_utils.load_file(assembly_filename)
+    program_context = asm_utils.load_file(assembly_filename)
     walker = ParseTreeWalker()
 
+    # Find PC value each label relates to
     handler = label_handling.handler()
-    walker.walk(handler, assembly)
-    label_pc_map = handler.get_output()
+    walker.walk(handler, program_context["program_tree"])
+    program_context["label_pc_map"] = handler.get_output()
 
+    # Handle IMM memory
     if "IMM" in config["data_memories"]:
-        handler = IMM_handling.handler(label_pc_map)
-        walker.walk(handler, assembly)
-        imm_data, IMM_addr_map = handler.get_output()
-        write_mif_file(output_path + "\\IMM.mem", config["data_memories"]["IMM"]["depth"], config["data_width"], imm_data)
-        generics["IMM_mem_file"] = "IMM.mem"
+        imm_file = processor_name + "_IMM.mem"
+        handler = IMM_handling.handler(program_context)
+        walker.walk(handler, program_context["program_tree"])
+        imm_data, program_context["IMM_addr_map"]  = handler.get_output()
+        write_mif_file(output_path + "\\" + imm_file, config["data_memories"]["IMM"]["depth"], config["data_memories"]["IMM"]["data_width"], imm_data)
+        generics["IMM_mem_file"] = imm_file
     else:
-        IMM_addr_map = {}
+        program_context["IMM_addr_map"] = {}
 
-    handler = program_handling.handler(config, label_pc_map, IMM_addr_map)
-    walker.walk(handler, assembly)
+
+    # Handle program memory
+    handler = PM_handling.handler(config, program_context)
+    pm_file = processor_name + "_PM.mem"
+    walker.walk(handler, program_context["program_tree"])
     program_end, program = handler.get_output()
-    write_mif_file(output_path + "\\PM.mem", config["fetch_decode"]["program_length"], config["opcode_width"] + (config["fetch_decode"]["encoded_addrs"]*config["addr_width"]), program)
-    generics["PM_mem_file"]  = "PM.mem"
+    write_mif_file(
+        output_path + "\\" + pm_file,
+        config["program_fetch"]["program_length"],
+        config["instruction_decoder"]["opcode_width"] + sum(config["instruction_decoder"]["addr_widths"].values()),
+        program
+    )
+    generics["PM_mem_file"]  = pm_file
     generics["PC_end_value"] = program_end
+
+    # Handle ZOL values
+    if "ZOL_delay_encoding" in interface:
+        handler = ZOL_handling.handler(program_context, interface["ZOL_delay_encoding"])
+        walker.walk(handler, program_context["program_tree"])
+        for ZOL, value in handler.get_output().items():
+            generics["ZOL_loop_%i_delay_tally"%(ZOL)]  = value["tally"]
+            generics["ZOL_loop_%i_start_value"%(ZOL)]  = value["start"]
+            generics["ZOL_loop_%i_end_value"  %(ZOL)]  = value["end"]
 
     # Generate testbench style file, with example instancation
     IMPORTS   = []
@@ -145,7 +173,6 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     ARCH_BODY += "\<\n);\n"
 
     ARCH_BODY += "\<\n"
-
 
     # Save code to file
     gen_utils.generate_files(output_path, processor_name + "_inst", IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)

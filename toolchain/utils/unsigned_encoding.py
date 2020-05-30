@@ -18,7 +18,7 @@ def encodeable(value, bits):
         return False
 
 def encode(value, bits):
-    if encodeable == False:
+    if encodeable(value, bits) == False:
         raise ValueError("Can't encode value %i with %i bits"%(value, bits))
 
     return bin(value)[2:].rjust(bits, "0")

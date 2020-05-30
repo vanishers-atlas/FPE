@@ -1,8 +1,0 @@
-{
-  ADD(1, 1, acc);
-  MOV(acc, PUT[0]);
-  ADD(1, acc, acc);
-  MOV(acc, PUT[0]);
-
-  AND(3, 5, PUT[0]);
-}

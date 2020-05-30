@@ -1,0 +1,6 @@
+{
+    "BAM_0_base": 0,
+    "BAM_0_increment": 1,
+    "LANE_0_ROM_mem_file": "..\\ROM_lane_0.mem",
+    "LANE_1_ROM_mem_file": "..\\ROM_lane_1.mem"
+}

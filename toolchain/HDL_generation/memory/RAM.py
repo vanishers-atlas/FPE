@@ -85,6 +85,10 @@ def gen_reads():
 
         # Generate output buffers
         ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+        ARCH_HEAD += "signal read_%i_addr_int  : integer;\n"%(read)
+
+        ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n"%(read, read)
+        ARCH_BODY += "read_%i_buffer_in <= data(read_%i_addr_int) when 0 <= read_%i_addr_int and read_%i_addr_int < data'Length else (others => 'U');\n"%(read, read, read, read)
 
         ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
@@ -93,8 +97,6 @@ def gen_reads():
         ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
         ARCH_BODY += "data_out => read_%i_data\n"%(read, )
         ARCH_BODY += "\<);\n\<"
-
-        ARCH_BODY += "read_%i_buffer_in <= data(to_integer(unsigned(read_%i_addr)));\n"%(read, read)
 
 def gen_writes():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
@@ -121,12 +123,16 @@ def gen_writes():
         ]
 
     if CONFIG["writes"] == 1:
+        ARCH_HEAD += "signal write_0_addr_int : integer;\n"
+
+        ARCH_BODY += "write_0_addr_int <= to_integer(unsigned(write_0_addr));\n"
+
         ARCH_BODY += "\n-- Write proccess\n"
         ARCH_BODY += "process (clock)\>\n"
         ARCH_BODY += "\<begin\>\n"
         ARCH_BODY += "if rising_edge(clock) then\>\n"
         ARCH_BODY += "if write_0_enable = '1' then\>\n"
-        ARCH_BODY += "data(to_integer(unsigned(write_0_addr))) <= write_0_data;\n"
+        ARCH_BODY += "data(write_0_addr_int) <= write_0_data;\n"
         ARCH_BODY += "\<end if;\n"
         ARCH_BODY += "\<end if;\n"
         ARCH_BODY += "\<end process;\n"

@@ -8,4 +8,5 @@ def generate(module_select, module_name, config_filename, HDL_output_path=".", a
     # Import module generation script
     script = importlib.import_module(".".join(__name__.split(".")[0:-1] + module_select.split(".")))
     _, returned_name = script.generate_HDL(config, HDL_output_path, module_name, append_hash, force_generation)
+
     return returned_name

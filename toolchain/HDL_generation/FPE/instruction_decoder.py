@@ -1,3 +1,5 @@
+import itertools as it
+
 from ..  import utils as gen_utils
 from ... import utils as tc_utils
 from ... import FPE_assembly as asm_utils
@@ -29,13 +31,29 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 
         # Include extremely commom libs
         IMPORTS += [
-            {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"},
-            {"library" : "ieee", "package" : "numeric_std"   , "parts" : "all"},
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all",
+            },
+            {
+                "library" : "ieee",
+                "package" : "numeric_std",
+                "parts" : "all",
+            },
         ]
 
         INTERFACE["ports"] += [
-            { "name" : "clock" , "type" : "std_logic", "direction" : "in" },
-            { "name" : "enable", "type" : "std_logic", "direction" : "in" }
+            {
+                "name" : "clock" ,
+                "type" : "std_logic",
+                "direction" : "in"
+            },
+            {
+                "name" : "enable",
+                "type" : "std_logic",
+                "direction" : "in"
+            }
         ]
 
         global DELAY_INTERFACE, DELAY_NAME
@@ -49,7 +67,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 
         # Generation Module Code
         generate_section_split()
-        generate_address_sources_controls()
+        generate_address_source_contols()
         generate_data_memory_controls()
         generate_program_counter_controls()
         generate_exe_compounds_controls()
@@ -70,65 +88,95 @@ def generate_section_split():
     ARCH_BODY += "-- Instr sectioning\n"
 
     # Declare instr input port
-    INTERFACE["ports"] += [ { "name" : "instr", "type" : "std_logic_vector(%i downto 0)"%(CONFIG["fetch_decode"]["instr_width"] - 1), "direction" : "in" } ]
+    INTERFACE["ports"] += [
+        {
+            "name" : "instr",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["instruction_decoder"]["instr_width"] - 1),
+            "direction" : "in"
+        }
+    ]
 
     # Section off opcode for decoding
-    ARCH_HEAD += "signal opcode : std_logic_vector(%i downto 0);\n"%(CONFIG["opcode_width"] - 1)
-    ARCH_BODY += "opcode <= instr(%i downto %i) when enable = '1' else (others => 'U');\n\n"%(CONFIG["fetch_decode"]["instr_width"] - 1, CONFIG["fetch_decode"]["instr_width"] - CONFIG["opcode_width"] )
+    ARCH_HEAD += "signal opcode : std_logic_vector(%i downto 0);\n"%(CONFIG["instruction_decoder"]["opcode_width"] - 1)
+    ARCH_BODY += "opcode <= instr(%i downto %i) when enable = '1' else (others => 'U');\n\n"%(
+        CONFIG["instruction_decoder"]["instr_width"] - 1,
+        CONFIG["instruction_decoder"]["instr_width"] - CONFIG["instruction_decoder"]["opcode_width"],
+    )
 
     # Section off addrs
-    addr_start = CONFIG["fetch_decode"]["instr_width"] - CONFIG["opcode_width"]
-    for addr in range(CONFIG["fetch_decode"]["encoded_addrs"]):
+    addr_start = CONFIG["instruction_decoder"]["instr_width"] - CONFIG["instruction_decoder"]["opcode_width"]
+    for addr, width in sorted(CONFIG["instruction_decoder"]["addr_widths"].items(), key=lambda kv: kv[0]):
         INTERFACE["ports"] += [
-            { "name" : "addr_%i_fetch"%(addr), "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1), "direction" : "out" },
-            { "name" : "addr_%i_store"%(addr), "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1), "direction" : "out" }
+            {
+                "name" : "%s_fetch"%(addr),
+                "type" : "std_logic_vector(%i downto 0)"%(width - 1),
+                "direction" : "out"
+            },
+            {
+                "name" : "%s_store"%(addr),
+                "type" : "std_logic_vector(%i downto 0)"%(width - 1),
+                "direction" : "out"
+            }
         ]
 
-        ARCH_HEAD += "signal pre_addr_%i_fetch : std_logic_vector(%i downto 0);\n"%(addr, CONFIG["addr_width"] - 1)
-        ARCH_HEAD += "signal pre_addr_%i_store : std_logic_vector(%i downto 0);\n"%(addr, CONFIG["addr_width"] - 1)
+        ARCH_HEAD += "signal pre_%s_fetch : std_logic_vector(%i downto 0);\n"%(addr, width - 1)
+        ARCH_HEAD += "signal pre_%s_store : std_logic_vector(%i downto 0);\n"%(addr, width - 1)
 
 
-        ARCH_BODY += "pre_addr_%i_fetch <= instr(%i downto %i) when enable = '1' else (others => 'U');\n\n"%(
+        ARCH_BODY += "pre_%s_fetch <= instr(%i downto %i) when enable = '1' else (others => 'U');\n\n"%(
             addr,
-            addr_start - addr*CONFIG["addr_width"] - 1,
-            addr_start - (addr+1)*CONFIG["addr_width"]
+            addr_start - 1,
+            addr_start - width
         )
+        addr_start -= width
+
 
         # Generate fetch buffer
-        ARCH_BODY += "addr_%i_fetch_delay : entity work.%s(arch)\>\n"%(addr, DELAY_NAME    )
+        ARCH_BODY += "%s_fetch_delay : entity work.%s(arch)\>\n"%(addr, DELAY_NAME)
 
         ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => %i,"%(CONFIG["addr_width"])
-        # delay of 1, translates to delay until next raising edge
-        ARCH_BODY += "delay_depth => 1"
+        ARCH_BODY += "delay_width => %i,"%(width)
+        # Delay until first fetch stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s)
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => pre_addr_%i_fetch,\n"%(addr)
-        ARCH_BODY += "data_out => pre_addr_%i_store\n" %(addr, )
+        ARCH_BODY += "data_in  => pre_%s_fetch,\n"%(addr)
+        ARCH_BODY += "data_out => pre_%s_store\n" %(addr)
         ARCH_BODY += "\<);\n\<\n"
 
-        ARCH_BODY += "addr_%i_fetch <= pre_addr_%i_store;\n\n"%(addr, addr)
+        ARCH_BODY += "%s_fetch <= pre_%s_store;\n\n"%(addr, addr)
 
         # Generate store buffer
-        ARCH_BODY += "addr_%i_store_delay : entity work.%s(arch)\>\n"%(addr, DELAY_NAME    )
+        ARCH_BODY += "%s_store_delay : entity work.%s(arch)\>\n"%(addr, DELAY_NAME)
 
         ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => %i,"%(CONFIG["addr_width"])
-        # delay of 1 + exe_stages,
-        #   1 to get past the fetch/read stage(s)
-        #   exe_stages to get past the exe stage(s) of the pipeline
-        ARCH_BODY += "delay_depth => %i" %(1 + CONFIG["exe_stages"])
+        ARCH_BODY += "delay_width => %i,"%(width)
+        # Delay for first fetch stage until first store stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get past the fetch stages
+                    CONFIG["exe_stages"],   # to get past the exe   stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => pre_addr_%i_store,\n"%(addr)
-        ARCH_BODY += "data_out => addr_%i_store\n"%(addr, )
+        ARCH_BODY += "data_in  => pre_%s_store,\n"%(addr)
+        ARCH_BODY += "data_out => %s_store\n"%(addr, )
         ARCH_BODY += "\<);\n\<\n"
 
-def generate_address_sources_controls():
+def generate_address_source_contols():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
@@ -145,9 +193,11 @@ def generate_address_sources_controls():
         ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\nelse '1' when\> "%(port)
         ARCH_BODY += "\nor ".join(
             [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
-                if (    asm_utils.decode_exe_component(instr_id) == addr
-                    and asm_utils.decode_mnemonic(instr_id) == "BAM_RST"
+                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
+                for instr_id, instr_val in CONFIG["instr_set"].items()
+                if (
+                    asm_utils.instr_exe_com(instr_id) == addr
+                    and asm_utils.instr_mnemonic(instr_id) == "RESET"
                 )
             ]
         )
@@ -157,51 +207,15 @@ def generate_address_sources_controls():
 
         ARCH_BODY += "generic map (\>"
         ARCH_BODY += "delay_width => 1,"
-        # delay of 2,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        ARCH_BODY += "delay_depth => 2"
-        ARCH_BODY += "\<)\n"
-
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in (0) => pre_%s,\n"%(port)
-        ARCH_BODY += "data_out(0) => %s\n"%(port)
-        ARCH_BODY += "\<);\<\n\n"
-
-        # Handle increment singals
-        port = "%s_fetch_fixed_inc"%(addr)
-
-        INTERFACE["ports"] += [ { "name" : port, "type" : "std_logic", "direction" : "out" } ]
-        ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
-
-        ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\n"%(port)
-        ARCH_BODY += "else '1' when\> "
-        ARCH_BODY += "\nor ".join(
-            [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
-                for instr_id, instr_val in CONFIG["instr_set"].items()
-                if (
-                    (
-                        addr in asm_utils.decode_fetch_address_components(instr_id)
-                        and "ADV" in asm_utils.decode_fetch_address_mods(instr_id)[asm_utils.decode_fetch_address_components(instr_id).index(addr)]
-                    )
-                    or
-                    (
-                        addr in asm_utils.decode_store_address_components(instr_id)
-                        and "ADV" in asm_utils.decode_store_address_mods(instr_id)[asm_utils.decode_store_address_components(instr_id).index(addr)]
-                    )
-                )
-            ]
+        # Delay until first ese stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                    1,                      # to get past the fetch stages
+                ]
+            )
         )
-        ARCH_BODY += "\<\nelse '0';\n\<"
-
-        ARCH_BODY += "%s_delay : entity work.%s(arch)\>\n"%(port, DELAY_NAME)
-
-        ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width =>  1,"
-        # delay of 1, translates to delay until next raising edge
-        ARCH_BODY += "delay_depth => 1"
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
@@ -210,20 +224,41 @@ def generate_address_sources_controls():
         ARCH_BODY += "data_out(0) => %s\n"%(port)
         ARCH_BODY += "\<);\<\n\n"
 
-        if any([port["name"] == "exe_data_inc"] for port in para["interface"]["ports"]):
-            port = "%s_data_inc"%(addr)
+        # Handle increment signals
+        if any(
+            [
+                port["name"] == "step_generic_forward"
+                for port in para["interface"]["ports"]
+            ]
+        ):
+            port = "%s_step_generic_forward"%(addr)
 
-            INTERFACE["ports"] += [ { "name" : port, "type" : "std_logic", "direction" : "out" } ]
+            INTERFACE["ports"] += [
+                {
+                    "name" : port,
+                    "type" : "std_logic",
+                    "direction" : "out"
+                }
+            ]
             ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
 
             ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\n"%(port)
             ARCH_BODY += "else '1' when\> "
+
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
+                    for instr_id, instr_val in CONFIG["instr_set"].items()
                     if (
-                            asm_utils.decode_exe_component(instr_id) == addr
-                        and asm_utils.decode_mnemonic(instr_id) == "BAM_ADV"
+                        (
+                            addr in asm_utils.instr_fetch_addr_coms(instr_id)
+                            and "FORWARD" in asm_utils.instr_fetch_addr_mods(instr_id)[asm_utils.instr_fetch_addr_coms(instr_id).index(addr)]
+                        )
+                        or
+                        (
+                            addr in asm_utils.instr_store_addr_coms(instr_id)
+                            and "FORWARD" in asm_utils.instr_store_addr_mods(instr_id)[asm_utils.instr_store_addr_coms(instr_id).index(addr)]
+                        )
                     )
                 ]
             )
@@ -233,10 +268,185 @@ def generate_address_sources_controls():
 
             ARCH_BODY += "generic map (\>"
             ARCH_BODY += "delay_width =>  1,"
-            # delay of 2,
-            #   1 to get to the start of the fetch/read stage(s)
-            #   1 the number of fetch/read stage(s)
-            ARCH_BODY += "delay_depth => 2"
+            # Delay until first fetch stage
+            ARCH_BODY += "delay_depth => %i"%(
+                sum(
+                    [
+                        1,                      # to get to the start of the fetch/read stage(s).
+                    ]
+                )
+            )
+            ARCH_BODY += "\<)\n"
+
+            ARCH_BODY += "port map (\n\>"
+            ARCH_BODY += "clock => clock,\n"
+            ARCH_BODY += "data_in (0) => pre_%s,\n"%(port)
+            ARCH_BODY += "data_out(0) => %s\n"%(port)
+            ARCH_BODY += "\<);\<\n\n"
+
+        if any(
+            [
+                port["name"] == "step_generic_backward"
+                for port in para["interface"]["ports"]
+            ]
+        ):
+            port = "%s_step_generic_backward"%(addr)
+
+            INTERFACE["ports"] += [
+                {
+                    "name" : port,
+                    "type" : "std_logic",
+                    "direction" : "out"
+                }
+            ]
+            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
+
+            ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\n"%(port)
+            ARCH_BODY += "else '1' when\> "
+            raise NotImplementedError()
+            ARCH_BODY += "\nor ".join(
+                [
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
+                    for instr_id, instr_val in CONFIG["instr_set"].items()
+                    if (
+                        (
+                            addr in asm_utils.instr_fetch_addr_coms(instr_id)
+                            and "FORWARD" in asm_utils.instr_fetch_addr_mods(instr_id)[asm_utils.instr_fetch_addr_coms(instr_id).index(addr)]
+                        )
+                        or
+                        (
+                            addr in asm_utils.instr_store_addr_coms(instr_id)
+                            and "FORWARD" in asm_utils.instr_store_addr_mods(instr_id)[asm_utils.instr_store_addr_coms(instr_id).index(addr)]
+                        )
+                    )
+                ]
+            )
+            ARCH_BODY += "\<\nelse '0';\n\<"
+
+            ARCH_BODY += "%s_delay : entity work.%s(arch)\>\n"%(port, DELAY_NAME)
+
+            ARCH_BODY += "generic map (\>"
+            ARCH_BODY += "delay_width =>  1,"
+            # Delay until first fetch stage
+            ARCH_BODY += "delay_depth => %i"%(
+                sum(
+                    [
+                        1,                      # to get to the start of the fetch/read stage(s).
+                    ]
+                )
+            )
+            ARCH_BODY += "\<)\n"
+
+            ARCH_BODY += "port map (\n\>"
+            ARCH_BODY += "clock => clock,\n"
+            ARCH_BODY += "data_in (0) => pre_%s,\n"%(port)
+            ARCH_BODY += "data_out(0) => %s\n"%(port)
+            ARCH_BODY += "\<);\<\n\n"
+
+        if any(
+            [
+                port["name"] == "step_fetched_forward"
+                for port in para["interface"]["ports"]
+            ]
+        ):
+            port = "%s_step_fetched_forward"%(addr)
+
+            INTERFACE["ports"] += [
+                {
+                    "name" : port,
+                    "type" : "std_logic",
+                    "direction" : "out"
+                }
+            ]
+            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
+
+            ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\n"%(port)
+            ARCH_BODY += "else '1' when\> "
+
+            ARCH_BODY += "\nor ".join(
+                [
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
+                    for instr_id, instr_val in CONFIG["instr_set"].items()
+                    if (
+                        (
+                            asm_utils.instr_mnemonic(instr_id) == "SEEK"
+                            and asm_utils.instr_exe_com(instr_id) == addr
+                            and "FORWARD" in asm_utils.instr_mods(instr_id)
+                        )
+                    )
+                ]
+            )
+            ARCH_BODY += "\<\nelse '0';\n\<"
+
+            ARCH_BODY += "%s_delay : entity work.%s(arch)\>\n"%(port, DELAY_NAME)
+
+            ARCH_BODY += "generic map (\>"
+            ARCH_BODY += "delay_width =>  1,"
+            # Delay until first ese stage
+            ARCH_BODY += "delay_depth => %i"%(
+                sum(
+                    [
+                        1,                      # to get to the start of the fetch/read stage(s).
+                        1,                      # to get past the fetch stages
+                    ]
+                )
+            )
+            ARCH_BODY += "\<)\n"
+
+            ARCH_BODY += "port map (\n\>"
+            ARCH_BODY += "clock => clock,\n"
+            ARCH_BODY += "data_in (0) => pre_%s,\n"%(port)
+            ARCH_BODY += "data_out(0) => %s\n"%(port)
+            ARCH_BODY += "\<);\<\n\n"
+
+        # Handle increment singals
+        if any(
+            [
+                port["name"] == "step_fetched_backward"
+                for port in para["interface"]["ports"]
+            ]
+        ):
+            port = "%s_step_fetched_backward"%(addr)
+
+            INTERFACE["ports"] += [
+                {
+                    "name" : port,
+                    "type" : "std_logic",
+                    "direction" : "out"
+                }
+            ]
+            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
+
+            ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\n"%(port)
+            ARCH_BODY += "else '1' when\> "
+            ARCH_BODY += "\nor ".join(
+                [
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
+                    for instr_id, instr_val in CONFIG["instr_set"].items()
+                    if (
+                        (
+                            asm_utils.instr_mnemonic(instr_id) == "SEEK"
+                            and asm_utils.instr_exe_com(instr_id) == addr
+                            and "BACKWARD" in asm_utils.instr_mods(instr_id)
+                        )
+                    )
+                ]
+            )
+            ARCH_BODY += "\<\nelse '0';\n\<"
+
+            ARCH_BODY += "%s_delay : entity work.%s(arch)\>\n"%(port, DELAY_NAME)
+
+            ARCH_BODY += "generic map (\>"
+            ARCH_BODY += "delay_width =>  1,"
+            # Delay until first ese stage
+            ARCH_BODY += "delay_depth => %i"%(
+                sum(
+                    [
+                        1,                      # to get to the start of the fetch/read stage(s).
+                        1,                      # to get past the fetch stages
+                    ]
+                )
+            )
             ARCH_BODY += "\<)\n"
 
             ARCH_BODY += "port map (\n\>"
@@ -260,18 +470,24 @@ def generate_data_memory_controls():
 
         port = "GET_read_0_adv"
 
-        INTERFACE["ports"] += [ { "name" : port, "type" : "std_logic", "direction" : "out" } ]
+        INTERFACE["ports"] += [
+            {
+                "name" : port,
+                "type" : "std_logic",
+                "direction" : "out"
+            }
+        ]
         ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
 
         ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\nelse '1' when\> "%(port)
 
         ARCH_BODY += "\nor ".join(
             [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                 for instr_id, instr_val in CONFIG["instr_set"].items()
                 if (
-                        "GET" in asm_utils.decode_fetch_components(instr_id)
-                    and "ADV" in asm_utils.decode_fetch_mods(instr_id)[asm_utils.decode_fetch_components(instr_id).index("GET")]
+                        "GET" in asm_utils.instr_fetch_access_coms(instr_id)
+                    and "ADV" in asm_utils.instr_fetch_access_mods(instr_id)[asm_utils.instr_fetch_access_coms(instr_id).index("GET")]
                 )
             ]
         )
@@ -281,8 +497,14 @@ def generate_data_memory_controls():
 
         ARCH_BODY += "generic map (\>"
         ARCH_BODY += "delay_width => 1,"
-        # delay of 1, translates to delay until next raising edge
-        ARCH_BODY += "delay_depth => 1"
+        # Delay until first fetch stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
@@ -303,8 +525,8 @@ def generate_data_memory_controls():
 
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
-                    if asm_utils.decode_store_components(instr_id).count(mem) >= write + 1
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
+                    if asm_utils.instr_store_access_coms(instr_id).count(mem) >= write + 1
                 ]
             )
             ARCH_BODY += "\<\nelse '0';\<\n\n"
@@ -313,11 +535,16 @@ def generate_data_memory_controls():
 
             ARCH_BODY += "generic map (\>"
             ARCH_BODY += "delay_width => 1,"
-            # delay of 2 + exe_stages,
-            #   1 to get to the start of the fetch/read stage(s)
-            #   1 the number of fetch/read stage(s)
-            #   exe_stages to get past the exe stage(s) of the pipeline
-            ARCH_BODY += "delay_depth => %i" %(1 + 1 + CONFIG["exe_stages"])
+            # Delay until first store stage
+            ARCH_BODY += "delay_depth => %i"%(
+                sum(
+                    [
+                        1,                      # to get to the start of the fetch/read stage(s).
+                        1,                      # to get past the fetch stages
+                        CONFIG["exe_stages"],   # to get past the exe   stages
+                    ]
+                )
+            )
             ARCH_BODY += "\<)\n"
 
             ARCH_BODY += "port map (\n\>"
@@ -342,7 +569,7 @@ def generate_program_counter_controls():
 
     for jump_signal in [
             p["name"]
-            for p in CONFIG["fetch_decode"]["interface"]["ports"]
+            for p in CONFIG["program_fetch"]["program_counter_interface"]["ports"]
             if p["name"].startswith("jump_") and p["name"] != "jump_value"
         ]:
         # Catch unhandled jump signals
@@ -350,16 +577,22 @@ def generate_program_counter_controls():
 
         ARCH_BODY += "-- %s generation\n\n"%(jump_signal)
 
-        INTERFACE["ports"] += [ { "name" : "PC_%s"%(jump_signal), "type" : "std_logic", "direction" : "out" } ]
+        INTERFACE["ports"] += [
+            {
+                "name" : "PC_%s"%(jump_signal),
+                "type" : "std_logic",
+                "direction" : "out"
+            }
+        ]
         ARCH_HEAD += "signal pre_PC_%s : std_logic;\n"%(jump_signal)
 
         ARCH_BODY += "pre_PC_%s <=\> 'U' when enable /= '1'\nelse '1' when\> "%(jump_signal)
         ARCH_BODY += "\nor ".join(
             [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                 for instr_id, instr_val in CONFIG["instr_set"].items()
                 if (
-                    asm_utils.decode_mnemonic(instr_id) in jump_signal_mnemonic_map[jump_signal]
+                    asm_utils.instr_mnemonic(instr_id) in jump_signal_mnemonic_map[jump_signal]
                 )
             ]
         )
@@ -369,10 +602,15 @@ def generate_program_counter_controls():
 
         ARCH_BODY += "generic map (\>"
         ARCH_BODY += "delay_width => 1,"
-        # delay of 2,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        ARCH_BODY += "delay_depth => 2"
+        # Delay until first ese stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                    1,                      # to get past the fetch stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
@@ -383,7 +621,7 @@ def generate_program_counter_controls():
 
     for update_signal in [
         p["name"]
-        for p in CONFIG["fetch_decode"]["interface"]["ports"]
+        for p in CONFIG["program_fetch"]["program_counter_interface"]["ports"]
         if p["name"].startswith("update_")
     ]:
         # Catch unhandled jump signals
@@ -397,10 +635,10 @@ def generate_program_counter_controls():
         ARCH_BODY += "pre_PC_%s <=\> 'U' when enable /= '1'\nelse '1' when\> "%(update_signal)
         ARCH_BODY += "\nor ".join(
             [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                 for instr_id, instr_val in CONFIG["instr_set"].items()
                 if (
-                    asm_utils.decode_mnemonic(instr_id) in update_signal_mnemonic_map[update_signal]
+                    asm_utils.instr_mnemonic(instr_id) in update_signal_mnemonic_map[update_signal]
                 )
             ]
         )
@@ -410,11 +648,16 @@ def generate_program_counter_controls():
 
         ARCH_BODY += "generic map (\>"
         ARCH_BODY += "delay_width => 1,"
-        # delay of 2 + exe_stages,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        #   exe_stages to get past the exe stage(s) of the pipeline
-        ARCH_BODY += "delay_depth => %i"%(1 + 1 + CONFIG["exe_stages"])
+        # Delay until first store stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                    1,                      # to get past the fetch stages
+                    CONFIG["exe_stages"],   # to get past the exe   stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
@@ -444,8 +687,8 @@ def generate_exe_compounds_controls():
             ARCH_BODY += "\"%s\" when\>"%(value)
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
-                    if asm_utils.decode_exe_component(instr_id) == "ALU" and gen_utils.get_exe_operation_code(instr_id) == exe_code
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
+                    if asm_utils.instr_exe_com(instr_id) == "ALU" and gen_utils.get_exe_operation_code(instr_id) == exe_code
                 ]
             )
             ARCH_BODY += "\n\<else "
@@ -455,10 +698,15 @@ def generate_exe_compounds_controls():
 
         ARCH_BODY += "generic map (\>"
         ARCH_BODY += "delay_width => pre_ALU_%s'length,"%(port["name"])
-        # delay of 2,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        ARCH_BODY += "delay_depth => 2"
+        # Delay until first ese stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                    1,                      # to get past the fetch stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
@@ -474,8 +722,8 @@ def generate_exe_compounds_controls():
         ARCH_BODY += "pre_ALU_enable <=\> '1' when\> "
         ARCH_BODY += "\nor ".join(
             [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
-                if asm_utils.decode_exe_component(instr_id) == "ALU"
+                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"])) for instr_id, instr_val in CONFIG["instr_set"].items()
+                if asm_utils.instr_exe_com(instr_id) == "ALU"
             ]
         )
         ARCH_BODY += "\n\<else '0';\<\n\n"
@@ -484,10 +732,15 @@ def generate_exe_compounds_controls():
 
         ARCH_BODY += "generic map (\>"
         ARCH_BODY += "delay_width => 1,"
-        # delay of 2,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        ARCH_BODY += "delay_depth => 2"
+        # Delay until first ese stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                    1,                      # to get past the fetch stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
@@ -502,177 +755,366 @@ def generate_path_select_controls():
     global DELAY_INTERFACE, DELAY_NAME
 
     # Handle fetch_addr_connects.
-    for dst, src_codes in CONFIG["fetch_addr_connects"].items():
-        ARCH_BODY += "-- %s_sel generation\n\n"%(dst)
+    for dst_id, src_mux in CONFIG["fetch_addr_connects"].items():
+        dst_sig = "_".join(dst_id.split("#"))
+
+        ARCH_BODY += "-- %s_mux_sel generation\n\n"%(dst_sig)
 
         # Handle operation select
-        port_type = "std_logic_vector(%i downto 0)"%(len(list(src_codes.values())[0]) - 1)
+        select_width = len(list(src_mux.values())[0])
+        select_port_type = "std_logic_vector(%i downto 0)"%(select_width - 1)
 
-        INTERFACE["ports"] += [ { "name" : "%s_sel"%(dst), "type" : port_type, "direction" : "out" } ]
-        ARCH_HEAD += "signal pre_%s_sel : %s;\n"%(dst, port_type)
+        INTERFACE["ports"] += [
+            {
+                "name" : "%s_mux_sel"%(dst_sig),
+                "type" : select_port_type,
+                "direction" : "out"
+            }
+        ]
+        ARCH_HEAD += "signal pre_%s_mux_sel : %s;\n"%(dst_sig, select_port_type)
 
-        ARCH_BODY += "pre_%s_sel <=\> "%(dst)
-        for src, code in src_codes.items():
-            ARCH_BODY += "\"%s\" when\>"%(code)
-            raise NotImplementedErrer()
+        ARCH_BODY += "pre_%s_mux_sel <=\> "%(dst_sig)
+        for src_id, select_code in src_mux.items():
+            src_sig = "_".join(src_id.split("#"))
+
+            ARCH_BODY += "\"%s\" when\>"%(select_code)
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                     for instr_id, instr_val in CONFIG["instr_set"].items()
                     if  (
-                            None
+                            # Check if src is red during fetch of this opcode
+                            src_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    asm_utils.instr_fetch_addr_coms(instr_id),
+                                    asm_utils.instr_fetch_addr_srcs(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written during fetch of this opcode
+                            and dst_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    asm_utils.instr_fetch_access_coms(instr_id),
+                                    asm_utils.instr_fetch_addr_dsts(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written by src during fetch of this opcode
+                            and (
+                                [
+                                    "_".join(p)
+                                    for p in zip(
+                                        asm_utils.instr_fetch_addr_coms(instr_id),
+                                        asm_utils.instr_fetch_addr_srcs(instr_id)
+                                    )
+                                ].index(src_sig)
+                                == [
+                                    "_".join(p)
+                                    for p in zip(
+                                        asm_utils.instr_fetch_access_coms(instr_id),
+                                        asm_utils.instr_fetch_addr_dsts(instr_id)
+                                    )
+                                ].index(dst_sig)
+                            )
                         )
                 ]
             )
             ARCH_BODY += "\n\<else "
         ARCH_BODY += "(others => 'U');\<\n\n"
 
-        ARCH_BODY += "%s_sel_delay : entity work.%s(arch)\>\n"%(dst, DELAY_NAME)
+        ARCH_BODY += "%s_mux_sel_delay : entity work.%s(arch)\>\n"%(dst_sig, DELAY_NAME)
         ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => %s_sel'length,"%(dst)
-        # delay of 1, translates to delay until next raising edge
-        ARCH_BODY += "delay_depth => 1"
+        ARCH_BODY += "delay_width => %s_mux_sel'length,"%(dst_sig)
+        # Delay until first fetch stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => pre_%s_sel,\n"%(dst)
-        ARCH_BODY += "data_out => %s_sel\n"%(dst)
+        ARCH_BODY += "data_in  => pre_%s_mux_sel,\n"%(dst_sig)
+        ARCH_BODY += "data_out => %s_mux_sel\n"%(dst_sig)
         ARCH_BODY += "\<);\<\n\n"
+
 
     # Handle fetch_data_connects
-    for dst, src_codes in CONFIG["fetch_data_connects"].items():
-        print()
+    for dst_id, src_mux in CONFIG["fetch_data_connects"].items():
+        dst_sig = "_".join(dst_id.split("#"))
 
-        ARCH_BODY += "-- %s_sel generation\n\n"%(dst)
+        ARCH_BODY += "-- %s_mux_sel generation\n\n"%(dst_sig)
 
         # Handle operation select
-        port_type = "std_logic_vector(%i downto 0)"%(len(list(src_codes.values())[0]) - 1)
+        select_width = len(list(src_mux.values())[0])
+        select_port_type = "std_logic_vector(%i downto 0)"%(select_width - 1)
 
-        INTERFACE["ports"] += [ { "name" : "%s_sel"%(dst), "type" : port_type, "direction" : "out" } ]
-        ARCH_HEAD += "signal pre_%s_sel : %s;\n"%(dst, port_type)
+        INTERFACE["ports"] += [
+            {
+                "name" : "%s_mux_sel"%(dst_sig),
+                "type" : select_port_type,
+                "direction" : "out"
+            }
+        ]
+        ARCH_HEAD += "signal pre_%s_mux_sel : %s;\n"%(dst_sig, select_port_type)
 
-        ARCH_BODY += "pre_%s_sel <=\> "%(dst)
-        for src, code in src_codes.items():
-            ARCH_BODY += "\"%s\" when\>"%(code)
+        ARCH_BODY += "pre_%s_mux_sel <=\> "%(dst_sig)
+        for src_id, select_code in src_mux.items():
+            src_sig = "_".join(src_id.split("#"))
+
+            ARCH_BODY += "\"%s\" when\>"%(select_code)
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                     for instr_id, instr_val in CONFIG["instr_set"].items()
                     if  (
-                        # Check if dst is written during store of this opcode
-                        dst in [p for p in asm_utils.decode_exe_inputs(instr_id)]
-                        # Check if src is red during store of this opcode
-                        and src in [p + "_data" for p in asm_utils.decode_fetch_paths(instr_id)]
-                        # Check if dst is written by src during store of this opcode
-                        and [p for p in asm_utils.decode_exe_inputs(instr_id)].index(dst) == [p + "_data" for p in asm_utils.decode_fetch_paths(instr_id)].index(src)
-                    )
+                            # Check if src is red during fetch of this opcode
+                            src_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    asm_utils.instr_fetch_access_coms(instr_id),
+                                    asm_utils.instr_fetch_access_srcs(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written during fetch of this opcode
+                            and dst_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    it.repeat(asm_utils.instr_exe_com(instr_id)),
+                                    asm_utils.instr_fetch_access_dsts(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written by src during fetch of this opcode
+                            and (
+                                [
+                                    "_".join(p)
+                                    for p in zip(
+                                        asm_utils.instr_fetch_access_coms(instr_id),
+                                        asm_utils.instr_fetch_access_srcs(instr_id)
+                                    )
+                                ].index(src_sig)
+                                ==  [
+                                    "_".join(p)
+                                    for p in zip(
+                                        it.repeat(asm_utils.instr_exe_com(instr_id)),
+                                        asm_utils.instr_fetch_access_dsts(instr_id)
+                                    )
+                                ].index(dst_sig)
+                            )
+                        )
                 ]
             )
             ARCH_BODY += "\n\<else "
         ARCH_BODY += "(others => 'U');\<\n\n"
 
-        ARCH_BODY += "%s_sel_delay : entity work.%s(arch)\>\n"%(dst, DELAY_NAME)
+        ARCH_BODY += "%s_mux_sel_delay : entity work.%s(arch)\>\n"%(dst_sig, DELAY_NAME)
         ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => %s_sel'length,"%(dst)
-        # delay of 2,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        ARCH_BODY += "delay_depth => 2"
+        ARCH_BODY += "delay_width => %s_mux_sel'length,"%(dst_sig)
+        # Delay until first ese stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                      # to get to the start of the fetch/read stage(s).
+                    1,                      # to get past the fetch stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => pre_%s_sel,\n"%(dst)
-        ARCH_BODY += "data_out => %s_sel\n"%(dst)
+        ARCH_BODY += "data_in  => pre_%s_mux_sel,\n"%(dst_sig)
+        ARCH_BODY += "data_out => %s_mux_sel\n"%(dst_sig)
         ARCH_BODY += "\<);\<\n\n"
+
 
     # Handle store_addr_connects
-    for dst, src_codes in CONFIG["store_addr_connects"].items():
-        #raise NotImplementedErrer()
-        ARCH_BODY += "-- %s_sel generation\n\n"%(dst)
+    for dst_id, src_mux in CONFIG["store_addr_connects"].items():
+        dst_sig = "_".join(dst_id.split("#"))
+
+        ARCH_BODY += "-- %s_mux_sel generation\n\n"%(dst_sig)
 
         # Handle operation select
-        port_type = "std_logic_vector(%i downto 0)"%(len(list(src_codes.values())[0]) - 1)
+        select_width = len(list(src_mux.values())[0])
+        select_port_type = "std_logic_vector(%i downto 0)"%(select_width - 1)
 
-        INTERFACE["ports"] += [ { "name" : "%s_sel"%(dst), "type" : port_type, "direction" : "out" } ]
-        ARCH_HEAD += "signal pre_%s_sel : %s;\n"%(dst, port_type)
+        INTERFACE["ports"] += [
+            {
+                "name" : "%s_mux_sel"%(dst_sig),
+                "type" : select_port_type,
+                "direction" : "out"
+            }
+        ]
+        ARCH_HEAD += "signal pre_%s_mux_sel : %s;\n"%(dst_sig, select_port_type)
 
-        ARCH_BODY += "pre_%s_sel <=\> "%(dst)
+        ARCH_BODY += "pre_%s_mux_sel <=\> "%(dst_sig)
+        for src_id, select_code in src_mux.items():
+            src_sig = "_".join(src_id.split("#"))
 
-        for src, code in src_codes.items():
-            ARCH_BODY += "\"%s\" when\>"%(code)
+            ARCH_BODY += "\"%s\" when\>"%(select_code)
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                     for instr_id, instr_val in CONFIG["instr_set"].items()
                     if  (
-                        # Check if dst is written during store of this opcode
-                        dst in [p + "_addr" for p in asm_utils.decode_store_paths(instr_id)]
-                        # Check if src is red during store of this opcode
-                        and src in [p + "_store" for p in asm_utils.decode_store_addresses(instr_id)]
-                        # Check if dst is written by src during store of this opcode
-                        and [p + "_addr" for p in asm_utils.decode_store_paths(instr_id)].index(dst) == [p + "_store" for p in asm_utils.decode_store_addresses(instr_id)].index(src)
-                    )
+                            # Check if src is red during store of this opcode
+                            src_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    asm_utils.instr_store_addr_coms(instr_id),
+                                    asm_utils.instr_store_addr_srcs(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written during store of this opcode
+                            and dst_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    asm_utils.instr_store_access_coms(instr_id),
+                                    asm_utils.instr_store_addr_dsts(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written by src during store of this opcode
+                            and (
+                                [
+                                    "_".join(p)
+                                    for p in zip(
+                                        asm_utils.instr_store_addr_coms(instr_id),
+                                        asm_utils.instr_store_addr_srcs(instr_id)
+                                    )
+                                ].index(src_sig)
+                                ==  [
+                                    "_".join(p)
+                                    for p in zip(
+                                        asm_utils.instr_store_access_coms(instr_id),
+                                        asm_utils.instr_store_addr_dsts(instr_id)
+                                    )
+                                ].index(dst_sig)
+                            )
+                        )
                 ]
             )
             ARCH_BODY += "\n\<else "
         ARCH_BODY += "(others => 'U');\<\n\n"
 
-        ARCH_BODY += "%s_sel_delay : entity work.%s(arch)\>\n"%(dst, DELAY_NAME)
+        ARCH_BODY += "%s_mux_sel_delay : entity work.%s(arch)\>\n"%(dst_sig, DELAY_NAME)
         ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => %s_sel'length,"%(dst)
-        # delay of 2 + exe_stages,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        #   exe_stages to get past the exe stage(s) of the pipeline
-        ARCH_BODY += "delay_depth => %i" %(1 + 1 + CONFIG["exe_stages"])
+        ARCH_BODY += "delay_width => %s_mux_sel'length,"%(dst_sig)
+        # Delay until store stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                          # to get to the start of the fetch/read stage(s).
+                    1,                          # to get past the fetch stages
+                    CONFIG["exe_stages"],       # to get past the all but last exe stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => pre_%s_sel,\n"%(dst)
-        ARCH_BODY += "data_out => %s_sel\n"%(dst)
+        ARCH_BODY += "data_in  => pre_%s_mux_sel,\n"%(dst_sig)
+        ARCH_BODY += "data_out => %s_mux_sel\n"%(dst_sig)
         ARCH_BODY += "\<);\<\n\n"
+
 
     # Handle store_data_connects
     for dst, src_codes in CONFIG["store_data_connects"].items():
-        ARCH_BODY += "-- %s_sel generation\n\n"%(dst)
+        dst_sig = "_".join(dst_id.split("#"))
+
+        ARCH_BODY += "-- %s_mux_sel generation\n\n"%(dst_sig)
 
         # Handle operation select
-        port_type = "std_logic_vector(%i downto 0)"%(len(list(src_codes.values())[0]) - 1)
+        select_width = len(list(src_mux.values())[0])
+        select_port_type = "std_logic_vector(%i downto 0)"%(select_width - 1)
 
-        INTERFACE["ports"] += [ { "name" : "%s_sel"%(dst), "type" : port_type, "direction" : "out" } ]
-        ARCH_HEAD += "signal pre_%s_sel : %s;\n"%(dst, port_type)
+        INTERFACE["ports"] += [
+            {
+                "name" : "%s_mux_sel"%(dst_sig),
+                "type" : select_port_type,
+                "direction" : "out"
+            }
+        ]
+        ARCH_HEAD += "signal pre_%s_mux_sel : %s;\n"%(dst_sig, select_port_type)
 
-        ARCH_BODY += "pre_%s_sel <=\> "%(dst)
-        for src, code in src_codes.items():
-            ARCH_BODY += "\"%s\" when\>"%(code)
-            raise NotImplementedErrer()
+        ARCH_BODY += "pre_%s_mux_sel <=\> "%(dst_sig)
+        for src_id, select_code in src_mux.items():
+            src_sig = "_".join(src_id.split("#"))
+
+            ARCH_BODY += "\"%s\" when\>"%(select_code)
+            raise NotImplementedError()
             ARCH_BODY += "\nor ".join(
                 [
-                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["opcode_width"]))
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
                     for instr_id, instr_val in CONFIG["instr_set"].items()
                     if  (
-                        None
-                    )
+                            # Check if src is red during store of this opcode
+                            src_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    asm_utils.instr_fetch_access_coms(instr_id),
+                                    asm_utils.instr_fetch_access_srcs(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written during store of this opcode
+                            and dst_sig in [
+                                "_".join(p)
+                                for p in zip(
+                                    it.repeat(asm_utils.instr_exe_com(instr_id)),
+                                    asm_utils.instr_fetch_access_dsts(instr_id)
+                                )
+                            ]
+
+                            # Check if dst is written by src during store of this opcode
+                            and (
+                                [
+                                    "_".join(p)
+                                    for p in zip(
+                                        asm_utils.instr_fetch_access_coms(instr_id),
+                                        asm_utils.instr_fetch_access_srcs(instr_id)
+                                    )
+                                ].index(src_sig)
+                                ==  [
+                                    "_".join(p)
+                                    for p in zip(
+                                        it.repeat(asm_utils.instr_exe_com(instr_id)),
+                                        asm_utils.instr_fetch_access_dsts(instr_id)
+                                    )
+                                ].index(dst_sig)
+                            )
+                        )
                 ]
             )
             ARCH_BODY += "\n\<else "
         ARCH_BODY += "(others => 'U');\<\n\n"
 
-        ARCH_BODY += "%s_sel_delay : entity work.%s(arch)\>\n"%(dst, DELAY_NAME)
+        ARCH_BODY += "%s_mux_sel_delay : entity work.%s(arch)\>\n"%(dst_sig, DELAY_NAME)
         ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => %s_sel'length,"%(dst)
-        # delay of 2 + exe_stages,
-        #   1 to get to the start of the fetch/read stage(s)
-        #   1 the number of fetch/read stage(s)
-        #   exe_stages to get past the exe stage(s) of the pipeline
-        ARCH_BODY += "delay_depth => %i" %(1 + 1 + CONFIG["exe_stages"])
+        ARCH_BODY += "delay_width => %s_mux_sel'length,"%(dst_sig)
+        # Delay until last exe stage
+        ARCH_BODY += "delay_depth => %i"%(
+            sum(
+                [
+                    1,                          # to get to the start of the fetch/read stage(s).
+                    1,                          # to get past the fetch stages
+                    CONFIG["exe_stages"] - 1,   # to get past the all but last exe stages
+                ]
+            )
+        )
         ARCH_BODY += "\<)\n"
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => pre_%s_sel,\n"%(dst)
-        ARCH_BODY += "data_out => %s_sel\n"%(dst)
+        ARCH_BODY += "data_in  => pre_%s_mux_sel,\n"%(dst_sig)
+        ARCH_BODY += "data_out => %s_mux_sel\n"%(dst_sig)
         ARCH_BODY += "\<);\<\n\n"

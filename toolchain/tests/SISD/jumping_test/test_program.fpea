@@ -1,0 +1,59 @@
+{
+  TEST_0:
+    MOV(GET[0]<ADV>, ACC);
+    CMP(ACC, GET[0]<ADV>);
+    NOP;
+    JLT(TEST_0_TRUE);
+    NOP;
+    NOP;
+    NOP;
+    NOP;
+    MOV(0, PUT[0]);
+    JMP(TEST_0_END);
+    NOP;
+    NOP;
+    NOP;
+    NOP;
+    TEST_0_TRUE:
+    MOV(1, PUT[0]);
+  TEST_0_END:
+
+  TEST_1:
+    MOV(GET[0]<ADV>, ACC);
+    CMP(ACC, GET[0]<ADV>);
+    NOP;
+    JLT(TEST_1_TRUE);
+    NOP;
+    NOP;
+    NOP;
+    NOP;
+    MOV(0, PUT[0]);
+    JMP(TEST_1_END);
+    NOP;
+    NOP;
+    NOP;
+    NOP;
+    TEST_1_TRUE:
+    MOV(1, PUT[0]);
+  TEST_1_END:
+
+  TEST_2:
+    MOV(GET[0]<ADV>, ACC);
+    CMP(ACC, GET[0]<ADV>);
+    NOP;
+    JLT(TEST_2_TRUE);
+    NOP;
+    NOP;
+    NOP;
+    NOP;
+    MOV(0, PUT[0]);
+    JMP(TEST_2_END);
+    NOP;
+    NOP;
+    NOP;
+    NOP;
+    TEST_2_TRUE:
+    MOV(1, PUT[0]);
+  TEST_2_END:
+    NOP;
+}

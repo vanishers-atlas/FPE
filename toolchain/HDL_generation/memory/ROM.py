@@ -32,6 +32,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 
         # Generation Module Code
         INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        process_config()
         gen_value_array()
         gen_reads()
 
@@ -41,6 +42,14 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
         return INTERFACE, MODULE_NAME
 
 #####################################################################
+
+def process_config():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    CONFIG["addr_width"] = tc_utils.unsigned.width(CONFIG["depth"] - 1)
+    INTERFACE["addr_width"] = CONFIG["addr_width"]
+    #print(CONFIG["depth"], CONFIG["addr_width"])
 
 def gen_value_array():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
@@ -136,6 +145,11 @@ def gen_reads():
 
         # Generate output buffers
         ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+        ARCH_HEAD += "signal read_%i_addr_int  : integer;\n"%(read)
+
+
+        ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n"%(read, read)
+        ARCH_BODY += "read_%i_buffer_in <= data(read_%i_addr_int) when 0 <= read_%i_addr_int and read_%i_addr_int < data'Length else (others => 'U');\n"%(read, read, read, read)
 
         ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
@@ -144,5 +158,3 @@ def gen_reads():
         ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
         ARCH_BODY += "data_out => read_%i_data\n"%(read, )
         ARCH_BODY += "\<);\n\<"
-
-        ARCH_BODY += "read_%i_buffer_in <= data(to_integer(unsigned(read_%i_addr)));\n"%(read, read)

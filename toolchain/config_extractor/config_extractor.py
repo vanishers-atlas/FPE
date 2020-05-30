@@ -9,14 +9,10 @@ from .. import FPE_assembly as FPEA
 
 # import config extractors
 from . import parameter_detection
-from . import instruction_set_extraction
-from . import IMM_extraction
-from . import BAM_extraction
-from . import ZOL_extraction
-from . import PC_extraction
+from . import feature_extraction
 
 # import toolchain utils for computing addr widths
-from .. import utils
+from .. import utils as tc_utils
 
 def merge_parameters(required, given, config = None):
     # Copy required parameters into config
@@ -41,27 +37,28 @@ def check_for_none(data):
     return False
 
 def compute_widths(config):
-    # Handle addr_widths
-    config["addr_width"] = 0
+    # Handle addr source ie bams
+    for addr in config["address_sources"].values():
+        if "addr_max" in addr:
+            addr["addr_width"]   = tc_utils.unsigned.width(addr["addr_max"])
+        if "offset_max" in addr:
+            addr["offset_width"] = tc_utils.unsigned.width(addr["offset_max"])
+        if "step_max" in addr:
+            addr["step_width"]   = tc_utils.unsigned.width(addr["step_max"])
+
+    # Handle memories
     for mem in config["data_memories"].values():
-        if "depth" in mem.keys():
-            config["addr_width"] = max([config["addr_width"], utils.unsigned.width(mem["depth"] - 1)])
+        if "depth" in mem:
+            mem["addr_width"]= tc_utils.unsigned.width(mem["depth"] - 1)
 
-    # Handle Pc width
-    config["fetch_decode"]["PC_width"] = utils.unsigned.width(config["fetch_decode"]["program_length"] - 1)
-
-    # Update data width with PC wisth if jumping occurs
-    jumps = ("JMP#", "JLT#")
-    if any([op_id.startswith(jumps) for op_id in config["instr_set"].keys()]):
-        config["data_width"] = max([config["data_width"], config["fetch_decode"]["PC_width"] ])
 
 def extract_config(assembly_file, parameter_file, config_file):
-    assembly = FPEA.load_file(assembly_file)
+    program_context = FPEA.load_file(assembly_file)
     walker = ParseTreeWalker()
 
     # Take rollcall of components used in FPE
-    extractor = parameter_detection.extractor()
-    walker.walk(extractor, assembly)
+    extractor = parameter_detection.extractor(program_context)
+    walker.walk(extractor, program_context["program_tree"])
     required_parameters = extractor.return_findings()
 
     # Handle parameter file
@@ -83,20 +80,14 @@ def extract_config(assembly_file, parameter_file, config_file):
             f.write(json.dumps(required_parameters, sort_keys=True, indent=4))
         raise ValueError("No parameter file given, a blank one was created, please replace the nulls")
 
-    # Geneterate the rest of the config file
-    for feature in [
-        instruction_set_extraction,
-        IMM_extraction,
-        BAM_extraction,
-        ZOL_extraction,
-        PC_extraction,
-    ]:
-        extractor = feature.extractor(config)
-        walker.walk(extractor, assembly)
-        config = extractor.get_updated_config()
-
     # Computer widths from config
     compute_widths(config)
+
+    # Geneterate the rest of the config file
+    for feature in feature_extraction.features:
+        extractor = feature .extractor(program_context, config)
+        walker.walk(extractor, program_context["program_tree"])
+        config = extractor.get_updated_config()
 
     with open(config_file, "w") as f:
         f.write(json.dumps(config, sort_keys=True, indent=4))

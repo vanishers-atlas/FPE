@@ -28,6 +28,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 
         # Include extremely commom libs
         IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
+        IMPORTS += [ {"library" : "ieee", "package" : "Numeric_Std", "parts" : "all"} ]
 
         # Generation Module Code
         INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
@@ -128,6 +129,9 @@ def gen_read_ports():
             }
         ]
 
+        ARCH_HEAD += "signal read_%i_addr_int : integer;\n"%(read)
+        ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n\n"%(read, read)
+
         # Generate output buffers
         ARCH_HEAD += "signal read_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
 
@@ -148,7 +152,13 @@ def gen_assignment_logic():
         for read in range(CONFIG["reads"]):
             ARCH_BODY += "read_%i_data_buffer_in <= FIFO_0_data_latched;\n"%(read, )
     else:
-        raise NotImplementedError()
+        for read in range(CONFIG["reads"]):
+            ARCH_BODY += "read_%i_data_buffer_in <= \>"%(read, )
+            for addr in range(CONFIG["depth"]):
+                ARCH_BODY += "FIFO_%i_data_latched when read_%i_addr_int = %i\nelse "%(
+                    addr, read, addr
+                )
+            ARCH_BODY += "(others => 'U');\<\n"
 
 def gen_advance_logic():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION

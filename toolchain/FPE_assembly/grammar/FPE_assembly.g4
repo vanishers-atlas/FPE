@@ -2,138 +2,140 @@ grammar FPE_assembly;
 
 /* Parser Rules */
 
+	/* expr are a way to encode constants within a program,
+		their as be as simple as a numbert literal,
+		or a complex expression built from a range of operands and
+		prevousally computed const.
+		Const exprs are evaluated by the assembler, this means thay
+		can able be used to preform assembly time calculations not runtime ones
+	*/
+	expr 	: ORB expr CRB	/* bracket precedence */
+				| expr multiplicative=('*'|'/'|'%') expr 	/* multiplicative precedence */
+				| expr additive=('+'|'-') 					expr	/* additive precedence */
+				| expr_operand
+				;
+		expr_operand 	:	DEC_NUM					/* decimal 			mumber literals */
+									| BIN_NUM					/* binary  			number literals */
+									|	OCT_NUM					/* octal       	number literals */
+									| HEX_NUM					/* hexadecimal 	number literals */
+									| IDENTIFER				/* an already defined constant 	*/
+									;
+
+
+	/* jump labels are used to mark location to which the program can jump
+	*/
+	jump_label : IDENTIFER ;
+
+	/* scopes are used to group statements and operations together
+		within FPE assembly that are used to determine the bodies for certain
+		statements (eg to tell ZOL statements what instructions to repeat)
+		They may also be used for a form of commenting (akin to indenting),
+		as the assembler ignores unrequired scopes
+		Nore that tool chain expection the whole program to be unclosed in a scope
+	*/
+	scope : '{' ( statement | operation )* '}' ;
+
+	/* Memory accesses, used for fetching(storing) data from(to) memories
+	*/
+	access_fetch	: access_imm
+								| access_get
+								| access_reg
+								| access_ram
+								| access_rom
+								;
+	access_store 	: access_put
+								| access_reg
+								| access_ram
+								;
+
+	access_imm : expr ;
+	access_get : 'GET' '[' addr ']' ('<' access_get_mod (',' access_get_mod)* '>')? ;
+		access_get_mod : 'ADV' ;
+	access_put : 'PUT' '[' addr ']' ;
+	access_reg : 'REG' '[' addr ']' ;
+	access_ram : 'RAM' '[' addr ']' ;
+	access_rom : 'ROM' '[' addr ']' ;
+
+	addr 	: addr_literal
+	 			| addr_bam
+				;
+
+		addr_literal  : expr ;
+		addr_bam : 	'BAM' '[' expr ']'
+								('<' addr_bam_mod (',' addr_bam_mod)* '>')? ;
+			addr_bam_mod 	: 'FORWARD'  /* seek forward  after read*/
+										| 'BACKWARD' /* seek BACKWARD after read */
+										;
+
 	/* Statements are parts of an FPE program which don't map to program code
 		And thus don't take up processor cycles
-		eg labels to jump to or scopes
+		However may affect the hardware generated (eg ZOLs
 	*/
-	statement : scope | label | zol ;
+	statement : state_zol
+						| state_jump_label
+						| state_constant
+						;
 
-		scope : OCB ( statement | operation )* CCB ;
+		state_zol : 'ZOL' '(' expr ')' scope ;
 
-		label : STRING COLON ;
+		state_jump_label : jump_label ':' ;
 
-		zol : ZOL ORB NUMBER CRB scope ;
+		state_constant : 'DEF' IDENTIFER expr ';' ;
+
 
 	/* operations are parts of an FPE program which map to program code
 		And thus take up processor cycles
-		eg ADD or jumps
 	*/
-	operation : (void_operation | pc_operation | bam_operation | alu_operation) SEMICOLON;
+	operation : op_void	';'
+		| op_pc 	';'
+		| op_bam 	';'
+		| op_alu  ';'
+		;
 
-		void_operation : void_0f_0s;
-			void_0f_0s : void_0f_0s_mnemonic ;
-				void_0f_0s_mnemonic	:  NOP ;
+		op_void : op_void_nop ;
+			op_void_nop : 'NOP' ;
 
-		pc_operation : pc_0f_0s;
-			pc_0f_0s	: pc_0f_0s_mnemonic ORB STRING CRB ;
-				pc_0f_0s_mnemonic	: JMP | JLT ;
+		op_pc 	: op_pc_jump ;
+			op_pc_jump	: mnemonic=('JMP'|'JLT')
+										'(' jump_label ')' ;
 
-		bam_operation : bam_0f_0s | bam_1f_0s ;
-			bam_0f_0s	: bam_0f_0s_mnemonic OSB NUMBER CSB ;
-				bam_0f_0s_mnemonic	: BAM_RST ;
-			bam_1f_0s	: bam_1f_0s_mnemonic OSB NUMBER CSB ORB mem_fetch CRB ;
-				bam_1f_0s_mnemonic	: BAM_ADV ;
+		op_bam	:	op_bam_reset | op_bam_seek;
+			op_bam_reset 	: 'RESET' 'BAM' '[' expr ']' ;
+			op_bam_seek		: 'SEEK'  'BAM' '[' expr ']'
+											'(' access_fetch ')'
+											( '<' op_bam_seek_mod ( ',' op_bam_seek_mod )* '>')? ;
+				op_bam_seek_mod	: 'FORWARD'		/* seek forward */
+					| 'BACKWARD'	/* seek back */
+					;
 
-		alu_operation : alu_1f_1s | alu_2f_0s | alu_2f_1s ;
-			alu_1f_1s 	: alu_1f_1s_mnemonic ORB alu_fetch COMMA alu_store CRB ;
-				alu_1f_1s_mnemonic : MOV ;
-			alu_2f_0s	: alu_2f_0s_mnemonic ORB alu_fetch COMMA alu_fetch CRB ;
-				alu_2f_0s_mnemonic : CMP ;
-			alu_2f_1s	: alu_2f_1s_mnemonic ORB alu_fetch COMMA alu_fetch COMMA alu_store CRB ;
-				alu_2f_1s_mnemonic : AND | ADD ;
-
-	alu_fetch : mem_fetch | ACC ;
-	alu_store : mem_store | ACC ;
-
-	mem_fetch	: imm_access | get_access | reg_access | ram_access | rom_access ;
-	mem_store : put_access | reg_access | ram_access ;
-		imm_access : NUMBER ;
-		get_access : (GET | GET_ADV) OSB mem_addr CSB ;
-		put_access : PUT OSB mem_addr CSB ;
-		reg_access : REG OSB mem_addr CSB ;
-		ram_access : RAM OSB mem_addr CSB ;
-		rom_access : ROM OSB mem_addr CSB ;
-
-	mem_addr : encoded_addr | bam_addr ;
-		encoded_addr : NUMBER ;
-		bam_addr : (BAM | BAM_ADV) OSB NUMBER CSB ;
+		op_alu 	: op_alu_1f_1s |  op_alu_2f_0s | op_alu_2f_1s ;
+			op_alu_1f_1s :  mnemonic=('MOV'|'NOT')
+											'(' access_fetch_alu ',' access_store_alu ')' ;
+			op_alu_2f_0s :  mnemonic=('CMP'|'CMP')
+											'(' access_fetch_alu ',' access_fetch_alu ')' ;
+			op_alu_2f_1s :  mnemonic=('ADD'|'AND'|'OR' |'XOR')
+											'(' access_fetch_alu ',' access_fetch_alu ',' access_store_alu ')' ;
+				access_fetch_alu 	: access_fetch
+													| internal=('ACC'|'ACC')
+													;
+				access_store_alu 	: access_store
+													| internal=('ACC'|'ACC')
+													;
 
 /* lexer Rules */
-
-	/* Bracket Tokens */
-		OAB : '<' ;
-		CAB : '>' ;
-		OCB : '{' ;
-		CCB : '}' ;
+	/* Symbol Tokens */
 		ORB : '(' ;
 		CRB : ')' ;
-		OSB : '[' ;
-		CSB : ']' ;
 
-	/* Special character Tokens */
-		SEMICOLON 	: ';' ;
-		COLON 			: ':' ;
-		COMMA 			: ',' ;
-
-	/* Caseless Fragments */
-		fragment UNDERSCORE : '_' ;
-		fragment A : ('a'|'A') ;
-		fragment B : ('b'|'B') ;
-		fragment C : ('c'|'C') ;
-		fragment D : ('d'|'D') ;
-		fragment E : ('e'|'E') ;
-		fragment F : ('f'|'F') ;
-		fragment G : ('g'|'G') ;
-		fragment H : ('h'|'H') ;
-		fragment I : ('i'|'I') ;
-		fragment J : ('j'|'J') ;
-		fragment K : ('k'|'K') ;
-		fragment L : ('l'|'L') ;
-		fragment M : ('m'|'M') ;
-		fragment N : ('n'|'N') ;
-		fragment O : ('o'|'O') ;
-		fragment P : ('p'|'P') ;
-		fragment Q : ('q'|'Q') ;
-		fragment R : ('r'|'R') ;
-		fragment S : ('s'|'S') ;
-		fragment T : ('t'|'T') ;
-		fragment U : ('u'|'U') ;
-		fragment V : ('v'|'V') ;
-		fragment W : ('w'|'W') ;
-		fragment X : ('x'|'X') ;
-		fragment Y : ('y'|'Y') ;
-		fragment Z : ('z'|'Z') ;
 
 	/* Number Handling */
-		fragment BIN : '0' B [0-1]+ ;
-		fragment OCT : '0' O [0-7]+ ;
-		fragment HEX : '0' X [0-9A-Fa-f]+ ;
-		fragment DEC : [+-]? [0-9]+ ;
+		DEC_NUM : [0-9]+ ;
+		BIN_NUM : '0' [bB]	[0-1]+ ;
+		OCT_NUM : '0' [oO] 	[0-7]+ ;
+		HEX_NUM : '0' [xX]	[0-9A-Fa-f]+ ;
 
-		NUMBER : (BIN | OCT | HEX | DEC) ;
-
-	/* Keyword tokens */
-		ACC				: A C C ;
-		ADD				: A D D ;
-		AND 			: A N D ;
-		BAM 			: B A M ;
-		BAM_ADV		: B A M UNDERSCORE A D V ;
-		BAM_RST		:	B A M UNDERSCORE R S T ;
-		CMP				: C M P ;
-		GET 			: G E T ;
-		GET_ADV		: G E T UNDERSCORE A D V ;
-		JMP 			: J M P ;
-		JLT	 			: J L T ;
-		MOV 			: M O V ;
-		NOP 			: N O P ;
-		PUT 			: P U T ;
-		RAM 			: R A M ;
-		REG 			: R E G ;
-		ROM 			: R O M ;
-		ZOL 			: Z O L ;
-
-	/* General String Handling */
-		STRING : [_a-zA-Z][_a-zA-Z0-9]* ;
+	/* General IDENTIFER Handling */
+		IDENTIFER : [_a-zA-Z][_a-zA-Z0-9]* ;
 
 	/* Whitespace and comment Skipping */
 		MUTL_LINE_COMMENT : '//*' .*? '*//' -> skip ;

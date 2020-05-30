@@ -49,13 +49,14 @@ def generate_loops():
     INTERFACE["ports"] += [
         { "name" : "value_in"   , "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1), "direction" : "in"  },
         { "name" : "value_out"  , "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1), "direction" : "out" },
-        { "name" : "overwrite" , "type" : "std_logic", "direction" : "out" },
+        { "name" : "overwrite"  , "type" : "std_logic", "direction" : "out" },
         { "name" : "PC_running" , "type" : "std_logic", "direction" : "in" },
     ]
 
     value_out = "value_out <= \>"
     overwrite = "overwrite <= \>"
 
+    INTERFACE["delay_encoding"] = []
     for loop_id, loop_count in enumerate(CONFIG["ZOLs"]):
         interface, name = ZOL_tracker.generate_HDL(
             {
@@ -67,15 +68,22 @@ def generate_loops():
             True,
             True
         )
+        INTERFACE["delay_encoding"].append(interface["delay_encoding"])
 
         ARCH_BODY += "tracker_%i : entity work.%s(arch)\n\>"%(loop_id, name)
 
         ARCH_BODY += "generic map (\>\n"
         for generic in interface["generics"]:
-            INTERFACE["generics"] += [ { "name" : "ZOL_%i_%s"%(loop_id, generic["name"]), "type" : generic["type"]} ]
-            ARCH_BODY += "%s => ZOL_%i_%s,\n"%(generic["name"], loop_id, generic["name"])
+            INTERFACE["generics"] += [
+                    {
+                        "name" : "loop_%i_%s"%(loop_id, generic["name"]),
+                        "type" : generic["type"]
+                    }
+                ]
+            ARCH_BODY += "%s => loop_%i_%s,\n"%(generic["name"], loop_id, generic["name"])
         ARCH_BODY.drop_last_X(2)
         ARCH_BODY += "\<\n)\n"
+
 
         ARCH_HEAD += "signal tracker_%i_value_out : std_logic_vector(%i downto 0);\n"%(loop_id, CONFIG["PC_width"] - 1)
         ARCH_HEAD += "signal tracker_%i_overwrite : std_logic;\n"%(loop_id)

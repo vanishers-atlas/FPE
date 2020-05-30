@@ -31,6 +31,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 
         # Generation Module Code
         INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        process_config()
         gen_FIFO_ports ()
         gen_write_ports()
         gen_assignment_logic()
@@ -41,6 +42,14 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
         return INTERFACE, MODULE_NAME
 
 #####################################################################
+
+def process_config():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    CONFIG["addr_width"] = tc_utils.unsigned.width(CONFIG["depth"] - 1)
+    INTERFACE["addr_width"] = CONFIG["addr_width"]
+    #print(CONFIG["depth"], CONFIG["addr_width"])
 
 def gen_FIFO_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION

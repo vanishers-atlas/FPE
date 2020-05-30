@@ -20,7 +20,7 @@ def encodeable(value, bits):
     return bits >= width(value)
 
 def encode(value, bits):
-    if encodeable == False:
+    if encodeable(value, bits) == False:
         raise ValueError("Can't encode value %i with %i bits"%(value, bits))
 
     if value >= 0:

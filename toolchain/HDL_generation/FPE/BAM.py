@@ -2,6 +2,7 @@ from ..  import utils as gen_utils
 from ... import utils as tc_utils
 
 from ..memory import register
+from ..memory import delay
 
 def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
@@ -33,7 +34,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
         INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
 
         # Generation Module Code
-        generate_increment_controls()
+        generate_step_controls()
         generate_outset_adder_acc()
         generate_base_adders()
 
@@ -44,47 +45,105 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 
 #####################################################################
 
-def generate_increment_controls():
+def generate_step_controls():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    ARCH_HEAD += "signal selected_increment : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
-    ARCH_BODY += "selected_increment <= \>"
+    ARCH_HEAD += "signal selected_step : std_logic_vector(%i downto 0);\n"%(CONFIG["step_width"] - 1, )
+    ARCH_BODY += "selected_step <= \>"
 
-    # Declare fetch fixed increment generic
-    INTERFACE["generics"] += [ { "name" : "increment", "type" : "integer" } ]
-    INTERFACE["ports"] += [
-        { "name" : "fetch_fixed_inc", "type" : "std_logic", "direction" : "in" }
-    ]
-    ARCH_BODY +="std_logic_vector(to_unsigned(increment, %i)) when fetch_fixed_inc = '1'\nelse "%(CONFIG["data_width"])
-
-    # Declare port for data increment
-    if  CONFIG["data_inc"] == True:
-        INTERFACE["ports"] += [
-            { "name" : "data_in" , "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ), "direction" : "in" },
-            { "name" : "data_inc", "type" : "std_logic", "direction" : "in" }
+    # Handle fixed/generic step
+    if set(CONFIG["steps"])&set(["generic_forward", "generic_backward"]):
+        INTERFACE["generics"] += [
+            {
+                "name" : "increment",
+                "type" : "integer"
+            }
         ]
-        ARCH_BODY += "data_in when data_inc = '1'\nelse "
+        if "generic_forward" in CONFIG["steps"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "step_generic_forward",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+            ARCH_BODY +="std_logic_vector(to_unsigned(increment, selected_step'length)) when step_generic_forward = '1'\nelse "
+        if "generic_backward" in CONFIG["steps"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "step_generic_backward",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+            ARCH_BODY +="std_logic_vector(to_unsigned(increment, selected_step'length)) when step_generic_backward = '1'\nelse "
+
+    # Handle fetched/data step
+    if set(CONFIG["steps"])&set(["fetched_forward", "fetched_backward"]):
+        INTERFACE["ports"] += [
+            {
+                "name" : "data_in" ,
+                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["step_width"] - 1, ),
+                "direction" : "in"
+            }
+        ]
+        if "fetched_forward" in CONFIG["steps"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "step_fetched_forward",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+            ARCH_BODY += "data_in when step_fetched_forward = '1'\nelse "
+        if "fetched_backward" in CONFIG["steps"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "step_fetched_backward",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+            ARCH_BODY += "data_in when step_fetched_backward = '1'\nelse "
 
     ARCH_BODY += "(others => '0');\<\n"
 
 
-    ARCH_HEAD += "signal advance : std_logic;\n"
-    ARCH_BODY += "advance <= fetch_fixed_inc"
-    if  CONFIG["data_inc"] == True:
-        ARCH_BODY += " or data_inc"
-    ARCH_BODY += ";\n"
+    ARCH_HEAD += "signal step_forward, step_backward : std_logic;\n"
+    ARCH_BODY += "step_forward <= \>"
+    if "generic_forward" in CONFIG["steps"]:
+        ARCH_BODY +="'1' when step_generic_forward = '1'\nelse "
+    if "fetched_forward" in CONFIG["steps"]:
+        ARCH_BODY += "'1' when step_fetched_forward = '1'\nelse "
+    ARCH_BODY += "'0';\n"
+
+
+    ARCH_BODY += "step_backward <= \>"
+    if "generic_backward" in CONFIG["steps"]:
+        ARCH_BODY +="'1' when step_generic_backward = '1'\nelse "
+    if "fetched_backward" in CONFIG["steps"]:
+        ARCH_BODY += "'1' when step_fetched_backward = '1'\nelse "
+    ARCH_BODY += "'0';\n"
 
 def generate_outset_adder_acc():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    INTERFACE["ports"] += [ { "name" : "reset", "type" : "std_logic", "direction" : "in" } ]
+    INTERFACE["ports"] += [
+        {
+            "name" : "reset",
+            "type" : "std_logic",
+            "direction" : "in"
+        }
+    ]
 
-    ARCH_HEAD += "signal curr_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
-    ARCH_HEAD += "signal last_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
+    ARCH_HEAD += "signal curr_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
+    ARCH_HEAD += "signal last_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
 
-    ARCH_BODY += "curr_offset <= std_logic_vector(to_unsigned(to_integer(unsigned(selected_increment)) + to_integer(unsigned(last_offset)), curr_offset'length));\n"
+    ARCH_BODY += "curr_offset <=\>std_logic_vector( to_unsigned( to_integer( unsigned( last_offset ) ) + to_integer( unsigned( selected_step ) ), curr_offset'length) ) when step_forward = '1'\nelse "
+    ARCH_BODY += "std_logic_vector( to_unsigned( to_integer( unsigned( last_offset ) ) - to_integer( unsigned( selected_step ) ), curr_offset'length) ) when step_backward = '1'\nelse "
+    ARCH_BODY += "last_offset;\<\n"
 
     reg_interface, reg_name = register.generate_HDL(
         {
@@ -101,10 +160,10 @@ def generate_outset_adder_acc():
     ARCH_BODY += "offset_acc : entity work.%s(arch)\>\n"%(reg_name)
     ARCH_BODY += "generic map (\>\n"
     ARCH_BODY += "asyn_0_value => 0,\n"
-    ARCH_BODY += "data_width => %i\n"%(CONFIG["data_width"])
+    ARCH_BODY += "data_width => %i\n"%(CONFIG["offset_width"])
     ARCH_BODY += "\<)\n"
     ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "enable => advance,\n"
+    ARCH_BODY += "enable => step_forward or step_backward,\n"
     ARCH_BODY += "trigger => clock,\n"
     ARCH_BODY += "data_in => curr_offset,\n"
     ARCH_BODY += "data_out => last_offset,\n"
@@ -115,31 +174,66 @@ def generate_base_adders():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    INTERFACE["generics"] += [ { "name" : "base", "type" : "integer" } ]
-    INTERFACE["ports"] += [ { "name" : "address", "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ), "direction" : "out" } ]
-
-    reg_interface, reg_name = register.generate_HDL(
+    INTERFACE["generics"] += [
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
-            "has_enable"    : False
+            "name" : "base",
+            "type" : "integer"
+        }
+    ]
+    INTERFACE["ports"] += [
+        {
+            "name" : "addr_fetch",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
+            "direction" : "out"
         },
+        {
+            "name" : "addr_store",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
+            "direction" : "out"
+        },
+    ]
+
+    delay_interface, delay_name = delay.generate_HDL(
+        {},
         OUTPUT_PATH,
-        "register",
+        "delay",
         True,
         False
     )
 
-    ARCH_HEAD += "signal pre_address : std_logic_vector(%i downto 0);"%(CONFIG["addr_width"] - 1, )
+    ARCH_HEAD += "signal pre_addr_fetch, pre_addr_store : std_logic_vector(%i downto 0);"%(CONFIG["addr_width"] - 1, )
 
-    ARCH_BODY += "address_buffer: entity work.%s(arch)\>\n"%(reg_name)
-    ARCH_BODY += "generic map (\>\n"
-    ARCH_BODY += "data_width => %i\n"%(CONFIG["addr_width"])
+    ARCH_BODY += "pre_addr_fetch <= std_logic_vector(to_unsigned(base + to_integer(unsigned(curr_offset)), pre_addr_fetch'length));\n\n"
+
+    # Generate fetch buffer
+    ARCH_BODY += "pre_addr_fetch_dalay : entity work.%s(arch)\>\n"%(delay_name)
+
+    ARCH_BODY += "generic map (\>"
+    ARCH_BODY += "delay_width => %i,"%(CONFIG["addr_width"])
+    # delay of 1, translates to delay until next raising edge
+    ARCH_BODY += "delay_depth => 1"
     ARCH_BODY += "\<)\n"
-    ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "trigger => clock,\n"
-    ARCH_BODY += "data_in => pre_address,\n"
-    ARCH_BODY += "data_out => address\n"
-    ARCH_BODY += "\<);\n\<"
 
-    ARCH_BODY += "pre_address <= std_logic_vector(to_unsigned(base + to_integer(unsigned(curr_offset)), pre_address'length));\n"
+    ARCH_BODY += "port map (\n\>"
+    ARCH_BODY += "clock => clock,\n"
+    ARCH_BODY += "data_in  => pre_addr_fetch,\n"
+    ARCH_BODY += "data_out => pre_addr_store\n"
+    ARCH_BODY += "\<);\n\<\n"
+
+    ARCH_BODY += "addr_fetch <= pre_addr_store;\n\n"
+
+    ARCH_BODY += "pre_addr_store_delay : entity work.%s(arch)\>\n"%(delay_name)
+
+    ARCH_BODY += "generic map (\>"
+    ARCH_BODY += "delay_width => %i,"%(CONFIG["addr_width"])
+    # delay of 1 + exe_stages,
+    #   1 to get past the fetch/read stage(s)
+    #   exe_stages to get past the exe stage(s) of the pipeline
+    ARCH_BODY += "delay_depth => %i" %(1 + CONFIG["exe_stages"])
+    ARCH_BODY += "\<)\n"
+
+    ARCH_BODY += "port map (\n\>"
+    ARCH_BODY += "clock => clock,\n"
+    ARCH_BODY += "data_in  => pre_addr_store,\n"
+    ARCH_BODY += "data_out => addr_store\n"
+    ARCH_BODY += "\<);\n\<\n"

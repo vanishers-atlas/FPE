@@ -40,7 +40,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 #####################################################################
 
 operation_sel_map = {
-    "ADD#fetch|acc#acc" : {
+    "ADD#fetch~acc#acc" : {
         "fetch_mapping" : ["C"],
         "controls" : "".join([
             "000",  # Z => 0
@@ -51,7 +51,7 @@ operation_sel_map = {
         ]),
     },
 
-    "ADD#fetch|fetch#acc" : {
+    "ADD#fetch~fetch#acc" : {
         "fetch_mapping" : ["C", "A:B"],
         "controls" : "".join([
             "000",  # Z => 0
@@ -62,18 +62,40 @@ operation_sel_map = {
         ]),
     },
 
-    "AND#fetch|fetch#store" : {
+    "AND#fetch~fetch#store" : {
         "fetch_mapping" : ["C", "A:B"],
         "controls" : "".join([
             "011",  # Z => C
             "00",   # Y => 0
             "11",   # X => A:B
 
-            "1100", # P => X and Z
+            "1100", # P => X and/or Z
         ]),
     },
 
-    "CMP#acc|fetch#" : {
+    "OR#fetch~fetch#store" : {
+        "fetch_mapping" : ["C", "A:B"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "10",   # Y => -1
+            "11",   # X => A:B
+
+            "1100", # P => X and/or Z
+        ]),
+    },
+
+    "XOR#fetch~fetch#store" : {
+        "fetch_mapping" : ["C", "A:B"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "00",   # Y => 0
+            "11",   # X => A:B
+
+            "0111", # P => X XOR Z
+        ]),
+    },
+
+    "CMP#acc~fetch#" : {
         "fetch_mapping" : ["C"],
         "controls" : "".join([
             "010",  # Z => P
@@ -107,13 +129,35 @@ operation_sel_map = {
     },
 
     "MOV#acc#store" : {
-        "fetch_mapping" : ["C"],
+        "fetch_mapping" : [],
         "controls" : "".join([
             "010",  # Z => P
             "00",   # Y => 0
             "00",   # X => 0
 
             "0000", # P => Z + Y + X + CarryIn
+        ]),
+    },
+
+    "NOT#fetch#store" : {
+        "fetch_mapping" : ["C"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "10",   # Y => all 1s
+            "00",   # X => 0
+
+            "0000", # P => x NOR Z
+        ]),
+    },
+
+    "NOT#acc#store" : {
+        "fetch_mapping" : [],
+        "controls" : "".join([
+            "010",  # Z => P
+            "10",   # Y => all 1s
+            "00",   # X => 0
+
+            "0000", # P => x NOR Z
         ]),
     },
 }
@@ -133,7 +177,7 @@ def process_operations():
             raise valueError("Operation, %s, requires outputs >= %i"%(op, num_stores))
 
     # Generate input => ALU mapping
-    fetch_mapping = [set() for _ in range(CONFIG["inputs"])]
+    fetch_mapping = [ set() for _ in range(CONFIG["inputs"]) ]
     for op in CONFIG["operations"]:
         for fetch, port in enumerate(operation_sel_map[op]["fetch_mapping"]):
             fetch_mapping[fetch].add(port)
