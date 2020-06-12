@@ -2,6 +2,8 @@
 
 This repo for the development and testing of the FPE (FPGE processing element) and related tools.
 
+After cloning/ forking the repo rename the root directory from *spfe* to *FPE*.
+
 ## Tools
 
 Like tools how been written in python 3, any none standard library required to run them are listed below:
