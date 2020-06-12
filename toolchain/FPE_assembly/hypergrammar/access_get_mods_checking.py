@@ -1,6 +1,6 @@
 from antlr4 import *
 
-from ..utils.error_reporting import ctx_start
+from ..interface.error_reporting import ctx_start
 from ..grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 class extractor(ParseTreeListener):

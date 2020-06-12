@@ -1,7 +1,7 @@
 # Generated from FPE_assembly.g4 by ANTLR 4.7.2
 from antlr4 import *
 
-from ..utils.error_reporting import ctx_start
+from ..interface.error_reporting import ctx_start
 from ..grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 class extractor(ParseTreeListener):

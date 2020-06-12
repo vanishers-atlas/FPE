@@ -86,7 +86,7 @@ BAM addresses are the sum of 2 parts:
 * The base, a generic within the BAM hardware which set the lowest value a BAM's address can take
 * The offset, the value of a counter within the BAM hardware that can be updated during a BAM access.
 
-#### Sytnax
+#### Syntax
 **BAM** **[** _select_ **]** **<** _mods_ **>**
 
 _select_ is a numeric value used to differentiate between multiple BAMs
@@ -117,7 +117,7 @@ Some memory accesses support modifiers (mods), if more that one modifier is bein
 
 The immediate memory (IMM) is how an FPE stores immediate values used with the program. It is handled purely by the toolchain, and can only be used as a fetch access.
 
-#### Sytnax
+#### Syntax
 _numeric_value_
 
 #### Parameters
@@ -131,7 +131,7 @@ No generics required
 
 The comm get (GET) is how an FPE reads data from outside itself. It can only be used as a fetch access.
 
-#### Sytnax
+#### Syntax
 **GET** **[** _address_ **]** **<** _mods_ **>**
 
 #### Mods
@@ -149,7 +149,7 @@ No generics requires
 
 Comm put (PUT) is how an FPE writes data outside of itself. It can only be used as a store access.
 
-#### Sytnax
+#### Syntax
 **PUT** **[** _address_ **]**
 
 #### Parameters
@@ -164,7 +164,7 @@ No generics required
 
 The Register File (REG) is a group of registers within the FPE. It can be used as both fetch and store accesses.
 
-#### Sytnax
+#### Syntax
 **REG** **[** _address_ **]**
 
 #### Parameters
@@ -179,7 +179,7 @@ No generics required
 
 Can be used as both fetch and store accesses.
 
-#### Sytnax
+#### Syntax
 **RAM** **[** _address_ **]**
 
 #### Parameters
@@ -194,7 +194,7 @@ No generics required
 
 Can be only used as a fetch access.
 
-#### Sytnax
+#### Syntax
 **ROM** **[** _address_ **]**
 
 #### Parameters
