@@ -1,0 +1,4 @@
+{
+  MUL(GET[0], GET[1], ACC);
+  MOV(ACC, PUT[0]);
+}

@@ -85,7 +85,7 @@ def extract_config(assembly_file, parameter_file, config_file):
 
     # Geneterate the rest of the config file
     for feature in feature_extraction.features:
-        extractor = feature .extractor(program_context, config)
+        extractor = feature.extractor(program_context, config)
         walker.walk(extractor, program_context["program_tree"])
         config = extractor.get_updated_config()
 
