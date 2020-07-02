@@ -1,0 +1,25 @@
+{
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "program_fetch": {},
+
+    "instruction_decoder": {},
+
+    "address_sources": {},
+
+    "data_memories": {
+        "IMM": {},
+        "PUT": {
+            "data_width": 4,
+            "depth": 1
+        }
+    },
+
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    }
+}

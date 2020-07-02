@@ -128,7 +128,7 @@ def generate_delay():
         ARCH_HEAD += "signal delay_reg_%i_out : std_logic;\n"%(reg)
 
         ARCH_BODY += "reg_%i : SRLC32E\n\>"%(reg)
-        ARCH_BODY += "generic map (INIT => X\"80000000\")\n"
+        ARCH_BODY += "generic map (INIT => X\"00000000\")\n"
         ARCH_BODY += "port map (\>\n"
         ARCH_BODY += "A => delay_tally(%i downto %i),\n"%(5*reg + 4, 5*reg)
 

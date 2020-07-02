@@ -1,0 +1,14 @@
+{
+  ZOL (8)
+  {
+    MOV ( 0, PUT[0]);
+    MOV ( 1, PUT[0]);
+    MOV ( 2, PUT[0]);
+    MOV ( 3, PUT[0]);
+    MOV ( 4, PUT[0]);
+    MOV ( 5, PUT[0]);
+    MOV ( 6, PUT[0]);
+    MOV ( 7, PUT[0]);
+  }
+  MOV (15, PUT[0]);
+}

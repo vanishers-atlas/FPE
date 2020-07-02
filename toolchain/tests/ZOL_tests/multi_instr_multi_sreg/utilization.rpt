@@ -1,7 +1,7 @@
 Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 ------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2019.1 (win64) Build 2552052 Fri May 24 14:49:42 MDT 2019
-| Date         : Wed May 13 15:15:16 2020
+| Date         : Thu Jul  2 17:00:25 2020
 | Host         : NatishiaDesktop running 64-bit Service Pack 1  (build 7601)
 | Command      : report_utilization -file ./utilization.rpt
 | Design       : sFPE_inst
@@ -30,13 +30,13 @@ Table of Contents
 +----------------------------+------+-------+-----------+-------+
 |          Site Type         | Used | Fixed | Available | Util% |
 +----------------------------+------+-------+-----------+-------+
-| Slice LUTs*                |   34 |     0 |    101400 |  0.03 |
-|   LUT as Logic             |   27 |     0 |    101400 |  0.03 |
-|   LUT as Memory            |    7 |     0 |     35000 |  0.02 |
+| Slice LUTs*                |   19 |     0 |    101400 |  0.02 |
+|   LUT as Logic             |   17 |     0 |    101400 |  0.02 |
+|   LUT as Memory            |    2 |     0 |     35000 | <0.01 |
 |     LUT as Distributed RAM |    0 |     0 |           |       |
-|     LUT as Shift Register  |    7 |     0 |           |       |
-| Slice Registers            |   31 |     0 |    202800 |  0.02 |
-|   Register as Flip Flop    |   31 |     0 |    202800 |  0.02 |
+|     LUT as Shift Register  |    2 |     0 |           |       |
+| Slice Registers            |   27 |     0 |    202800 |  0.01 |
+|   Register as Flip Flop    |   27 |     0 |    202800 |  0.01 |
 |   Register as Latch        |    0 |     0 |    202800 |  0.00 |
 | F7 Muxes                   |    0 |     0 |     50700 |  0.00 |
 | F8 Muxes                   |    0 |     0 |     25350 |  0.00 |
@@ -59,7 +59,7 @@ Table of Contents
 | 0     |          Yes |           - |          Set |
 | 0     |          Yes |           - |        Reset |
 | 0     |          Yes |         Set |            - |
-| 31    |          Yes |       Reset |            - |
+| 27    |          Yes |       Reset |            - |
 +-------+--------------+-------------+--------------+
 
 
@@ -154,16 +154,16 @@ Table of Contents
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| FDRE     |   31 |        Flop & Latch |
-| LUT6     |   13 |                 LUT |
-| LUT4     |   10 |                 LUT |
+| FDRE     |   27 |        Flop & Latch |
+| LUT2     |    7 |                 LUT |
 | OBUF     |    6 |                  IO |
-| LUT5     |    6 |                 LUT |
-| SRL16E   |    4 |  Distributed Memory |
-| LUT3     |    4 |                 LUT |
-| SRLC32E  |    3 |  Distributed Memory |
-| LUT2     |    3 |                 LUT |
+| LUT6     |    5 |                 LUT |
+| LUT4     |    4 |                 LUT |
+| LUT5     |    3 |                 LUT |
+| LUT3     |    3 |                 LUT |
+| SRLC32E  |    2 |  Distributed Memory |
 | IBUF     |    2 |                  IO |
+| LUT1     |    1 |                 LUT |
 | DSP48E1  |    1 |    Block Arithmetic |
 | BUFG     |    1 |               Clock |
 +----------+------+---------------------+
