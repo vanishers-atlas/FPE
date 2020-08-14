@@ -1,16 +1,24 @@
-from ..  import utils as gen_utils
-from ... import utils as tc_utils
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 4
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
 
-from ..memory import register
+from FPE.toolchain import utils as tc_utils
 
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+
+from FPE.toolchain.HDL_generation.memory import register
+
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -51,7 +59,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 #####################################################################
 
 def generate_state_management():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -76,7 +84,7 @@ def generate_state_management():
     ARCH_BODY += "else last_state;\n"
 
 def generate_generate_running():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -93,7 +101,7 @@ def generate_generate_running():
     ARCH_BODY += "else 'U';\<\n"
 
 def generate_value_register():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -144,7 +152,7 @@ def generate_value_register():
     ARCH_BODY += "value <= internal_value;\n"
 
 def generate_end_value_checking():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- End Value Checking\n"
@@ -156,7 +164,7 @@ def generate_end_value_checking():
     ARCH_BODY += "end_reached <= '1' when to_integer(unsigned(next_value)) = end_value else '0';\n"
 
 def generate_jumping():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Exit if no jumping
@@ -220,7 +228,7 @@ def generate_jumping():
     ARCH_BODY += jump_occured
 
 def generate_next_value():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "next_value <=\> "

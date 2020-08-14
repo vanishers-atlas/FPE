@@ -1,8 +1,11 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from .. import FPE_assembly as FPEA
-from ..FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
+
+# import FPE assembly parser
+from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 ####################################################################
 

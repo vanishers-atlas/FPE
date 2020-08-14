@@ -10,30 +10,30 @@ architecture arch of testbench is
 	signal	kickoff : std_logic := '0';
 	signal	running : std_logic;
 
-	signal	GET_FIFO_0_data : std_logic_vector(5 downto 0);
+	signal	GET_FIFO_0_data : std_logic_vector(3 downto 0);
 	signal	GET_FIFO_0_red  : std_logic;
 	signal  GET_FIFO_0_index : integer := 0;
-	type  GET_FIFO_0_data_array is array (0 to 5) of std_logic_vector(5 downto 0);
+	type  GET_FIFO_0_data_array is array (0 to 5) of std_logic_vector(3 downto 0);
 	constant GET_FIFO_0_test_data : GET_FIFO_0_data_array :=
 	(
-		"000000", "000001",
-		"000001", "000001",
-		"000001", "000000"
+		"0000", "0001",
+		"0001", "0001",
+		"0001", "0000"
 	);
 
-	signal	PUT_FIFO_0_data  : std_logic_vector(5 downto 0);
+	signal	PUT_FIFO_0_data  : std_logic_vector(3 downto 0);
 	signal	PUT_FIFO_0_write : std_logic;
 	signal  PUT_FIFO_0_index : integer := 0;
-	type  PUT_FIFO_0_data_array is array (0 to 2) of std_logic_vector(5 downto 0);
+	type  PUT_FIFO_0_data_array is array (0 to 2) of std_logic_vector(3 downto 0);
 	constant PUT_FIFO_0_test_data : PUT_FIFO_0_data_array :=
 	(
-		"000001",
-		"000000",
-		"000000"
+		"0001",
+		"0000",
+		"0000"
 	);
 
 begin
-  UUT : entity work.sFPE_inst(arch)
+  UUT : entity work.test_FPE_inst(arch)
 		port map (
 			GET_FIFO_0_data => GET_FIFO_0_data,
 			GET_FIFO_0_red  => GET_FIFO_0_red,

@@ -1,18 +1,24 @@
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 3
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
+
 # Import ParseTreeWalker from antlr so extactors can walk loading tree
 from antlr4 import ParseTreeWalker
 
 # Import json for reading/writing json files
 import json
 
-# import FPE assembly handling module
-from .. import FPE_assembly as FPEA
-
 # import config extractors
-from . import parameter_detection
-from . import feature_extraction
+from FPE.toolchain.config_extractor import parameter_detection
+from FPE.toolchain.config_extractor import feature_extraction
 
-# import toolchain utils for computing addr widths
-from .. import utils as tc_utils
+# Import utils libraries
+from FPE.toolchain import utils  as tc_utils
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.HDL_generation import utils  as gen_utils
 
 def merge_parameters(required, given, config = None):
     # Copy required parameters into config
@@ -53,7 +59,7 @@ def compute_widths(config):
 
 
 def extract_config(assembly_file, parameter_file, config_file):
-    program_context = FPEA.load_file(assembly_file)
+    program_context = asm_utils.load_file(assembly_file)
     walker = ParseTreeWalker()
 
     # Take rollcall of components used in FPE
@@ -83,7 +89,7 @@ def extract_config(assembly_file, parameter_file, config_file):
     # Computer widths from config
     compute_widths(config)
 
-    # Geneterate the rest of the config file
+    # Generate the rest of the config file
     for feature in feature_extraction.features:
         extractor = feature.extractor(program_context, config)
         walker.walk(extractor, program_context["program_tree"])

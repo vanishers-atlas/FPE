@@ -1,6 +1,6 @@
-from ..grammar.FPE_assemblyParser import FPE_assemblyParser
+from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser
 
-from . import token_handling
+from FPE.toolchain.FPE_assembly.interface import token_handling
 
 def evaluate_expr(ctx, program_context):
     if type(ctx) != FPE_assemblyParser.ExprContext:

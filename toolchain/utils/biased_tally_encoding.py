@@ -1,6 +1,14 @@
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 3
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
+
 import math
 import builtins
-from . import unsigned_encoding
+
+from FPE.toolchain.utils import unsigned_encoding
 
 def width(value, bias, range):
     if value < 0:

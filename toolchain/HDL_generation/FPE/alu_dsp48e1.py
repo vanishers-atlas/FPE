@@ -1,14 +1,22 @@
-from ..  import utils as gen_utils
-from ... import utils as tc_utils
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 4
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
 
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+from FPE.toolchain import utils as tc_utils
+
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -62,6 +70,94 @@ operation_sel_map = {
         ]),
     },
 
+    "ADD#fetch~fetch#store" : {
+        "fetch_mapping" : ["C", "A:B"],
+        "controls" : "".join([
+            "000",  # Z => 0
+            "11",   # Y => C
+            "11",   # X => A:B
+
+            "0000", # P => Z + Y + X + CarryIn
+        ]),
+    },
+
+    "ADD#fetch~acc#store" : {
+        "fetch_mapping" : ["C"],
+        "controls" : "".join([
+            "000",  # Z => 0
+            "11",   # Y => C
+            "10",   # X => P
+
+            "0000", # P => Z + Y + X + CarryIn
+        ]),
+    },
+
+    "SUB#fetch~fetch#store" : {
+        "fetch_mapping" : ["C", "A:B"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "00",   # Y => 0
+            "11",   # X => A:B
+
+            "0011", # P => Z - (Y + X + CarryIn)
+        ]),
+    },
+
+    "SUB#fetch~acc#acc" : {
+        "fetch_mapping" : ["C"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "00",   # Y => 0
+            "10",   # X => P
+
+            "0011", # P => Z - (Y + X + CarryIn)
+        ]),
+    },
+
+    "SUB#fetch~fetch#acc" : {
+        "fetch_mapping" : ["C", "A:B"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "00",   # Y => 0
+            "11",   # X => A:B
+
+            "0011", # P => Z - (Y + X + CarryIn)
+        ]),
+    },
+
+    "SUB#fetch~acc#store" : {
+        "fetch_mapping" : ["C"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "00",   # Y => 0
+            "10",   # X => P
+
+            "0011", # P => Z - (Y + X + CarryIn)
+        ]),
+    },
+
+    "MUL#fetch~fetch#acc" : {
+        "fetch_mapping" : ["A", "B"],
+        "controls" : "".join([
+            "000",  # Z => 0
+            "01",   # Y => M
+            "01",   # X => M
+
+            "0000", # P => Z + Y + X + CarryIn
+        ]),
+    },
+
+    "MUL#fetch~fetch#store" : {
+        "fetch_mapping" : ["A", "B"],
+        "controls" : "".join([
+            "000",  # Z => 0
+            "01",   # Y => M
+            "01",   # X => M
+
+            "0000", # P => Z + Y + X + CarryIn
+        ]),
+    },
+
     "AND#fetch~fetch#store" : {
         "fetch_mapping" : ["C", "A:B"],
         "controls" : "".join([
@@ -101,6 +197,17 @@ operation_sel_map = {
             "010",  # Z => P
             "11",   # Y => C
             "00",   # X => 0
+
+            "0011", # P => Z - (Y + X + CarryIn)
+        ]),
+    },
+
+    "CMP#fetch~fetch#" : {
+        "fetch_mapping" : ["C", "A:B"],
+        "controls" : "".join([
+            "011",  # Z => C
+            "00",   # Y => 0
+            "11",   # X => A:B
 
             "0011", # P => Z - (Y + X + CarryIn)
         ]),
@@ -163,27 +270,18 @@ operation_sel_map = {
 }
 
 def process_operations():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Collect required data ports for ops
     for op in CONFIG["operations"]:
         num_fetchs = gen_utils.decode_num_fetchs(op)
         if num_fetchs > CONFIG["inputs"]:
-            raise valueError("Operation, %s, requires inputs >= %i"%(op, num_fetchs))
+            raise ValueError("Operation, %s, requires inputs >= %i"%(op, num_fetchs))
 
         num_stores = gen_utils.decode_num_stores(op)
         if num_stores > CONFIG["outputs"]:
-            raise valueError("Operation, %s, requires outputs >= %i"%(op, num_stores))
-
-    # Generate input => ALU mapping
-    fetch_mapping = [ set() for _ in range(CONFIG["inputs"]) ]
-    for op in CONFIG["operations"]:
-        for fetch, port in enumerate(operation_sel_map[op]["fetch_mapping"]):
-            fetch_mapping[fetch].add(port)
-    for fetch in fetch_mapping:
-        if len(fetch) != 1:
-            raise NotImplementedErrer()
+            raise ValueError("Operation, %s, requires outputs >= %i"%(op, num_stores))
 
     # Generate required control signals for each op
     INTERFACE["operation_sel"] = {}
@@ -194,7 +292,7 @@ def process_operations():
     INTERFACE["cycles required"] = 1
 
 def generate_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Generate common control
@@ -224,7 +322,7 @@ def generate_ports():
         INTERFACE["ports"] += [ { "name" : "status_" + port, "type" : "std_logic", "direction" : "out" } ]
 
 def instanate_Slice():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     IMPORTS += [ {"library" : "UNISIM", "package" : "vcomponents", "parts" : "all"} ]
@@ -233,8 +331,8 @@ def instanate_Slice():
 
     ARCH_BODY += "generic map (\>\n"
 
-    # Disable casxading
-    ARCH_BODY += "-- Disable casxading \n"
+    # Disable cascading
+    ARCH_BODY += "-- Disable cascading \n"
     ARCH_BODY += "A_INPUT => \"DIRECT\",\n"
     ARCH_BODY += "B_INPUT => \"DIRECT\",\n"
 
@@ -242,9 +340,21 @@ def instanate_Slice():
     ARCH_BODY += "-- Disable pre_adder \n"
     ARCH_BODY += "USE_DPORT => FALSE,\n"
 
-    # Disable multiplier
-    ARCH_BODY += "-- Disable multiplier \n"
-    ARCH_BODY += "USE_MULT => \"NONE\",\n"
+    # Enable/ disable multiplier as needed
+    ARCH_BODY += "-- Multiplier setting \n"
+    use_mult = "\"NONE\""
+    has_mul = False
+    has_AB = False
+    for op in CONFIG["operations"]:
+        if op.split("#")[0] == "MUL":
+            use_mult = "\"MULTIPLY\""
+            has_mul = True
+        if "A:B" in operation_sel_map[op]["fetch_mapping"]:
+            has_AB = True
+        if has_mul and has_AB:
+            use_mult = "\"DYNAMIC\""
+            break
+    ARCH_BODY += "USE_MULT => %s,\n"%(use_mult)
 
     # Disable pattern Detector
     ARCH_BODY += "-- Disable Pattern Detector \n"
@@ -326,11 +436,12 @@ def instanate_Slice():
     ARCH_HEAD += "signal slice_A   : std_logic_vector (29 downto 0);\n"
     ARCH_HEAD += "signal slice_B   : std_logic_vector (17 downto 0);\n"
     ARCH_HEAD += "signal slice_C   : std_logic_vector (47 downto 0);\n"
+    ARCH_HEAD += "signal slice_D   : std_logic_vector (24 downto 0);\n"
 
     ARCH_BODY += "A => slice_A,\n"
     ARCH_BODY += "B => slice_B,\n"
     ARCH_BODY += "C => slice_C,\n"
-    ARCH_BODY += "D => (others => '1'),\n"
+    ARCH_BODY += "D => slice_D,\n"
     ARCH_BODY += "CARRYIN => '1',\n"
 
     ARCH_BODY += "-- Reset/Clock Enable: 1-bit (each) input: Reset/Clock Enable Inputs\n"
@@ -367,21 +478,97 @@ def instanate_Slice():
     ARCH_BODY += "slice_operandSel <= operation_sel(10 downto 4);\n"
     ARCH_BODY += "slice_ALUmode    <= operation_sel( 3 downto 0);\n"
 
-    # Control data inputs
-    if CONFIG["inputs"] >= 2:
-        if CONFIG["data_width"] < 18:
-            ARCH_BODY += "slice_A <= (others => '0');\n"
+    # Compute how slice input and AlU inputs connect
+    data_mapping = {
+        "A" : set(),
+        "B" : set(),
+        "C" : set(),
+        "D" : set(),
+        "A:B" : set(),
+    }
+    for op in CONFIG["operations"]:
+        for fetch, port in enumerate(operation_sel_map[op]["fetch_mapping"]):
+            data_mapping[port].add(fetch)
 
-            ARCH_BODY += "slice_B(%i downto 0) <= in_1;\n"%(CONFIG["data_width"] - 1, )
-            ARCH_BODY += "slice_B(17 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
+    # Handle slice A
+    # Not used
+    if (    ( CONFIG["data_width"] <= 18 and len(data_mapping["A"]) == 0)
+        or  ( CONFIG["data_width"] >  18 and len(data_mapping["A"]) + len(data_mapping["A:B"]) == 0 )
+    ):
+        ARCH_BODY += "slice_A <= (others => '1');\n"
+    # Single source
+    elif(   ( CONFIG["data_width"] <= 18 and len(data_mapping["A"]) == 1)
+        or  ( CONFIG["data_width"] >  18 and len(data_mapping["A"]) + len(data_mapping["A:B"]) == 1 )
+    ):
+        # Acting as sole A input
+        if len(data_mapping["A"]) == 1:
+            if CONFIG["data_width"] > 30:
+                raise ValueError("slice_A can't handle data_widths larger than 30 bits")
+
+            ARCH_BODY += "slice_A(%i downto 0) <= in_%i;\n"%(CONFIG["data_width"] - 1, list(data_mapping["A"])[0])
+            if CONFIG["data_width"] < 30:
+                ARCH_BODY += "slice_A(29 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
+        # Acting as A:B input
         else:
-            raise valueError("ALU dpesn't support data widths greater than 18 bits")
-    else:
-        ARCH_BODY += "slice_A <= (others => '0');\n"
-        ARCH_BODY += "slice_B(17 downto 0) <= (others => '0');\n"
+            if CONFIG["data_width"] > 48:
+                raise ValueError("A:B can't handle data_widths larger than 48 bits")
 
-    ARCH_BODY += "slice_C(%i downto 0) <= in_0;\n"%(CONFIG["data_width"] - 1, )
-    ARCH_BODY += "slice_C(47 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
+            ARCH_BODY += "slice_A(%i downto 0) <= in_%i(in_%i'left downto 18);\n"%(CONFIG["data_width"] - 18 - 1, list(data_mapping["A"])[0], list(data_mapping["A"])[0])
+            if CONFIG["data_width"] < 48:
+                ARCH_BODY += "slice_A(29 downto %i) <= (others => '0');\n"%(CONFIG["data_width"]  - 18, )
+    # Multiple sources
+    else:
+        raise NotImplementedError()
+
+    # Handle slice B
+    # Not used
+    if ( len(data_mapping["B"] | data_mapping["A:B"]) == 0 ):
+        ARCH_BODY += "slice_B <= (others => '1');\n"
+    # Single source
+    elif( len(data_mapping["B"] | data_mapping["A:B"]) == 1 ):
+        # Acting as sole B width check
+        if len(data_mapping["A"]) == 1 and CONFIG["data_width"] > 18:
+            raise ValueError("slice_B can't handle data_widths larger than 18 bits")
+
+        ARCH_BODY += "slice_B(%i downto 0) <= in_%i;\n"%(CONFIG["data_width"] - 1, list(data_mapping["B"] | data_mapping["A:B"])[0])
+        if CONFIG["data_width"] < 18:
+            ARCH_BODY += "slice_B(17 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
+    # Multiple sources
+    else:
+        raise NotImplementedError()
+
+    # Handle slice C
+    # Not used
+    if len(data_mapping["C"]) == 0:
+        ARCH_BODY += "slice_C <= (others => '1');\n"
+    # Single source
+    elif len(data_mapping["C"]) == 1:
+        if CONFIG["data_width"] > 48:
+            raise ValueError("slice_C can't handle data_widths larger than 48 bits")
+
+        ARCH_BODY += "slice_C(%i downto 0) <= in_%i;\n"%(CONFIG["data_width"] - 1, list(data_mapping["C"])[0])
+        if CONFIG["data_width"] < 48:
+            ARCH_BODY += "slice_C(47 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
+    # Multiple sources
+    else:
+        raise NotImplementedError()
+
+    # Handle slice D
+    # Not used
+    if len(data_mapping["D"]) == 0:
+        ARCH_BODY += "slice_D <= (others => '1');\n"
+    # Single source
+    elif len(data_mapping["D"]) == 1:
+        if CONFIG["data_width"] < 25:
+            raise ValueError("slice_D can't handle data_widths larger than 25 bits")
+
+        ARCH_BODY += "slice_D(%i downto 0) <= in_%i;\n"%(CONFIG["data_width"] - 1, list(data_mapping["D"])[0])
+        if CONFIG["data_width"] < 25:
+            ARCH_BODY += "slice_D(25 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
+    # Multiple sources
+    else:
+        raise NotImplementedError()
+
 
     # Connect data outputs
     ARCH_BODY += "out_0 <= slice_p(out_0'left downto 0);\n"

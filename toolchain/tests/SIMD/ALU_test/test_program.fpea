@@ -5,4 +5,13 @@
   MOV(ACC, PUT[0]);
 
   AND(3, 5, PUT[0]);
+
+  MUL(0, 1, ACC);
+  MOV(ACC, PUT[0]);
+
+  MUL(1, 1, ACC);
+  MOV(ACC, PUT[0]);
+
+  MUL(2, 2, ACC);
+  MOV(ACC, PUT[0]);
 }

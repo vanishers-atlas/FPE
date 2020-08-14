@@ -1,10 +1,9 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from ... import FPE_assembly as FPEA
-
-# import toolchain utils for computing widths
-from ... import utils as tc_utils
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain import utils  as tc_utils
 
 ####################################################################
 

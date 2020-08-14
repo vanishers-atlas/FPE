@@ -1,9 +1,10 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
+
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
 
 import itertools as it
-
-# import FPE assembly handling module
-from .. import FPE_assembly as FPEA
 
 ####################################################################
 
@@ -18,7 +19,7 @@ class handler(ParseTreeListener):
         filler = [
             op_value
             for op_id, op_value in this.config["instr_set"].items()
-            if FPEA.instr_mnemonic(op_id).upper() == "NOP"
+            if asm_utils.instr_mnemonic(op_id).upper() == "NOP"
         ]
         if filler != []:
             filler = filler[0] << sum(this.config["instruction_decoder"]["addr_widths"].values())
@@ -39,7 +40,7 @@ class handler(ParseTreeListener):
         this.addresses = []
 
     def exitOperation(this, ctx):
-        instr = this.config["instr_set"][FPEA.generate_instr(ctx, this.program_context)]
+        instr = this.config["instr_set"][asm_utils.generate_instr(ctx, this.program_context)]
         for addr, (k, width) in zip(
             it.chain(this.addresses, it.repeat(0)),
             sorted(
@@ -59,10 +60,10 @@ class handler(ParseTreeListener):
 
     def enterAccess_imm(this, ctx):
         imm_addr = this.program_context["IMM_addr_map"][
-            FPEA.evaluate_expr(ctx.expr(), this.program_context)
+            asm_utils.evaluate_expr(ctx.expr(), this.program_context)
         ]
         this.addresses.append(imm_addr)
 
 
     def enterAddr_literal(this, ctx):
-        this.addresses.append(FPEA.evaluate_expr(ctx.expr(), this.program_context))
+        this.addresses.append(asm_utils.evaluate_expr(ctx.expr(), this.program_context))

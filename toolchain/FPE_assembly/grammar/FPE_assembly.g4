@@ -3,10 +3,10 @@ grammar FPE_assembly;
 /* Parser Rules */
 
 	/* expr are a way to encode constants within a program,
-		their as be as simple as a numbert literal,
+		their as be as simple as a number literal,
 		or a complex expression built from a range of operands and
 		prevousally computed const.
-		Const exprs are evaluated by the assembler, this means thay
+		Const exprs are evaluated by the assembler, this means they
 		can able be used to preform assembly time calculations not runtime ones
 	*/
 	expr 	: ORB expr CRB	/* bracket precedence */
@@ -113,7 +113,7 @@ grammar FPE_assembly;
 											'(' access_fetch_alu ',' access_store_alu ')' ;
 			op_alu_2f_0s :  mnemonic=('CMP'|'CMP')
 											'(' access_fetch_alu ',' access_fetch_alu ')' ;
-			op_alu_2f_1s :  mnemonic=('ADD'|'AND'|'OR' |'XOR')
+			op_alu_2f_1s :  mnemonic=('ADD'|'SUB'|'AND'|'OR' |'XOR'|'MUL')
 											'(' access_fetch_alu ',' access_fetch_alu ',' access_store_alu ')' ;
 				access_fetch_alu 	: access_fetch
 													| internal=('ACC'|'ACC')

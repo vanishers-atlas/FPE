@@ -1,14 +1,22 @@
-from ..  import utils as gen_utils
-from ... import utils as tc_utils
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = None
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
 
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+from FPE.toolchain import utils as tc_utils
+
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, generate_name, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    generate_name = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -22,10 +30,19 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        INTERFACE = {
+            "ports" : [],
+            "generics" : []
+        }
 
         # Include extremely commom libs
-        IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
+        IMPORTS += [
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all"
+            }
+        ]
 
         # Generation Module Code
         example()
@@ -38,11 +55,22 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 #####################################################################
 
 def example():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, generate_name, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Example generic
-    INTERFACE["generics"] += [ { "name" : "data_width", "type" : "integer", } ]
+    INTERFACE["generics"] += [
+        {
+            "name" : "data_width",
+            "type" : "integer",
+        }
+    ]
 
     # Example port
-    INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+    INTERFACE["ports"] += [
+        {
+            "name" : "clock",
+            "type" : "std_logic",
+            "direction" : "in"
+        }
+    ]

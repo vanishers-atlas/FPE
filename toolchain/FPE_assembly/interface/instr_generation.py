@@ -1,10 +1,10 @@
 import antlr4
 
-from ..grammar.FPE_assemblyParser import FPE_assemblyParser as parser
+from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
-from . import error_reporting
-from . import get_component
-from . import token_handling
+from FPE.toolchain.FPE_assembly.interface import error_reporting
+from FPE.toolchain.FPE_assembly.interface import get_component
+from FPE.toolchain.FPE_assembly.interface import token_handling
 
 def generate_instr(ctx, program_context):
     if type(ctx) == parser.OperationContext:

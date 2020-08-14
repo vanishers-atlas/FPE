@@ -1,5 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.std_logic_unsigned.all;
 
 entity testbench is
 
@@ -18,14 +20,14 @@ architecture arch of testbench is
 	signal	LANE_1_PUT_FIFO_0_write : std_logic;
 	signal  LANE_1_PUT_FIFO_0_index : integer := 0;
 
-	type  PUT_FIFO_0_data_array is array (0 to 2) of std_logic_vector(3 downto 0);
+	type  PUT_FIFO_0_data_array is array (0 to 5) of std_logic_vector(3 downto 0);
 	constant PUT_FIFO_0_test_data : PUT_FIFO_0_data_array :=
 	(
-		"0010", "0011", "0001"
+		"0010", "0011", "0001", "0000", "0001", "0100"
 	);
 
 begin
-  UUT : entity work.sFPE_inst(arch)
+  UUT : entity work.test_FPE_inst(arch)
 		port map (
 			LANE_0_PUT_FIFO_0_data  => LANE_0_PUT_FIFO_0_data,
 			LANE_0_PUT_FIFO_0_write => LANE_0_PUT_FIFO_0_write,
@@ -45,7 +47,7 @@ begin
     end loop;
   end process;
 
-  -- Sigbal kickoff after 250 ns
+  -- Signal kickoff after 250 ns
   kickoff <= '1' after 250 ns, '0' after 350 ns;
 
 	-- Check output
@@ -59,10 +61,12 @@ begin
 
 			-- Check the data is correct
 			assert(LANE_0_PUT_FIFO_0_data  = PUT_FIFO_0_test_data(LANE_0_PUT_FIFO_0_index))
-				report "Incorrect " & integer'Image(LANE_0_PUT_FIFO_0_index) & " th output lane 0"
+				report "Incorrect " & integer'Image(LANE_0_PUT_FIFO_0_index) & "th output lane 0" & lf & ""
+				& integer'Image(to_integer(unsigned(LANE_0_PUT_FIFO_0_data))) & " != " & integer'Image(to_integer(unsigned(PUT_FIFO_0_test_data(LANE_0_PUT_FIFO_0_index))))
 				severity error;
 			assert(LANE_0_PUT_FIFO_0_data /= PUT_FIFO_0_test_data(LANE_0_PUT_FIFO_0_index))
-				report "Correct " & integer'Image(LANE_0_PUT_FIFO_0_index) & " th output lane 0"
+				report "Correct " & integer'Image(LANE_0_PUT_FIFO_0_index) & "th output lane 0" & lf & ""
+				& integer'Image(to_integer(unsigned(LANE_0_PUT_FIFO_0_data))) & " = " & integer'Image(to_integer(unsigned(PUT_FIFO_0_test_data(LANE_0_PUT_FIFO_0_index))))
 				severity note;
 
 			-- Advance to output index
@@ -77,10 +81,12 @@ begin
 
 			-- Check the data is correct
 			assert(LANE_1_PUT_FIFO_0_data  = PUT_FIFO_0_test_data(LANE_1_PUT_FIFO_0_index))
-				report "Incorrect " & integer'Image(LANE_1_PUT_FIFO_0_index) & " th output lane 1"
+				report "Incorrect " & integer'Image(LANE_1_PUT_FIFO_0_index) & "th output lane 1" & lf & ""
+				& integer'Image(to_integer(unsigned(LANE_1_PUT_FIFO_0_data))) & " != " & integer'Image(to_integer(unsigned(PUT_FIFO_0_test_data(LANE_1_PUT_FIFO_0_index))))
 				severity error;
 			assert(LANE_1_PUT_FIFO_0_data /= PUT_FIFO_0_test_data(LANE_1_PUT_FIFO_0_index))
-				report "Correct " & integer'Image(LANE_1_PUT_FIFO_0_index) & " th output lane 1"
+				report "Correct " & integer'Image(LANE_1_PUT_FIFO_0_index) & "th output lane 1" & lf & ""
+				& integer'Image(to_integer(unsigned(LANE_1_PUT_FIFO_0_data))) & " = " & integer'Image(to_integer(unsigned(PUT_FIFO_0_test_data(LANE_1_PUT_FIFO_0_index))))
 				severity note;
 
 			-- Advance to output index
@@ -94,20 +100,20 @@ begin
 		-- Wait until the end of simulation
 		wait for 100 us;
 
-		-- Check all ezpected output was received
+		-- Check all expected output was received
 		assert(LANE_0_PUT_FIFO_0_index  = PUT_FIFO_0_test_data'Length)
-			report "Not all ezpected output recieved lane 0"
+			report "Not all expected output received lane 0"
 			severity error;
 		assert(LANE_0_PUT_FIFO_0_index /= PUT_FIFO_0_test_data'Length)
-			report "all ezpected output recieved lane 0"
+			report "all expected output received lane 0"
 			severity note;
 
-		-- Check all ezpected output was received
+		-- Check all expected output was received
 		assert(LANE_1_PUT_FIFO_0_index  = PUT_FIFO_0_test_data'Length)
-			report "Not all ezpected output recieved lane 1"
+			report "Not all expected output received lane 1"
 			severity error;
 		assert(LANE_1_PUT_FIFO_0_index /= PUT_FIFO_0_test_data'Length)
-			report "all ezpected output recieved lane 1"
+			report "all expected output received lane 1"
 			severity note;
 	end process;
 

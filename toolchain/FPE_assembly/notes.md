@@ -10,8 +10,8 @@ The FPE assembly language is white space independent.
 
 ## Comments
 The FPE assembly language currently supports 2 types of comments
-* Single line comments, started by double backslashes (\\\\) and ended by a new line,
-* Multi line comments, started by  double backslashes followed by an asterisk (\\\\\*) and ended by the reverse (\*\\\\)
+* Single line comments, started by double backslashes (//) and ended by a new line,
+* Multi line comments, started by  double backslashes followed by an asterisk (//*) and ended by the reverse (\*//)
 
 ## Instructions, Operations, and Statements
 

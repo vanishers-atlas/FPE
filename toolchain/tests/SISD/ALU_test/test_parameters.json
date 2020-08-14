@@ -14,6 +14,10 @@
         "PUT": {
             "data_width": 4,
             "depth": 1
+        },
+        "GET": {
+            "data_width": 4,
+            "depth": 2
         }
     },
 

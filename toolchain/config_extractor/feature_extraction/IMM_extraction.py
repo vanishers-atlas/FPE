@@ -1,10 +1,9 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from ... import FPE_assembly as FPEA
-
-# import toolchain utils for computing addr widths
-from ... import utils as tc_utils
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain import utils  as tc_utils
 
 ####################################################################
 
@@ -37,7 +36,7 @@ class extractor(ParseTreeListener):
         )
 
     def enterAccess_imm(this, ctx):
-        value = FPEA.evaluate_expr(ctx.expr(), this.program_context)
+        value = asm_utils.evaluate_expr(ctx.expr(), this.program_context)
 
         # Check that value can be encoded in data width
         if value < 0:

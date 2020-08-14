@@ -1,7 +1,7 @@
-from ..grammar.FPE_assemblyParser import FPE_assemblyParser as parser
+from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
-from .error_reporting import ctx_start
-from .evaluate_expr import evaluate_expr
+from FPE.toolchain.FPE_assembly.interface.error_reporting import ctx_start
+from FPE.toolchain.FPE_assembly.interface.evaluate_expr import evaluate_expr
 
 def get_component_addr(ctx, program_context):
     if   type(ctx) == parser.Addr_literalContext:

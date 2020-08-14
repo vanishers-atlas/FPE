@@ -1,7 +1,8 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-from ..interface.error_reporting import ctx_start
-from ..grammar.FPE_assemblyParser import FPE_assemblyParser as parser
+from FPE.toolchain.FPE_assembly.interface.error_reporting import ctx_start
+from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 class extractor(ParseTreeListener):
 

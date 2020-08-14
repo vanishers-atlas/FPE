@@ -1,4 +1,4 @@
-from . import indented_string  as inStr
+from FPE.toolchain.HDL_generation.utils import indented_string as inStr
 
 import json, zlib
 

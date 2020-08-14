@@ -1,4 +1,4 @@
-from ... import FPE_assembly as asm_utils
+from FPE.toolchain import FPE_assembly as asm_utils
 
 def get_exe_operation_code(op_id):
     return "#".join(

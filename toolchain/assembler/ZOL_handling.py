@@ -1,8 +1,10 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from .. import FPE_assembly as FPEA
-from .. import utils  as tc_utils
+# Import utils libraries
+from FPE.toolchain import utils  as tc_utils
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.HDL_generation import utils  as gen_utils
 
 ####################################################################
 
@@ -26,7 +28,7 @@ class handler(ParseTreeListener):
             "end"   : None,
             "tally" : "\"%s\""%(
                 tc_utils.biased_tally.encode(
-                    FPEA.evaluate_expr(ctx.expr(), this.program_context) - 1,
+                    asm_utils.evaluate_expr(ctx.expr(), this.program_context) - 1,
                     this.encoding[this.curr_ZOL[-1]]["width"],
                     this.encoding[this.curr_ZOL[-1]]["bais" ],
                     this.encoding[this.curr_ZOL[-1]]["range"]

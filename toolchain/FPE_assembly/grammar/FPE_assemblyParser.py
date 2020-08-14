@@ -8,7 +8,7 @@ import sys
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\62")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\64")
         buf.write("\u012b\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4\23\t\23")
@@ -37,29 +37,29 @@ def serializedATN():
         buf.write("\"\3\"\3#\3#\3#\3#\3#\3#\3#\3#\3#\3$\3$\5$\u0125\n$\3")
         buf.write("%\3%\5%\u0129\n%\3%\2\3\2&\2\4\6\b\n\f\16\20\22\24\26")
         buf.write("\30\32\34\36 \"$&(*,.\60\62\64\668:<>@BDFH\2\13\3\2\3")
-        buf.write("\5\3\2\6\7\3\2+/\3\2\26\27\3\2\35\36\3\2!\"\3\2##\3\2")
-        buf.write("$\'\3\2((\2\u0122\2P\3\2\2\2\4]\3\2\2\2\6_\3\2\2\2\ba")
-        buf.write("\3\2\2\2\np\3\2\2\2\fu\3\2\2\2\16w\3\2\2\2\20y\3\2\2\2")
-        buf.write("\22\u008a\3\2\2\2\24\u008c\3\2\2\2\26\u0091\3\2\2\2\30")
-        buf.write("\u0096\3\2\2\2\32\u009b\3\2\2\2\34\u00a2\3\2\2\2\36\u00a4")
-        buf.write("\3\2\2\2 \u00a6\3\2\2\2\"\u00b7\3\2\2\2$\u00bc\3\2\2\2")
-        buf.write("&\u00be\3\2\2\2(\u00c4\3\2\2\2*\u00c7\3\2\2\2,\u00d8\3")
-        buf.write("\2\2\2.\u00da\3\2\2\2\60\u00dc\3\2\2\2\62\u00de\3\2\2")
-        buf.write("\2\64\u00e0\3\2\2\2\66\u00e7\3\2\2\28\u00e9\3\2\2\2:\u00ef")
-        buf.write("\3\2\2\2<\u0104\3\2\2\2>\u0109\3\2\2\2@\u010b\3\2\2\2")
-        buf.write("B\u0112\3\2\2\2D\u0119\3\2\2\2F\u0124\3\2\2\2H\u0128\3")
-        buf.write("\2\2\2JK\b\2\1\2KL\7)\2\2LM\5\2\2\2MN\7*\2\2NQ\3\2\2\2")
-        buf.write("OQ\5\4\3\2PJ\3\2\2\2PO\3\2\2\2QZ\3\2\2\2RS\f\5\2\2ST\t")
-        buf.write("\2\2\2TY\5\2\2\6UV\f\4\2\2VW\t\3\2\2WY\5\2\2\5XR\3\2\2")
-        buf.write("\2XU\3\2\2\2Y\\\3\2\2\2ZX\3\2\2\2Z[\3\2\2\2[\3\3\2\2\2")
-        buf.write("\\Z\3\2\2\2]^\t\4\2\2^\5\3\2\2\2_`\7/\2\2`\7\3\2\2\2a")
-        buf.write("f\7\b\2\2be\5$\23\2ce\5,\27\2db\3\2\2\2dc\3\2\2\2eh\3")
-        buf.write("\2\2\2fd\3\2\2\2fg\3\2\2\2gi\3\2\2\2hf\3\2\2\2ij\7\t\2")
-        buf.write("\2j\t\3\2\2\2kq\5\16\b\2lq\5\20\t\2mq\5\26\f\2nq\5\30")
-        buf.write("\r\2oq\5\32\16\2pk\3\2\2\2pl\3\2\2\2pm\3\2\2\2pn\3\2\2")
-        buf.write("\2po\3\2\2\2q\13\3\2\2\2rv\5\24\13\2sv\5\26\f\2tv\5\30")
-        buf.write("\r\2ur\3\2\2\2us\3\2\2\2ut\3\2\2\2v\r\3\2\2\2wx\5\2\2")
-        buf.write("\2x\17\3\2\2\2yz\7\n\2\2z{\7\13\2\2{|\5\34\17\2|\u0088")
+        buf.write("\5\3\2\6\7\3\2-\61\3\2\26\27\3\2\35\36\3\2!\"\3\2##\3")
+        buf.write("\2$)\3\2**\2\u0122\2P\3\2\2\2\4]\3\2\2\2\6_\3\2\2\2\b")
+        buf.write("a\3\2\2\2\np\3\2\2\2\fu\3\2\2\2\16w\3\2\2\2\20y\3\2\2")
+        buf.write("\2\22\u008a\3\2\2\2\24\u008c\3\2\2\2\26\u0091\3\2\2\2")
+        buf.write("\30\u0096\3\2\2\2\32\u009b\3\2\2\2\34\u00a2\3\2\2\2\36")
+        buf.write("\u00a4\3\2\2\2 \u00a6\3\2\2\2\"\u00b7\3\2\2\2$\u00bc\3")
+        buf.write("\2\2\2&\u00be\3\2\2\2(\u00c4\3\2\2\2*\u00c7\3\2\2\2,\u00d8")
+        buf.write("\3\2\2\2.\u00da\3\2\2\2\60\u00dc\3\2\2\2\62\u00de\3\2")
+        buf.write("\2\2\64\u00e0\3\2\2\2\66\u00e7\3\2\2\28\u00e9\3\2\2\2")
+        buf.write(":\u00ef\3\2\2\2<\u0104\3\2\2\2>\u0109\3\2\2\2@\u010b\3")
+        buf.write("\2\2\2B\u0112\3\2\2\2D\u0119\3\2\2\2F\u0124\3\2\2\2H\u0128")
+        buf.write("\3\2\2\2JK\b\2\1\2KL\7+\2\2LM\5\2\2\2MN\7,\2\2NQ\3\2\2")
+        buf.write("\2OQ\5\4\3\2PJ\3\2\2\2PO\3\2\2\2QZ\3\2\2\2RS\f\5\2\2S")
+        buf.write("T\t\2\2\2TY\5\2\2\6UV\f\4\2\2VW\t\3\2\2WY\5\2\2\5XR\3")
+        buf.write("\2\2\2XU\3\2\2\2Y\\\3\2\2\2ZX\3\2\2\2Z[\3\2\2\2[\3\3\2")
+        buf.write("\2\2\\Z\3\2\2\2]^\t\4\2\2^\5\3\2\2\2_`\7\61\2\2`\7\3\2")
+        buf.write("\2\2af\7\b\2\2be\5$\23\2ce\5,\27\2db\3\2\2\2dc\3\2\2\2")
+        buf.write("eh\3\2\2\2fd\3\2\2\2fg\3\2\2\2gi\3\2\2\2hf\3\2\2\2ij\7")
+        buf.write("\t\2\2j\t\3\2\2\2kq\5\16\b\2lq\5\20\t\2mq\5\26\f\2nq\5")
+        buf.write("\30\r\2oq\5\32\16\2pk\3\2\2\2pl\3\2\2\2pm\3\2\2\2pn\3")
+        buf.write("\2\2\2po\3\2\2\2q\13\3\2\2\2rv\5\24\13\2sv\5\26\f\2tv")
+        buf.write("\5\30\r\2ur\3\2\2\2us\3\2\2\2ut\3\2\2\2v\r\3\2\2\2wx\5")
+        buf.write("\2\2\2x\17\3\2\2\2yz\7\n\2\2z{\7\13\2\2{|\5\34\17\2|\u0088")
         buf.write("\7\f\2\2}~\7\r\2\2~\u0083\5\22\n\2\177\u0080\7\16\2\2")
         buf.write("\u0080\u0082\5\22\n\2\u0081\177\3\2\2\2\u0082\u0085\3")
         buf.write("\2\2\2\u0083\u0081\3\2\2\2\u0083\u0084\3\2\2\2\u0084\u0086")
@@ -86,10 +86,10 @@ def serializedATN():
         buf.write("\t\5\2\2\u00b8#\3\2\2\2\u00b9\u00bd\5&\24\2\u00ba\u00bd")
         buf.write("\5(\25\2\u00bb\u00bd\5*\26\2\u00bc\u00b9\3\2\2\2\u00bc")
         buf.write("\u00ba\3\2\2\2\u00bc\u00bb\3\2\2\2\u00bd%\3\2\2\2\u00be")
-        buf.write("\u00bf\7\30\2\2\u00bf\u00c0\7)\2\2\u00c0\u00c1\5\2\2\2")
-        buf.write("\u00c1\u00c2\7*\2\2\u00c2\u00c3\5\b\5\2\u00c3\'\3\2\2")
+        buf.write("\u00bf\7\30\2\2\u00bf\u00c0\7+\2\2\u00c0\u00c1\5\2\2\2")
+        buf.write("\u00c1\u00c2\7,\2\2\u00c2\u00c3\5\b\5\2\u00c3\'\3\2\2")
         buf.write("\2\u00c4\u00c5\5\6\4\2\u00c5\u00c6\7\31\2\2\u00c6)\3\2")
-        buf.write("\2\2\u00c7\u00c8\7\32\2\2\u00c8\u00c9\7/\2\2\u00c9\u00ca")
+        buf.write("\2\2\u00c7\u00c8\7\32\2\2\u00c8\u00c9\7\61\2\2\u00c9\u00ca")
         buf.write("\5\2\2\2\u00ca\u00cb\7\33\2\2\u00cb+\3\2\2\2\u00cc\u00cd")
         buf.write("\5.\30\2\u00cd\u00ce\7\33\2\2\u00ce\u00d9\3\2\2\2\u00cf")
         buf.write("\u00d0\5\62\32\2\u00d0\u00d1\7\33\2\2\u00d1\u00d9\3\2")
@@ -99,15 +99,15 @@ def serializedATN():
         buf.write("\2\2\2\u00d8\u00d2\3\2\2\2\u00d8\u00d5\3\2\2\2\u00d9-")
         buf.write("\3\2\2\2\u00da\u00db\5\60\31\2\u00db/\3\2\2\2\u00dc\u00dd")
         buf.write("\7\34\2\2\u00dd\61\3\2\2\2\u00de\u00df\5\64\33\2\u00df")
-        buf.write("\63\3\2\2\2\u00e0\u00e1\t\6\2\2\u00e1\u00e2\7)\2\2\u00e2")
-        buf.write("\u00e3\5\6\4\2\u00e3\u00e4\7*\2\2\u00e4\65\3\2\2\2\u00e5")
+        buf.write("\63\3\2\2\2\u00e0\u00e1\t\6\2\2\u00e1\u00e2\7+\2\2\u00e2")
+        buf.write("\u00e3\5\6\4\2\u00e3\u00e4\7,\2\2\u00e4\65\3\2\2\2\u00e5")
         buf.write("\u00e8\58\35\2\u00e6\u00e8\5:\36\2\u00e7\u00e5\3\2\2\2")
         buf.write("\u00e7\u00e6\3\2\2\2\u00e8\67\3\2\2\2\u00e9\u00ea\7\37")
         buf.write("\2\2\u00ea\u00eb\7\25\2\2\u00eb\u00ec\7\13\2\2\u00ec\u00ed")
         buf.write("\5\2\2\2\u00ed\u00ee\7\f\2\2\u00ee9\3\2\2\2\u00ef\u00f0")
         buf.write("\7 \2\2\u00f0\u00f1\7\25\2\2\u00f1\u00f2\7\13\2\2\u00f2")
-        buf.write("\u00f3\5\2\2\2\u00f3\u00f4\7\f\2\2\u00f4\u00f5\7)\2\2")
-        buf.write("\u00f5\u00f6\5\n\6\2\u00f6\u0102\7*\2\2\u00f7\u00f8\7")
+        buf.write("\u00f3\5\2\2\2\u00f3\u00f4\7\f\2\2\u00f4\u00f5\7+\2\2")
+        buf.write("\u00f5\u00f6\5\n\6\2\u00f6\u0102\7,\2\2\u00f7\u00f8\7")
         buf.write("\r\2\2\u00f8\u00fd\5<\37\2\u00f9\u00fa\7\16\2\2\u00fa")
         buf.write("\u00fc\5<\37\2\u00fb\u00f9\3\2\2\2\u00fc\u00ff\3\2\2\2")
         buf.write("\u00fd\u00fb\3\2\2\2\u00fd\u00fe\3\2\2\2\u00fe\u0100\3")
@@ -116,14 +116,14 @@ def serializedATN():
         buf.write("\u0103;\3\2\2\2\u0104\u0105\t\5\2\2\u0105=\3\2\2\2\u0106")
         buf.write("\u010a\5@!\2\u0107\u010a\5B\"\2\u0108\u010a\5D#\2\u0109")
         buf.write("\u0106\3\2\2\2\u0109\u0107\3\2\2\2\u0109\u0108\3\2\2\2")
-        buf.write("\u010a?\3\2\2\2\u010b\u010c\t\7\2\2\u010c\u010d\7)\2\2")
+        buf.write("\u010a?\3\2\2\2\u010b\u010c\t\7\2\2\u010c\u010d\7+\2\2")
         buf.write("\u010d\u010e\5F$\2\u010e\u010f\7\16\2\2\u010f\u0110\5")
-        buf.write("H%\2\u0110\u0111\7*\2\2\u0111A\3\2\2\2\u0112\u0113\t\b")
-        buf.write("\2\2\u0113\u0114\7)\2\2\u0114\u0115\5F$\2\u0115\u0116")
-        buf.write("\7\16\2\2\u0116\u0117\5F$\2\u0117\u0118\7*\2\2\u0118C")
-        buf.write("\3\2\2\2\u0119\u011a\t\t\2\2\u011a\u011b\7)\2\2\u011b")
+        buf.write("H%\2\u0110\u0111\7,\2\2\u0111A\3\2\2\2\u0112\u0113\t\b")
+        buf.write("\2\2\u0113\u0114\7+\2\2\u0114\u0115\5F$\2\u0115\u0116")
+        buf.write("\7\16\2\2\u0116\u0117\5F$\2\u0117\u0118\7,\2\2\u0118C")
+        buf.write("\3\2\2\2\u0119\u011a\t\t\2\2\u011a\u011b\7+\2\2\u011b")
         buf.write("\u011c\5F$\2\u011c\u011d\7\16\2\2\u011d\u011e\5F$\2\u011e")
-        buf.write("\u011f\7\16\2\2\u011f\u0120\5H%\2\u0120\u0121\7*\2\2\u0121")
+        buf.write("\u011f\7\16\2\2\u011f\u0120\5H%\2\u0120\u0121\7,\2\2\u0121")
         buf.write("E\3\2\2\2\u0122\u0125\5\n\6\2\u0123\u0125\t\n\2\2\u0124")
         buf.write("\u0122\3\2\2\2\u0124\u0123\3\2\2\2\u0125G\3\2\2\2\u0126")
         buf.write("\u0129\5\f\7\2\u0127\u0129\t\n\2\2\u0128\u0126\3\2\2\2")
@@ -148,8 +148,8 @@ class FPE_assemblyParser ( Parser ):
                      "'ADV'", "'PUT'", "'REG'", "'RAM'", "'ROM'", "'BAM'", 
                      "'FORWARD'", "'BACKWARD'", "'ZOL'", "':'", "'DEF'", 
                      "';'", "'NOP'", "'JMP'", "'JLT'", "'RESET'", "'SEEK'", 
-                     "'MOV'", "'NOT'", "'CMP'", "'ADD'", "'AND'", "'OR'", 
-                     "'XOR'", "'ACC'", "'('", "')'" ]
+                     "'MOV'", "'NOT'", "'CMP'", "'ADD'", "'SUB'", "'AND'", 
+                     "'OR'", "'XOR'", "'MUL'", "'ACC'", "'('", "')'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
@@ -160,9 +160,10 @@ class FPE_assemblyParser ( Parser ):
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "<INVALID>", "ORB", "CRB", 
-                      "DEC_NUM", "BIN_NUM", "OCT_NUM", "HEX_NUM", "IDENTIFER", 
-                      "MUTL_LINE_COMMENT", "SING_LINE_COMMENT", "WHITESPACE" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "<INVALID>", "ORB", "CRB", "DEC_NUM", "BIN_NUM", "OCT_NUM", 
+                      "HEX_NUM", "IDENTIFER", "MUTL_LINE_COMMENT", "SING_LINE_COMMENT", 
+                      "WHITESPACE" ]
 
     RULE_expr = 0
     RULE_expr_operand = 1
@@ -250,16 +251,18 @@ class FPE_assemblyParser ( Parser ):
     T__35=36
     T__36=37
     T__37=38
-    ORB=39
-    CRB=40
-    DEC_NUM=41
-    BIN_NUM=42
-    OCT_NUM=43
-    HEX_NUM=44
-    IDENTIFER=45
-    MUTL_LINE_COMMENT=46
-    SING_LINE_COMMENT=47
-    WHITESPACE=48
+    T__38=39
+    T__39=40
+    ORB=41
+    CRB=42
+    DEC_NUM=43
+    BIN_NUM=44
+    OCT_NUM=45
+    HEX_NUM=46
+    IDENTIFER=47
+    MUTL_LINE_COMMENT=48
+    SING_LINE_COMMENT=49
+    WHITESPACE=50
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -544,7 +547,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 100
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__21) | (1 << FPE_assemblyParser.T__23) | (1 << FPE_assemblyParser.T__25) | (1 << FPE_assemblyParser.T__26) | (1 << FPE_assemblyParser.T__27) | (1 << FPE_assemblyParser.T__28) | (1 << FPE_assemblyParser.T__29) | (1 << FPE_assemblyParser.T__30) | (1 << FPE_assemblyParser.T__31) | (1 << FPE_assemblyParser.T__32) | (1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36) | (1 << FPE_assemblyParser.IDENTIFER))) != 0):
+            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__21) | (1 << FPE_assemblyParser.T__23) | (1 << FPE_assemblyParser.T__25) | (1 << FPE_assemblyParser.T__26) | (1 << FPE_assemblyParser.T__27) | (1 << FPE_assemblyParser.T__28) | (1 << FPE_assemblyParser.T__29) | (1 << FPE_assemblyParser.T__30) | (1 << FPE_assemblyParser.T__31) | (1 << FPE_assemblyParser.T__32) | (1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36) | (1 << FPE_assemblyParser.T__37) | (1 << FPE_assemblyParser.T__38) | (1 << FPE_assemblyParser.IDENTIFER))) != 0):
                 self.state = 98
                 self._errHandler.sync(self)
                 token = self._input.LA(1)
@@ -552,7 +555,7 @@ class FPE_assemblyParser ( Parser ):
                     self.state = 96
                     self.statement()
                     pass
-                elif token in [FPE_assemblyParser.T__25, FPE_assemblyParser.T__26, FPE_assemblyParser.T__27, FPE_assemblyParser.T__28, FPE_assemblyParser.T__29, FPE_assemblyParser.T__30, FPE_assemblyParser.T__31, FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36]:
+                elif token in [FPE_assemblyParser.T__25, FPE_assemblyParser.T__26, FPE_assemblyParser.T__27, FPE_assemblyParser.T__28, FPE_assemblyParser.T__29, FPE_assemblyParser.T__30, FPE_assemblyParser.T__31, FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36, FPE_assemblyParser.T__37, FPE_assemblyParser.T__38]:
                     self.state = 97
                     self.operation()
                     pass
@@ -1578,7 +1581,7 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 209
                 self.match(FPE_assemblyParser.T__24)
                 pass
-            elif token in [FPE_assemblyParser.T__30, FPE_assemblyParser.T__31, FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36]:
+            elif token in [FPE_assemblyParser.T__30, FPE_assemblyParser.T__31, FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36, FPE_assemblyParser.T__37, FPE_assemblyParser.T__38]:
                 self.enterOuterAlt(localctx, 4)
                 self.state = 211
                 self.op_alu()
@@ -2076,7 +2079,7 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 261
                 self.op_alu_2f_0s()
                 pass
-            elif token in [FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36]:
+            elif token in [FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36, FPE_assemblyParser.T__37, FPE_assemblyParser.T__38]:
                 self.enterOuterAlt(localctx, 3)
                 self.state = 262
                 self.op_alu_2f_1s()
@@ -2278,7 +2281,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 279
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36))) != 0)):
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36) | (1 << FPE_assemblyParser.T__37) | (1 << FPE_assemblyParser.T__38))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
@@ -2345,12 +2348,12 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 288
                 self.access_fetch()
                 pass
-            elif token in [FPE_assemblyParser.T__37]:
+            elif token in [FPE_assemblyParser.T__39]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 289
                 localctx.internal = self._input.LT(1)
                 _la = self._input.LA(1)
-                if not(_la==FPE_assemblyParser.T__37):
+                if not(_la==FPE_assemblyParser.T__39):
                     localctx.internal = self._errHandler.recoverInline(self)
                 else:
                     self._errHandler.reportMatch(self)
@@ -2407,12 +2410,12 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 292
                 self.access_store()
                 pass
-            elif token in [FPE_assemblyParser.T__37]:
+            elif token in [FPE_assemblyParser.T__39]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 293
                 localctx.internal = self._input.LT(1)
                 _la = self._input.LA(1)
-                if not(_la==FPE_assemblyParser.T__37):
+                if not(_la==FPE_assemblyParser.T__39):
                     localctx.internal = self._errHandler.recoverInline(self)
                 else:
                     self._errHandler.reportMatch(self)

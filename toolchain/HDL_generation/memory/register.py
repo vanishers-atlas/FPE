@@ -1,14 +1,35 @@
-from ..  import utils as gen_utils
-from ... import utils as tc_utils
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 4
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
 
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+from FPE.toolchain import utils as tc_utils
+
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+        generated_name = "register_%ia_%is"%(config["async_forces"], config["sync_forces"])
+
+        # Handle enable
+        if config["has_enable"] == True:
+            generated_name += "_e"
+
+        return generated_name
+    else:
+        return module_name
+
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = handle_module_name(module_name, config, generate_name)
+    GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can

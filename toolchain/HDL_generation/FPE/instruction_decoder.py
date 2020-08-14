@@ -1,19 +1,28 @@
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 4
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
+
+from FPE.toolchain import utils as tc_utils
+
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+
+from FPE.toolchain import FPE_assembly as asm_utils
+
+from FPE.toolchain.HDL_generation.memory import delay
+
 import itertools as it
 
-from ..  import utils as gen_utils
-from ... import utils as tc_utils
-from ... import FPE_assembly as asm_utils
-
-from ..memory import delay
-
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -81,7 +90,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 #####################################################################
 
 def generate_section_split():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
 
@@ -177,7 +186,7 @@ def generate_section_split():
         ARCH_BODY += "\<);\n\<\n"
 
 def generate_address_source_contols():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
 
@@ -456,7 +465,7 @@ def generate_address_source_contols():
             ARCH_BODY += "\<);\<\n\n"
 
 def generate_data_memory_controls():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
 
@@ -465,53 +474,52 @@ def generate_data_memory_controls():
         ARCH_BODY += "-- Get advance generation\n\n"
         config = CONFIG["data_memories"]["GET"]
 
-        if config["reads"] > 1:
-            raise notImplenentedError()
+        for port_index in range(config["reads"]):
 
-        port = "GET_read_0_adv"
+            port = "GET_read_%i_adv"%(port_index)
 
-        INTERFACE["ports"] += [
-            {
-                "name" : port,
-                "type" : "std_logic",
-                "direction" : "out"
-            }
-        ]
-        ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
-
-        ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\nelse '1' when\> "%(port)
-
-        ARCH_BODY += "\nor ".join(
-            [
-                "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
-                for instr_id, instr_val in CONFIG["instr_set"].items()
-                if (
-                        "GET" in asm_utils.instr_fetch_access_coms(instr_id)
-                    and "ADV" in asm_utils.instr_fetch_access_mods(instr_id)[asm_utils.instr_fetch_access_coms(instr_id).index("GET")]
-                )
+            INTERFACE["ports"] += [
+                {
+                    "name" : port,
+                    "type" : "std_logic",
+                    "direction" : "out"
+                }
             ]
-        )
-        ARCH_BODY += "\n\<else '0';\<\n\n"
+            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port)
 
-        ARCH_BODY += "get_0_adv_delay : entity work.%s(arch)\>\n"%(DELAY_NAME)
+            ARCH_BODY += "pre_%s <=\> 'U' when enable /= '1'\nelse '1' when\> "%(port)
 
-        ARCH_BODY += "generic map (\>"
-        ARCH_BODY += "delay_width => 1,"
-        # Delay until first fetch stage
-        ARCH_BODY += "delay_depth => %i"%(
-            sum(
+            ARCH_BODY += "\nor ".join(
                 [
-                    1,                      # to get to the start of the fetch/read stage(s).
+                    "opcode = \"%s\""%(tc_utils.unsigned.encode(instr_val, CONFIG["instruction_decoder"]["opcode_width"]))
+                    for instr_id, instr_val in CONFIG["instr_set"].items()
+                    if (
+                            "GET" in asm_utils.instr_fetch_access_coms(instr_id)
+                        and "ADV" in asm_utils.instr_fetch_access_mods(instr_id)[asm_utils.instr_fetch_access_coms(instr_id).index("GET")]
+                    )
                 ]
             )
-        )
-        ARCH_BODY += "\<)\n"
+            ARCH_BODY += "\n\<else '0';\<\n\n"
 
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in (0) => pre_%s,\n"%(port)
-        ARCH_BODY += "data_out(0) => %s\n"%(port)
-        ARCH_BODY += "\<);\n\<\n"
+            ARCH_BODY += "%s_delay : entity work.%s(arch)\>\n"%(port, DELAY_NAME)
+
+            ARCH_BODY += "generic map (\>"
+            ARCH_BODY += "delay_width => 1,"
+            # Delay until first fetch stage
+            ARCH_BODY += "delay_depth => %i"%(
+                sum(
+                    [
+                        1,                      # to get to the start of the fetch/read stage(s).
+                    ]
+                )
+            )
+            ARCH_BODY += "\<)\n"
+
+            ARCH_BODY += "port map (\n\>"
+            ARCH_BODY += "clock => clock,\n"
+            ARCH_BODY += "data_in (0) => pre_%s,\n"%(port)
+            ARCH_BODY += "data_out(0) => %s\n"%(port)
+            ARCH_BODY += "\<);\n\<\n"
 
     for mem, para in [(mem, para) for mem, para in CONFIG["data_memories"].items() if "writes" in para and para["writes"] > 0]:
         ARCH_BODY += "-- %s write enable generation\n\n"%(mem)
@@ -559,11 +567,11 @@ jump_signal_mnemonic_map = {
 }
 
 update_signal_mnemonic_map = {
-    "update_ALU_statuses" : ["CMP"],
+    "update_ALU_statuses" : ["CMP", "SIGN"],
 }
 
 def generate_program_counter_controls():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
 
@@ -667,7 +675,7 @@ def generate_program_counter_controls():
         ARCH_BODY += "\<);\<\n\n"
 
 def generate_exe_compounds_controls():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
 
@@ -750,7 +758,7 @@ def generate_exe_compounds_controls():
         ARCH_BODY += "\<);\<\n\n"
 
 def generate_path_select_controls():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
 

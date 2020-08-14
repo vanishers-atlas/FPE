@@ -1,9 +1,9 @@
 from antlr4 import *
 
-from .evaluate_expr import evaluate_expr
+from FPE.toolchain.FPE_assembly.interface.evaluate_expr import evaluate_expr
 
-from .. import grammar
-from .. import hypergrammar
+from FPE.toolchain.FPE_assembly import grammar
+from FPE.toolchain.FPE_assembly import hypergrammar
 
 def load_file(inputFile):
 	input  = FileStream(inputFile)

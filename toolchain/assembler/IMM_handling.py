@@ -1,7 +1,8 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from .. import FPE_assembly as FPEA
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
 
 ####################################################################
 
@@ -17,7 +18,7 @@ class handler(ParseTreeListener):
         return {a : v for a, v in enumerate(this.IMM)}, {v : a for a, v in enumerate(this.IMM)}
 
     def enterAccess_imm(this, ctx):
-        imm_value = FPEA.evaluate_expr(ctx.expr(), this.program_context)
+        imm_value = asm_utils.evaluate_expr(ctx.expr(), this.program_context)
 
         # Add Imm value to Imm mem
         this.IMM.add(imm_value)

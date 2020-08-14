@@ -27,7 +27,7 @@ architecture arch of testbench is
 	);
 
 begin
-  UUT : entity work.sFPE_inst(arch)
+  UUT : entity work.test_FPE_inst(arch)
 		port map (
 			PUT_FIFO_0_data  => PUT_FIFO_0_data,
 			PUT_FIFO_0_write => PUT_FIFO_0_write,

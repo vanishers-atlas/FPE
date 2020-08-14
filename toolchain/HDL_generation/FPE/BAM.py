@@ -1,17 +1,26 @@
-from ..  import utils as gen_utils
-from ... import utils as tc_utils
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 4
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
 
-from ..memory import register
-from ..memory import delay
 
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+from FPE.toolchain import utils as tc_utils
+
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+
+from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.memory import delay
+
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -46,7 +55,7 @@ def generate_HDL(config, output_path, module_name, append_hash=True,force_genera
 #####################################################################
 
 def generate_step_controls():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_HEAD += "signal selected_step : std_logic_vector(%i downto 0);\n"%(CONFIG["step_width"] - 1, )
@@ -127,7 +136,7 @@ def generate_step_controls():
     ARCH_BODY += "'0';\n"
 
 def generate_outset_adder_acc():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -171,7 +180,7 @@ def generate_outset_adder_acc():
     ARCH_BODY += "\<);\n\<"
 
 def generate_base_adders():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["generics"] += [

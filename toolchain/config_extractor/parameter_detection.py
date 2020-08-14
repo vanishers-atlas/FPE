@@ -1,7 +1,8 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from .. import FPE_assembly as FPEA
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
 
 ####################################################################
 
@@ -30,7 +31,7 @@ class extractor(ParseTreeListener):
 
 
     def enterOp_bam(this, ctx):
-        BAM = FPEA.get_component_op(ctx, this.program_context)
+        BAM = asm_utils.get_component_op(ctx, this.program_context)
         # Ensure BAM exists
         if BAM not in this.parameters["address_sources"]:
             this.parameters["address_sources"][BAM] = {}
@@ -45,7 +46,7 @@ class extractor(ParseTreeListener):
 
 
     def enterOp_alu(this, ctx):
-        ALU = FPEA.get_component_op(ctx, this.program_context)
+        ALU = asm_utils.get_component_op(ctx, this.program_context)
         # Ensure ALU exists
         if ALU not in this.parameters["execute_units"]:
             this.parameters["execute_units"][ALU] = {}
@@ -56,7 +57,7 @@ class extractor(ParseTreeListener):
 
 
     def enterAccess_fetch(this, ctx):
-        mem = FPEA.get_component_access(ctx, this.program_context)
+        mem = asm_utils.get_component_access(ctx, this.program_context)
         if mem != "IMM":
             # Ensure mem exists
             if mem not in this.parameters["data_memories"]:
@@ -69,7 +70,7 @@ class extractor(ParseTreeListener):
                 this.parameters["data_memories"][mem]["depth" ] = None
 
     def enterAccess_store(this, ctx):
-        mem = FPEA.get_component_access(ctx, this.program_context)
+        mem = asm_utils.get_component_access(ctx, this.program_context)
         # Ensure mem exists
         if mem not in this.parameters["data_memories"]:
             this.parameters["data_memories"][mem] = {}
@@ -82,7 +83,7 @@ class extractor(ParseTreeListener):
 
 
     def enterAddr_bam(this, ctx):
-        BAM = FPEA.get_component_addr(ctx, this.program_context)
+        BAM = asm_utils.get_component_addr(ctx, this.program_context)
         # Ensure BAM exists
         if BAM not in this.parameters["address_sources"]:
             this.parameters["address_sources"][BAM] = {}

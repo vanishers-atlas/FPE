@@ -1,31 +1,39 @@
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 4
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
+
+from FPE.toolchain import utils as tc_utils
+
+from FPE.toolchain.HDL_generation  import utils as gen_utils
+
+from FPE.toolchain import FPE_assembly as asm_utils
+
+from FPE.toolchain.HDL_generation.FPE import alu_dsp48e1
+from FPE.toolchain.HDL_generation.FPE import comm_get
+from FPE.toolchain.HDL_generation.FPE import comm_put
+from FPE.toolchain.HDL_generation.FPE import reg_file
+from FPE.toolchain.HDL_generation.FPE import BAM
+from FPE.toolchain.HDL_generation.FPE import instruction_decoder
+from FPE.toolchain.HDL_generation.FPE import program_counter
+from FPE.toolchain.HDL_generation.FPE import ZOL_manager
+
+from FPE.toolchain.HDL_generation.memory import RAM
+from FPE.toolchain.HDL_generation.memory import ROM
+from FPE.toolchain.HDL_generation.memory import delay
 
 import itertools as it
 
-from ..  import utils        as gen_utils
-from ... import utils        as  tc_utils
-from ... import FPE_assembly as asm_utils
-
-from . import alu_dsp48e1
-from . import comm_get
-from . import comm_put
-from . import reg_file
-from . import BAM
-from . import instruction_decoder
-from . import program_counter
-from . import ZOL_manager
-
-from ..memory import RAM
-from ..memory import ROM
-from ..memory import delay
-
-def generate_HDL(config, output_path, module_name, append_hash=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
     CONFIG = config
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, append_hash)
-    APPEND_HASH = append_hash
+    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -85,7 +93,7 @@ jump_exe_status_map = {
 }
 
 def pre_process_instr_set():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Handle compute lanes
@@ -98,7 +106,7 @@ def pre_process_instr_set():
              for l in range(CONFIG["SIMD"]["lanes"])
         ]
 
-    # Exstract number of reads and writes for each memory
+    # Extract number of reads and writes for each memory
     for mem, config in CONFIG["data_memories"].items():
         config["reads" ] = max(
             [
@@ -114,7 +122,7 @@ def pre_process_instr_set():
         )
 
 
-    # Exstract number of reads and writes, and statuses for each exe element
+    # Extract number of reads and writes, and statuses for each exe element
     for exe, config in CONFIG["execute_units"].items():
         config["inputs" ] = max(
             [
@@ -151,7 +159,7 @@ def pre_process_instr_set():
             config["statuses"] = list(set(config["statuses"]))
 
 
-    # Exstract instruction fetch related para
+    # Extract instruction fetch related para
     CONFIG["instruction_decoder"]["instr_width"] = CONFIG["instruction_decoder"]["opcode_width"] + sum(CONFIG["instruction_decoder"]["addr_widths"].values())
     CONFIG["program_fetch"]["uncondional_jump"] = any(
         [
@@ -198,7 +206,7 @@ def pre_process_instr_set():
                     CONFIG["fetch_data_connects"][dst][src] = None
 
 
-    # Built write addr map
+    # Build write addr map
     CONFIG["store_addr_connects"] = {}
     # process instr set for collections
     for op in CONFIG["instr_set"].keys():
@@ -217,7 +225,7 @@ def pre_process_instr_set():
                 CONFIG["store_addr_connects"][dst][src] = None
 
 
-    # Built write data map
+    # Build write data map
     CONFIG["store_data_connects"] = {}
     # process instr set for collections
     for op in CONFIG["instr_set"].keys():
@@ -245,7 +253,7 @@ exe_lib_lookup = {
 }
 
 def gen_execute_units():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "-- Exe components\n"
@@ -360,7 +368,7 @@ mem_lib_lookup = {
 }
 
 def gen_data_memories():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Memories components\n"
@@ -427,7 +435,7 @@ def gen_data_memories():
                 dst_sig = "_".join([mem, "read_%i_addr"%(read,)])
                 dst_id  = "#".join([mem, "read_%i_addr"%(read,)])
 
-                # Handle speacel edge of only 1 source for input
+                # Handle special edge of only 1 source for input
                 if len(CONFIG["fetch_addr_connects"][dst_id]) == 1:
                     src_id = list(CONFIG["fetch_addr_connects"][dst_id].keys())[0]
                     src_sig = "_".join(src_id.split("#"))
@@ -472,7 +480,8 @@ def gen_data_memories():
                         if src_addr == "ID":
                             signal = gen_utils.connect_signals(
                                 src_sig,
-                                CONFIG["instruction_decoder"]["addr_widths"][src_id.split("#")[1]],
+                                # [:-6] to remove ending _fetch or _store
+                                CONFIG["instruction_decoder"]["addr_widths"][src_id.split("#")[1][:-6]],
                                 config["addr_width"]
                             )
                         else:
@@ -505,9 +514,10 @@ def gen_data_memories():
                         ARCH_HEAD += "signal %s : %s;\n"%(lane_signal_name, signal_type)
                         ARCH_BODY += "%s <= %s;\n"%(lane_signal_name, data_signal)
         else:
-            # Repeat instantation for each lane
+            is_instantiated = False
+            # Repeat instantiation for each lane
             for lane in CONFIG["SIMD"]["lanes_names"]:
-                # instantiate each each memory
+                # Instantiate each memory
                 ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(lane + mem, name)
 
                 if len(interface["generics"]) != 0:
@@ -570,7 +580,7 @@ def gen_data_memories():
                     dst_sig = "_".join([mem, "read_%i_addr"%(read,)])
                     dst_id  = "#".join([mem, "read_%i_addr"%(read,)])
 
-                    # Handle speacel edge of only 1 source for input
+                    # Handle special edge of only 1 source for input
                     if len(CONFIG["fetch_addr_connects"][dst_id]) == 1:
                         src_id = list(CONFIG["fetch_addr_connects"][dst_id].keys())[0]
                         src_sig = "_".join(src_id.split("#"))
@@ -600,9 +610,13 @@ def gen_data_memories():
                         # Define mux select
                         select_width  = tc_utils.unsigned.width(len(CONFIG["fetch_addr_connects"][dst_id]) - 1)
                         select_signal = "%s_mux_sel"%(dst_sig)
-                        ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(select_signal, select_width - 1)
+                        if not is_instantiated:
+                            ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n" % (select_signal, select_width - 1)
+                            is_instantiated = True
+                        if lane != "":
+                            ARCH_HEAD += "signal %s%s : std_logic_vector(%i downto 0);\n"%(lane, select_signal, select_width - 1)
 
-                        # Geneter mux code
+                        # Generate mux code
                         ARCH_BODY += "%s <=\>"%(lane + dst_sig)
                         for i, src_id in enumerate(CONFIG["fetch_addr_connects"][dst_id].keys()):
                             src_sig = "_".join(src_id.split("#"))
@@ -614,7 +628,8 @@ def gen_data_memories():
                             if src_addr == "ID":
                                 signal = gen_utils.connect_signals(
                                     src_sig,
-                                    CONFIG["instruction_decoder"]["addr_widths"][src_id.split("#")[1]],
+                                    # [:-6] to remove ending _fetch or _store
+                                    CONFIG["instruction_decoder"]["addr_widths"][src_id.split("#")[1][:-6]],
                                     config["addr_width"]
                                 )
                             else:
@@ -624,7 +639,7 @@ def gen_data_memories():
                                     config["addr_width"]
                                 )
 
-                            ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
+                            ARCH_BODY += "%s when ID_%s = \"%s\"\nelse "%(
                                 signal,
                                 select_signal,
                                 select_value
@@ -633,12 +648,11 @@ def gen_data_memories():
 
                 # Create write muxes
                 for write in range(config["writes"]):
-                    print(mem, "write", write)
                     # Handle write addr muxes
                     dst_sig = "_".join([mem, "write_%i_addr"%(write,)])
                     dst_id  = "#".join([mem, "write_%i_addr"%(write,)])
 
-                    # Handle speacel edge of only 1 source for input
+                    # Handle special edge of only 1 source for input
                     if len(CONFIG["store_addr_connects"][dst_id]) == 1:
                         src_id = list(CONFIG["store_addr_connects"][dst_id].keys())[0]
                         src_sig = "_".join(src_id.split("#"))
@@ -670,7 +684,7 @@ def gen_data_memories():
                         select_signal = lane + "%s_mux_sel"%(dst_sig)
                         ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(select_signal, select_width - 1)
 
-                        # Geneter mux code
+                        # Generate mux code
                         ARCH_BODY += "%s <=\>"%(lane + dst_sig)
                         for i, src_id in enumerate(CONFIG["store_addr_connects"][dst_id].keys()):
                             src_sig = "_".join(src_id.split("#"))
@@ -704,9 +718,8 @@ def gen_data_memories():
                     dst_sig = "_".join([mem, "write_%i_data"%(write,)])
                     dst_id  = "#".join([mem, "write_%i_data"%(write,)])
 
-                    # Handle speacel edge of only 1 source for input
+                    # Handle special edge of only 1 source for input
                     if len(CONFIG["store_data_connects"][dst_id]) == 1:
-                        print("Found")
                         src_id = list(CONFIG["store_data_connects"][dst_id].keys())[0]
                         src_sig = "_".join(src_id.split("#"))
                         src_exe = src_id.split("#")[0]
@@ -725,7 +738,7 @@ def gen_data_memories():
                         raise NotImplementedError()
 
 
-            # Remove speacel spaces for input muxes
+            # Remove special spaces for input muxes
             # Must be done here so each lane can see sate before deletion
             for read in range(config["reads"]):
                 dst_id = "#".join([mem, "read_%i_addr"%(read,)])
@@ -738,13 +751,12 @@ def gen_data_memories():
                     del CONFIG["store_addr_connects"][dst_id]
                 dst_id = "#".join([mem, "write_%i_data"%(write,)])
                 if  len(CONFIG["store_data_connects"][dst_id]) == 1:
-                    print("removed")
                     del CONFIG["store_data_connects"][dst_id]
 
 #####################################################################
 
 def gen_addr_sources():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Address components\n"
@@ -801,7 +813,7 @@ def gen_addr_sources():
             dst_sig = "_".join([addr, "data_in"])
             dst_id  = "#".join([addr, "data_in"])
 
-            # Handle speacel edge of only 1 source for input
+            # Handle special edge of only 1 source for input
             if len(CONFIG["fetch_data_connects"][dst_id]) == 1:
                 src_id = list(CONFIG["fetch_data_connects"][dst_id].keys())[0]
                 src_sig = "_".join(src_id.split("#"))
@@ -826,7 +838,7 @@ def gen_addr_sources():
                 select_signal = "%s_mux_sel"%(dst_sig)
                 ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(select_signal, select_width - 1)
 
-                # Geneter mux code
+                # Generate mux code
                 ARCH_BODY += "%s <=\>"%(dst_sig)
                 for i, src_id in enumerate(CONFIG["fetch_data_connects"][dst_id].keys()):
                     src_sig = "_".join(src_id.split("#"))
@@ -849,7 +861,7 @@ def gen_addr_sources():
 #####################################################################
 
 def gen_program_fetch():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Program fetch components\n"
@@ -860,7 +872,7 @@ def gen_program_fetch():
     gen_program_memory()
 
 def gen_program_counter():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     interface, name = program_counter.generate_HDL(
@@ -877,7 +889,7 @@ def gen_program_counter():
         },
         OUTPUT_PATH,
         MODULE_NAME + "_PC",
-        APPEND_HASH,
+        GENERATE_NAME,
         FORCE_GENERATION
     )
 
@@ -934,7 +946,7 @@ def gen_program_counter():
         dst_sig = "_".join(["PC", "jump_value"])
         dst_id  = "#".join(["PC", "jump_value"])
 
-        # Handle speacel edge of only 1 source for input
+        # Handle special edge of only 1 source for input
         if len(CONFIG["fetch_data_connects"][dst_id]) == 1:
             src_id = list(CONFIG["fetch_data_connects"][dst_id].keys())[0]
             src_sig = "_".join(src_id.split("#"))
@@ -1009,7 +1021,7 @@ def gen_program_counter():
     ARCH_BODY += "\<);\<\n\n"
 
 def gen_zero_overhead_loop():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     interface, name = ZOL_manager.generate_HDL(
@@ -1019,7 +1031,7 @@ def gen_zero_overhead_loop():
         },
         OUTPUT_PATH,
         MODULE_NAME + "_ZOL_manager",
-        APPEND_HASH,
+        GENERATE_NAME,
         FORCE_GENERATION
     )
     INTERFACE["ZOL_delay_encoding"] = interface["delay_encoding"]
@@ -1052,7 +1064,7 @@ def gen_zero_overhead_loop():
     ARCH_BODY += "PM_addr <= PC_value;\n"
 
 def gen_program_memory():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     interface, name = ROM.generate_HDL(
@@ -1064,7 +1076,7 @@ def gen_program_memory():
         },
         OUTPUT_PATH,
         MODULE_NAME + "_PM",
-        APPEND_HASH,
+        GENERATE_NAME,
         FORCE_GENERATION
     )
 
@@ -1094,7 +1106,7 @@ def gen_program_memory():
 #####################################################################
 
 def gen_instruction_decoder():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, APPEND_HASH, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     interface, name = instruction_decoder.generate_HDL(
@@ -1103,7 +1115,7 @@ def gen_instruction_decoder():
         },
         OUTPUT_PATH,
         MODULE_NAME + "_ID",
-        APPEND_HASH,
+        GENERATE_NAME,
         FORCE_GENERATION
     )
 

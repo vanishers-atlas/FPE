@@ -1,20 +1,29 @@
+# Make sure is FPE discoverable
+if __name__ == "__main__":
+    import sys
+    import os
+    levels_below_FPE = 3
+    sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
+
 # Import ParseTreeWalker from antlr so extactors can walk loading tree
 from antlr4 import ParseTreeWalker
 
 # Import json for reading/writing json files
 import json
 
+# import regular expression library
 import re
 
-# import FPE assembly handling module
-from .. import FPE_assembly as asm_utils
-from ..HDL_generation import utils  as gen_utils
-from .. import utils  as tc_utils
+# Import utils libraries
+from FPE.toolchain import utils  as tc_utils
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.HDL_generation import utils  as gen_utils
 
-from . import label_handling
-from . import IMM_handling
-from . import PM_handling
-from . import ZOL_handling
+# import import assembler files (extactors)
+from FPE.toolchain.assembler import label_handling
+from FPE.toolchain.assembler import IMM_handling
+from FPE.toolchain.assembler import PM_handling
+from FPE.toolchain.assembler import ZOL_handling
 
 
 def determine_require_generics(interface):

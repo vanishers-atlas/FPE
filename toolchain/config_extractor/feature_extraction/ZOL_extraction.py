@@ -1,7 +1,9 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from ... import FPE_assembly as FPEA
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
+
 
 ####################################################################
 
@@ -17,4 +19,4 @@ class extractor(ParseTreeListener):
 
 
     def enterState_zol(this, ctx):
-        this.config["program_fetch"]["ZOLs"].append(FPEA.evaluate_expr(ctx.expr(), this.program_context))
+        this.config["program_fetch"]["ZOLs"].append(asm_utils.evaluate_expr(ctx.expr(), this.program_context))

@@ -1,10 +1,9 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from ... import FPE_assembly as FPEA
-
-# import toolchain utils for computing addr widths
-from ... import utils as tc_utils
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain import utils  as tc_utils
 
 ####################################################################
 
@@ -33,7 +32,7 @@ class extractor(ParseTreeListener):
 
 
     def enterOperation(this, ctx):
-        instr = FPEA.generate_instr(ctx, this.program_context)
+        instr = asm_utils.generate_instr(ctx, this.program_context)
         this.instr_set.add(instr)
         this.addr_literals = 0
 
@@ -46,7 +45,7 @@ class extractor(ParseTreeListener):
 
     def enterAddr_literal(this, ctx, mem=None):
         if mem == None:
-            mem = FPEA.get_component_access(ctx, this.program_context)
+            mem = asm_utils.get_component_access(ctx, this.program_context)
         try:
             this.config["instruction_decoder"]["addr_widths"]["addr_%i"%(this.addr_literals)] = max(
                 [

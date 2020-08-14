@@ -1,7 +1,8 @@
-from antlr4 import *
+# Import ParseTreeListener to extend
+from antlr4 import ParseTreeListener
 
-# import FPE assembly handling module
-from ... import FPE_assembly as FPEA
+# Import utils libraries
+from FPE.toolchain import FPE_assembly as asm_utils
 
 ####################################################################
 
@@ -22,7 +23,7 @@ class extractor(ParseTreeListener):
 
 
     def enterOp_bam_seek(this, ctx):
-        BAM = FPEA.get_component_op(ctx, this.program_context)
+        BAM = asm_utils.get_component_op(ctx, this.program_context)
 
         # Record fetched firection signal
         for mod in [mod.getText().upper() for mod in ctx.op_bam_seek_mod()]:
@@ -33,9 +34,9 @@ class extractor(ParseTreeListener):
                     this.config["address_sources"][BAM]["steps"]= set(["fetched_forward",])
             elif mod == "BACKWARD":
                 try:
-                    this.config["address_sources"][FPEA.get_component_op(ctx, this.program_context)]["steps"].add("fetched_backward")
+                    this.config["address_sources"][asm_utils.get_component_op(ctx, this.program_context)]["steps"].add("fetched_backward")
                 except KeyError:
-                    this.config["address_sources"][FPEA.get_component_op(ctx, this.program_context)]["steps"]= set(["fetched_backward",])
+                    this.config["address_sources"][asm_utils.get_component_op(ctx, this.program_context)]["steps"]= set(["fetched_backward",])
             else:
                 raise NotImplementedError("unknown mod, %s"%(mod))
         # Check fort defaulting to forward
@@ -51,7 +52,7 @@ class extractor(ParseTreeListener):
                 this.config["address_sources"][BAM]["steps"]= set(["fetched_forward",])
 
     def enterAddr_bam(this, ctx):
-        BAM = FPEA.get_component_addr(ctx, this.program_context)
+        BAM = asm_utils.get_component_addr(ctx, this.program_context)
         # Record fetched firection signal
         for mod in [mod.getText().upper() for mod in ctx.addr_bam_mod()]:
             if mod == "FORWARD":
@@ -61,8 +62,8 @@ class extractor(ParseTreeListener):
                     this.config["address_sources"][BAM]["steps"]= set(["generic_forward",])
             elif mod == "BACKWARD":
                 try:
-                    this.config["address_sources"][FPEA.get_component(ctx)]["steps"].add("generic_backward")
+                    this.config["address_sources"][asm_utils.get_component(ctx)]["steps"].add("generic_backward")
                 except KeyError:
-                    this.config["address_sources"][FPEA.get_component(ctx)]["steps"]= set(["generic_backward",])
+                    this.config["address_sources"][asm_utils.get_component(ctx)]["steps"]= set(["generic_backward",])
             else:
                 raise NotImplementedError("unknown mod, %s"%(mod))
