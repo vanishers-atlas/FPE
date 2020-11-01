@@ -11,13 +11,54 @@ from FPE.toolchain.HDL_generation import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.FPE import ZOL_tracker
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    assert(config_in["PC_width"] > 0)
+    config_out["PC_width"] = config_in["PC_width"]
+
+    assert(type(config_in["ZOLs"]) == type([]) )
+    config_out["ZOLs"] = []
+    for ZOL in config_in["ZOLs"]:
+        assert(ZOL > 0)
+        config_out["ZOLs"].append(ZOL)
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name = "ZOL_manager"
+        generated_name += "_%iw"%(config["PC_width"], )
+        generated_name += "_%iz"%(len(config["ZOLs"]), )
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 

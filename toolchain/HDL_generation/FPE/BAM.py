@@ -13,13 +13,72 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 from FPE.toolchain.HDL_generation.memory import register
 from FPE.toolchain.HDL_generation.memory import delay
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    assert(config_in["addr_width"] > 0)
+    config_out["addr_width"] = config_in["addr_width"]
+
+    assert(config_in["offset_width"] > 0)
+    config_out["offset_width"] = config_in["offset_width"]
+
+    assert(config_in["step_width"] > 0)
+    config_out["step_width"] = config_in["step_width"]
+
+    assert(type(config_in["steps"]) == type([]))
+    config_out["steps"] = []
+    for step in config_in["steps"]:
+        assert(step in [
+                "fetched_backward",
+                "fetched_forward",
+                "generic_backward",
+                "generic_forward",
+            ]
+        )
+        assert(step not in config_out["steps"])
+        config_out["steps"].append(step)
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+import zlib
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+        generated_name = "BAM"
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name += "_%ia"%(config["addr_width"])
+        generated_name += "_%io"%(config["offset_width"])
+        generated_name += "_%is"%(config["step_width"])
+
+        generated_name += "_%s"%str( hex( zlib.adler32("\n".join(config["steps"]).encode('utf-8')) )).lstrip("0x").zfill(8)
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
@@ -37,10 +96,26 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         INTERFACE = { "ports" : [], "generics" : [] }
 
         # Include extremely commom libs
-        IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
-        IMPORTS += [ {"library" : "ieee", "package" : "numeric_std", "parts" : "all"} ]
+        IMPORTS += [
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all"
+            },
+            {
+                "library" : "ieee",
+                "package" : "numeric_std",
+                "parts" : "all"
+            }
+        ]
 
-        INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        INTERFACE["ports"] += [
+            {
+                "name" : "clock",
+                "type" : "std_logic",
+                "direction" : "in",
+            }
+        ]
 
         # Generation Module Code
         generate_step_controls()
@@ -148,11 +223,11 @@ def generate_outset_adder_acc():
     ]
 
     ARCH_HEAD += "signal curr_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
-    ARCH_HEAD += "signal last_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
+    ARCH_HEAD += "signal next_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
 
-    ARCH_BODY += "curr_offset <=\>std_logic_vector( to_unsigned( to_integer( unsigned( last_offset ) ) + to_integer( unsigned( selected_step ) ), curr_offset'length) ) when step_forward = '1'\nelse "
-    ARCH_BODY += "std_logic_vector( to_unsigned( to_integer( unsigned( last_offset ) ) - to_integer( unsigned( selected_step ) ), curr_offset'length) ) when step_backward = '1'\nelse "
-    ARCH_BODY += "last_offset;\<\n"
+    ARCH_BODY += "next_offset <=\>std_logic_vector( to_unsigned( to_integer( unsigned( curr_offset ) ) + to_integer( unsigned( selected_step ) ), curr_offset'length) ) when step_forward = '1'\nelse "
+    ARCH_BODY += "std_logic_vector( to_unsigned( to_integer( unsigned( curr_offset ) ) - to_integer( unsigned( selected_step ) ), curr_offset'length) ) when step_backward = '1'\nelse "
+    ARCH_BODY += "curr_offset;\<\n"
 
     reg_interface, reg_name = register.generate_HDL(
         {
@@ -174,8 +249,8 @@ def generate_outset_adder_acc():
     ARCH_BODY += "port map (\n\>"
     ARCH_BODY += "enable => step_forward or step_backward,\n"
     ARCH_BODY += "trigger => clock,\n"
-    ARCH_BODY += "data_in => curr_offset,\n"
-    ARCH_BODY += "data_out => last_offset,\n"
+    ARCH_BODY += "data_in => next_offset,\n"
+    ARCH_BODY += "data_out => curr_offset,\n"
     ARCH_BODY += "asyn_reset_sel(0) => reset\n"
     ARCH_BODY += "\<);\n\<"
 
@@ -191,58 +266,40 @@ def generate_base_adders():
     ]
     INTERFACE["ports"] += [
         {
-            "name" : "addr_fetch",
+            "name" : "addr_0_fetch",
             "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
             "direction" : "out"
         },
         {
-            "name" : "addr_store",
+            "name" : "addr_0_store",
             "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
             "direction" : "out"
         },
     ]
 
+    # Declare addr signals
+    ARCH_HEAD += "signal addr_0_fetch_internal : std_logic_vector(%i downto 0);"%(CONFIG["addr_width"] - 1, )
+
+    # Generate addr value
+    ARCH_BODY += "addr_0_fetch_internal <= std_logic_vector(to_unsigned(base + to_integer(unsigned(curr_offset)), addr_0_fetch_internal'length));\n\n"
+    ARCH_BODY += "addr_0_fetch <= addr_0_fetch_internal;\n"
+
+    # Generate addr delay
     delay_interface, delay_name = delay.generate_HDL(
-        {},
+        {
+            "width" : CONFIG["addr_width"],
+            "depth" : 2,
+        },
         OUTPUT_PATH,
         "delay",
         True,
         False
     )
 
-    ARCH_HEAD += "signal pre_addr_fetch, pre_addr_store : std_logic_vector(%i downto 0);"%(CONFIG["addr_width"] - 1, )
-
-    ARCH_BODY += "pre_addr_fetch <= std_logic_vector(to_unsigned(base + to_integer(unsigned(curr_offset)), pre_addr_fetch'length));\n\n"
-
-    # Generate fetch buffer
-    ARCH_BODY += "pre_addr_fetch_dalay : entity work.%s(arch)\>\n"%(delay_name)
-
-    ARCH_BODY += "generic map (\>"
-    ARCH_BODY += "delay_width => %i,"%(CONFIG["addr_width"])
-    # delay of 1, translates to delay until next raising edge
-    ARCH_BODY += "delay_depth => 1"
-    ARCH_BODY += "\<)\n"
+    ARCH_BODY += "pre_addr_0_store_delay : entity work.%s(arch)\>\n"%(delay_name)
 
     ARCH_BODY += "port map (\n\>"
     ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => pre_addr_fetch,\n"
-    ARCH_BODY += "data_out => pre_addr_store\n"
-    ARCH_BODY += "\<);\n\<\n"
-
-    ARCH_BODY += "addr_fetch <= pre_addr_store;\n\n"
-
-    ARCH_BODY += "pre_addr_store_delay : entity work.%s(arch)\>\n"%(delay_name)
-
-    ARCH_BODY += "generic map (\>"
-    ARCH_BODY += "delay_width => %i,"%(CONFIG["addr_width"])
-    # delay of 1 + exe_stages,
-    #   1 to get past the fetch/read stage(s)
-    #   exe_stages to get past the exe stage(s) of the pipeline
-    ARCH_BODY += "delay_depth => %i" %(1 + CONFIG["exe_stages"])
-    ARCH_BODY += "\<)\n"
-
-    ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => pre_addr_store,\n"
-    ARCH_BODY += "data_out => addr_store\n"
+    ARCH_BODY += "data_in  => addr_0_fetch_internal,\n"
+    ARCH_BODY += "data_out => addr_0_store\n"
     ARCH_BODY += "\<);\n\<\n"

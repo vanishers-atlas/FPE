@@ -9,13 +9,76 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    assert(config_in["data_width"] > 0)
+    config_out["data_width"] = config_in["data_width"]
+
+    assert(config_in["inputs"] > 0)
+    config_out["inputs"] = config_in["inputs"]
+
+    assert(config_in["outputs"] > 0)
+    config_out["outputs"] = config_in["outputs"]
+
+    assert(type(config_in["op_set"]) == type([]))
+    assert(len(config_in["op_set"]) > 0)
+    config_out["op_set"] = config_in["op_set"]
+
+    # Check inputs/outputs required by op_set
+    for op in config_out["op_set"]:
+        num_fetchs = gen_utils.decode_num_fetchs(op)
+        if num_fetchs > config_out["inputs"]:
+            raise ValueError("Operation, %s, requires inputs >= %i"%(op, num_fetchs))
+
+        num_stores = gen_utils.decode_num_stores(op)
+        if num_stores > config_out["outputs"]:
+            raise ValueError("Operation, %s, requires outputs >= %i"%(op, num_stores))
+
+    config_out["statuses"] = config_in["statuses"]
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+import zlib
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name = "ALU_48E1"
+
+        # Hash op_set
+        generated_name += "_%sop"%str( hex( zlib.adler32("\n".join(config["op_set"]).encode('utf-8')) )).lstrip("0x").zfill(8)
+
+        # Append data width
+        generated_name += "_%sw"%config["data_width"]
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
@@ -36,7 +99,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
 
         # Generation Module Code
-        process_operations()
+        populate_interface()
         generate_ports()
         instanate_Slice()
 
@@ -47,7 +110,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 
 #####################################################################
 
-operation_sel_map = {
+op_set_map = {
     "ADD#fetch~acc#acc" : {
         "fetch_mapping" : ["C"],
         "controls" : "".join([
@@ -269,24 +332,18 @@ operation_sel_map = {
     },
 }
 
-def process_operations():
+def populate_interface():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Collect required data ports for ops
-    for op in CONFIG["operations"]:
-        num_fetchs = gen_utils.decode_num_fetchs(op)
-        if num_fetchs > CONFIG["inputs"]:
-            raise ValueError("Operation, %s, requires inputs >= %i"%(op, num_fetchs))
-
-        num_stores = gen_utils.decode_num_stores(op)
-        if num_stores > CONFIG["outputs"]:
-            raise ValueError("Operation, %s, requires outputs >= %i"%(op, num_stores))
+    INTERFACE["controls"] = {}
 
     # Generate required control signals for each op
-    INTERFACE["operation_sel"] = {}
-    for op in CONFIG["operations"]:
-        INTERFACE["operation_sel"][op] = operation_sel_map[op]["controls"]
+    INTERFACE["controls"]["op_sel"] = {}
+    INTERFACE["controls"]["op_sel"]["width"] = 11
+    INTERFACE["controls"]["op_sel"]["values"] = {}
+    for op in CONFIG["op_set"]:
+        INTERFACE["controls"]["op_sel"]["values"][op] = op_set_map[op]["controls"]
 
     # Flag number of clock cycles needed
     INTERFACE["cycles required"] = 1
@@ -300,7 +357,7 @@ def generate_ports():
         { "name" : "clock" , "type" : "std_logic", "direction" : "in" },
         { "name" : "enable", "type" : "std_logic", "direction" : "in" },
         {
-            "name" : "operation_sel",
+            "name" : "op_sel",
 
             # 10 downto 0 as 7 for op(erand) mode and 4 for 4 ALU mode = 11 bits
             "type" : "std_logic_vector(10 downto 0)",
@@ -342,19 +399,17 @@ def instanate_Slice():
 
     # Enable/ disable multiplier as needed
     ARCH_BODY += "-- Multiplier setting \n"
-    use_mult = "\"NONE\""
-    has_mul = False
-    has_AB = False
-    for op in CONFIG["operations"]:
-        if op.split("#")[0] == "MUL":
-            use_mult = "\"MULTIPLY\""
-            has_mul = True
-        if "A:B" in operation_sel_map[op]["fetch_mapping"]:
-            has_AB = True
-        if has_mul and has_AB:
-            use_mult = "\"DYNAMIC\""
-            break
-    ARCH_BODY += "USE_MULT => %s,\n"%(use_mult)
+    multiplier_used = any([op.split("#")[0] == "MUL" for op in CONFIG["op_set"]])
+    AB_used = any(["A:B" in op_set_map[op]["fetch_mapping"] for op in CONFIG["op_set"]])
+
+    if multiplier_used == False:
+        ARCH_BODY += "USE_MULT => \"NONE\",\n"
+    elif multiplier_used == True and AB_used == False:
+        ARCH_BODY += "USE_MULT => \"MULTIPLY\",\n"
+    elif multiplier_used == True and AB_used == True:
+        ARCH_BODY += "USE_MULT => \"DYNAMIC\",\n"
+    else:
+        raise ValueError("Unknown case for multiplier_used (%s) and AB_used (%s)"%(str(multiplier_used), str(AB_used)))
 
     # Disable pattern Detector
     ARCH_BODY += "-- Disable Pattern Detector \n"
@@ -475,8 +530,8 @@ def instanate_Slice():
     ARCH_BODY += "\<\n"
 
     # Connect controls from ID
-    ARCH_BODY += "slice_operandSel <= operation_sel(10 downto 4);\n"
-    ARCH_BODY += "slice_ALUmode    <= operation_sel( 3 downto 0);\n"
+    ARCH_BODY += "slice_operandSel <= op_sel(10 downto 4);\n"
+    ARCH_BODY += "slice_ALUmode    <= op_sel( 3 downto 0);\n"
 
     # Compute how slice input and AlU inputs connect
     data_mapping = {
@@ -486,8 +541,8 @@ def instanate_Slice():
         "D" : set(),
         "A:B" : set(),
     }
-    for op in CONFIG["operations"]:
-        for fetch, port in enumerate(operation_sel_map[op]["fetch_mapping"]):
+    for op in CONFIG["op_set"]:
+        for fetch, port in enumerate(op_set_map[op]["fetch_mapping"]):
             data_mapping[port].add(fetch)
 
     # Handle slice A

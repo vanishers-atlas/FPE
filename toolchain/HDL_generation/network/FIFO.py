@@ -20,13 +20,40 @@ def handle_module_name(module_name, config, generate_name):
     else:
         return module_name
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    raise NotImplementedError()
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+        generated_name = ""
+
+        raise NotImplementedError()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 

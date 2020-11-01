@@ -1,219 +1,96 @@
 import re
 
-def instr_mnemonic(op_id):
-    return op_id.split("#")[0]
+###############################################################
+# Instr decomposing
+###############################################################
+# Instr structure :
+# Sections : Mnemonic Sources Execution_unit Dests Mods
+# With "#" as section delimators
+# With "~" as multiple delimators
 
-####################################################################
+def instr_mnemonic(instr):
+    return instr.split("#")[0]
 
-def instr_srcs(op_id):
-    if op_id.split("#")[1] != "":
-        return [
-            store
-            for store in op_id.split("#")[1].split("~")
-        ]
+def instr_srcs(instr):
+    if instr.split("#")[1] != "":
+        return instr.split("#")[1].split("~")
     else:
         return []
 
-def instr_fetchs(op_id):
+def instr_exe_unit(instr):
+    return instr.split("#")[2]
+
+def instr_dests(instr):
+    if instr.split("#")[3] != "":
+        return instr.split("#")[3].split("~")
+    else:
+        return []
+
+def instr_mods(instr):
+    return instr.split("#")[4]
+
+exe_internals = {
+    "ALU" : ["ACC"],
+}
+
+def instr_fetches(instr):
     return [
         src
-        for src in instr_srcs(op_id)
-        if src.lower() != "acc"
-    ]
-
-def instr_fetch_addrs(op_id):
-    return [
-        "addr_%s"%(fetch.split("'")[1].split(";")[0])
-        if fetch.split("'")[1].split(";")[0].isdigit()
-        else "addr"
-        for fetch in instr_fetchs(op_id)
-    ]
-
-
-def instr_fetch_access_coms(op_id):
-    return [
-        fetch.split("'")[0]
-        for fetch in instr_fetchs(op_id)
-    ]
-
-def instr_fetch_access_srcs(op_id):
-    paths_used = []
-    rtn_data = []
-    for com in instr_fetch_access_coms(op_id):
-        rtn_data.append(
-            "read_%i_data"%(
-                paths_used.count(com),
-            )
+        for src in instr_srcs(instr)
+        if
+        (
+            instr_exe_unit(instr) not in exe_internals.keys()
+            or src not in exe_internals[instr_exe_unit(instr)]
         )
-        paths_used.append(com)
-    return rtn_data
-
-def instr_fetch_access_dsts(op_id):
-    exe_com =  instr_exe_com(op_id)
-    if exe_com == "":
-        return []
-    elif exe_com.startswith(("ALU")):
-        return [
-            "in_%i"%(index)
-            for index, src in enumerate(instr_fetchs(op_id))
-        ]
-    elif exe_com.startswith(("BAM_")):
-        return [
-            "data_in"
-            for src in instr_fetchs(op_id)
-        ]
-    elif exe_com == "PC":
-        return [
-            "jump_value"
-            for src in instr_fetchs(op_id)
-        ]
-    else:
-        raise NotImplementedError("Unknown ese_com, %s"%(exe_com))
-
-def instr_fetch_access_mods(op_id):
-    return [
-        fetch.split("'")[2].split("@")
-        for fetch in instr_fetchs(op_id)
     ]
 
-
-def instr_fetch_addr_coms(op_id):
-    return [
-        "ID"
-        if fetch.split("'")[1].split(";")[0].isdigit()
-        else fetch.split("'")[1].split(";")[0]
-        for fetch in instr_fetchs(op_id)
-    ]
-
-def instr_fetch_addr_srcs(op_id):
-    return [
-        "addr_%s_fetch"%(fetch.split("'")[1].split(";")[1])
-        if fetch.split("'")[1].split(";")[1].isdigit()
-        else "addr_fetch"
-        for fetch in instr_fetchs(op_id)
-    ]
-
-def instr_fetch_addr_dsts(op_id):
-    paths_used = []
-    rtn_data = []
-    for com in instr_fetch_access_coms(op_id):
-        rtn_data.append(
-            "read_%i_addr"%(
-                paths_used.count(com),
-            )
-        )
-        paths_used.append(com)
-    return rtn_data
-
-def instr_fetch_addr_mods(op_id):
-    return [
-        fetch.split("'")[1].split(";")[2].split(":")
-        for fetch in instr_fetchs(op_id)
-    ]
-
-
-####################################################################
-
-def instr_exe_com(op_id):
-    return op_id.split("#")[2]
-
-####################################################################
-
-def instr_dests(op_id):
-    if op_id.split("#")[3] != "":
-        return [
-            store
-            for store in op_id.split("#")[3].split("~")
-        ]
-    else:
-        return []
-
-def instr_stores(op_id):
+def instr_stores(instr):
     return [
         dest
-        for dest in instr_dests(op_id)
-        if dest.lower() != "acc"
+        for dest in instr_dests(instr)
+        if
+        (
+            instr_exe_unit(instr) in exe_internals.keys()
+            and dest not in exe_internals[instr_exe_unit(instr)]
+        )
     ]
 
-def instr_store_addrs(op_id):
-    return [
-        "addr_%s"%(fetch.split("'")[1].split(";")[0])
-        if fetch.split("'")[1].split(";")[0].isdigit()
-        else "addr"
-        for fetch in instr_stores(op_id)
-    ]
+###############################################################
+# Access decomposing
+###############################################################
+# Access structure :
+# Sections : Mem Addr Mods
+# With "'" as section delimators
+# With "@" as multiple delimators
 
+def access_mem(access):
+    return access.split("'")[0]
 
-def instr_store_access_coms(op_id):
-    return [
-        store.split("'")[0]
-        for store in instr_stores(op_id)
-    ]
+def access_addr(access):
+    return access.split("'")[1]
 
-def instr_store_access_srcs(op_id):
-    exe_com =  instr_exe_com(op_id)
-    if exe_com.startswith(("ALU")):
-        return [
-            "out_%i"%(index)
-            for index, src in enumerate(instr_stores(op_id))
-        ]
-    elif exe_com.startswith(("BAM_", "PC")):
-        return []
+def access_mods(access):
+    if access.split("'")[2] != "":
+        return access.split("'")[2].split("@")
     else:
-        raise NotImplementedError("Unknown ese_com, %s"%(exe_com))
+        return []
 
-def instr_store_access_dsts(op_id):
-    paths_used = []
-    rtn_data = []
-    for com in instr_store_access_coms(op_id):
-        rtn_data.append(
-            "write_%i_data"%(
-                paths_used.count(com),
-            )
-        )
-        paths_used.append(com)
-    return rtn_data
+###############################################################
+# Addr decomposing
+###############################################################
+# Addr structure :
+# Sections : Com Port Mods
+# With ";" as section delimators
+# With ":" as multiple delimators
 
-def instr_store_access_mods(op_id):
-    raise NotImplementedError()
-    return [store.split("]")[1].split("|") for store in instr_stores(op_id) ]
+def addr_com(addr):
+    return addr.split(";")[0]
 
+def addr_port(addr):
+    return addr.split(";")[1]
 
-def instr_store_addr_coms(op_id):
-    return [
-        "ID"
-        if fetch.split("'")[1].split(";")[0].isdigit()
-        else fetch.split("'")[1].split(";")[0]
-        for fetch in instr_stores(op_id)
-    ]
-
-def instr_store_addr_srcs(op_id):
-    return [
-        "addr_%s_store"%(store.split("'")[1].split(";")[1])
-        if store.split("'")[1].split(";")[1].isdigit()
-        else "addr_store"
-        for store in instr_stores(op_id)
-    ]
-
-def instr_store_addr_dsts(op_id):
-    paths_used = []
-    rtn_data = []
-    for component in instr_store_access_coms(op_id):
-        rtn_data.append(
-            "write_%i_addr"%(
-                paths_used.count(component),
-            )
-        )
-        paths_used.append(component)
-    return rtn_data
-
-def instr_store_addr_mods(op_id):
-    return [
-        store.split("'")[1].split(";")[2].split(":")
-        for store in instr_stores(op_id)
-    ]
-
-####################################################################
-
-def instr_mods(op_id):
-    return op_id.split("#")[4].split("~")
+def addr_mods(addr):
+    if addr.split(";")[2] != "":
+        return addr.split(";")[2].split(":")
+    else:
+        return []

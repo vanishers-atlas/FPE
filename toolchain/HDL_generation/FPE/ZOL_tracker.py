@@ -9,30 +9,64 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation import utils as gen_utils
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    assert(config_in["width"] > 0)
+    config_out["width"] = config_in["width"]
+
+    assert(config_in["count"] > 0)
+    config_out["count"] = config_in["count"]
+
+    # Handle delay regs and delay encoding
+    config_out["delay_encoding"] = {
+        "bais"  : 1,
+        "range" : 31
+    }
+    config_out["registers"] = tc_utils.biased_tally.width(
+        config_out["count"],
+        config_out["delay_encoding"]["bais" ],
+        config_out["delay_encoding"]["range"]
+    )
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name = "ZOL"
+        generated_name += "_%iw"%(config["width"])
+        generated_name += "_%ireg"%(config["registers"])
+        generated_name += "_%ib"%(config["delay_encoding"]["bais"])
+        generated_name += "_%ir"%(config["delay_encoding"]["range"])
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
-    # Handle delay regs and delay encoding
-    interface = {
-        "delay_encoding" : {
-            "bais"  : 1,
-            "range" : 31
-        }
-    }
-    config["registers"] = tc_utils.biased_tally.width(
-        config["count"],
-        interface["delay_encoding"]["bais" ],
-        interface["delay_encoding"]["range"]
-    )
-    interface["delay_encoding"]["width"] = config["registers"]
-    del config["count"]
-
-
-
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
@@ -47,13 +81,33 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { **interface, "ports" : [], "generics" : [] }
+        INTERFACE = {
+            "ports" : [],
+            "generics" : [],
+            "delay_encoding" : {
+                "width" : CONFIG["registers"],
+                "bais" : CONFIG["delay_encoding"]["bais"],
+                "range" : CONFIG["delay_encoding"]["range"]
+            }
+        }
 
         # Include extremely commom libs
-        IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
+        IMPORTS += [
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all"
+            }
+        ]
 
         # Setop common ports
-        INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        INTERFACE["ports"] += [
+            {
+                "name" : "clock",
+                "type" : "std_logic",
+                "direction" : "in"
+            }
+        ]
 
         generate_PC_checking()
         generate_delay()
@@ -67,18 +121,46 @@ def generate_PC_checking():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    IMPORTS += [ {"library" : "ieee"  , "package" : "numeric_std"   , "parts" : "all"} ]
+    IMPORTS += [
+        {
+            "library" : "ieee",
+            "package" : "numeric_std",
+            "parts" : "all"
+        }
+    ]
 
     INTERFACE["generics"] += [
-        { "name" : "start_value", "type" : "integer", },
-        { "name" : "end_value"  , "type" : "integer", },
+        {
+            "name" : "start_value",
+            "type" : "integer",
+        },
+        {
+            "name" : "end_value",
+            "type" : "integer",
+        },
     ]
 
     INTERFACE["ports"] += [
-        { "name" : "value_in" , "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1), "direction" : "in" },
-        { "name" : "value_out", "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1), "direction" : "out" },
-        { "name" : "overwrite", "type" : "std_logic", "direction" : "out" },
-        { "name" : "PC_running"  , "type" : "std_logic", "direction" : "in" },
+        {
+            "name" : "value_in",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1),
+            "direction" : "in"
+        },
+        {
+            "name" : "value_out",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1),
+            "direction" : "out"
+        },
+        {
+            "name" : "overwrite",
+            "type" : "std_logic",
+            "direction" : "out"
+        },
+        {
+            "name" : "PC_running",
+            "type" : "std_logic",
+            "direction" : "in"
+        },
     ]
     ARCH_HEAD += "type tracker_state is (INACTIVE, SETUP, ACTIVE, CLEAR);\n"
     ARCH_HEAD += "signal last_state : tracker_state := INACTIVE;\n"
@@ -123,10 +205,19 @@ def generate_delay():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    IMPORTS += [ {"library" : "UNISIM", "package" : "vcomponents"   , "parts" : "all"}, ]
+    IMPORTS += [
+        {
+            "library" : "UNISIM",
+            "package" : "vcomponents",
+            "parts" : "all"
+        },
+    ]
 
     INTERFACE["generics"] += [
-        { "name" : "delay_tally", "type" : "std_logic_vector(%i downto 0)"%(5*CONFIG["registers"] - 1), },
+        {
+            "name" : "delay_tally",
+            "type" : "std_logic_vector(%i downto 0)"%(5*CONFIG["registers"] - 1),
+        },
     ]
 
     ARCH_HEAD += "signal delay_in, delay_out, delay_clock_enable : std_logic;\n"

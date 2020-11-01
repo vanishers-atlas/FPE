@@ -22,7 +22,7 @@ class handler(ParseTreeListener):
             if asm_utils.instr_mnemonic(op_id).upper() == "NOP"
         ]
         if filler != []:
-            filler = filler[0] << sum(this.config["instruction_decoder"]["addr_widths"].values())
+            filler = filler[0] << sum(this.config["instr_decoder"]["addr_widths"])
         else:
             filler = 0
 
@@ -30,7 +30,7 @@ class handler(ParseTreeListener):
         program_end = len(this.program) - 1
 
         # Fill unused space at the end of the PM with filler opcode
-        while len(this.program) < this.config["program_fetch"]["program_length"]:
+        while len(this.program) < this.config["program_flow"]["program_length"]:
             this.program.append(filler)
 
         return program_end, this.program
@@ -41,14 +41,11 @@ class handler(ParseTreeListener):
 
     def exitOperation(this, ctx):
         instr = this.config["instr_set"][asm_utils.generate_instr(ctx, this.program_context)]
-        for addr, (k, width) in zip(
+        for addr, slot_width in zip(
             it.chain(this.addresses, it.repeat(0)),
-            sorted(
-                this.config["instruction_decoder"]["addr_widths"].items(),
-                 key=lambda kv: kv[0]
-            )
+            this.config["instr_decoder"]["addr_widths"]
         ):
-            instr <<= width
+            instr <<= slot_width
             instr += addr
 
         this.program.append(instr)

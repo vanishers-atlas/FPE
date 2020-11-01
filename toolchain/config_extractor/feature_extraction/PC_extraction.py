@@ -15,8 +15,8 @@ class extractor(ParseTreeListener):
         this.PC = 0
 
     def get_updated_config(this):
-        this.config["program_fetch"]["program_length"] = this.PC
-        this.config["program_fetch"]["addr_width"] = tc_utils.unsigned.width(this.config["program_fetch"]["program_length"] - 1)
+        this.config["program_flow"]["program_length"] = this.PC
+        this.config["program_flow"]["PC_width"] = tc_utils.unsigned.width(this.config["program_flow"]["program_length"] - 1)
         return this.config
 
 

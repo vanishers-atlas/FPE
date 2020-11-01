@@ -25,7 +25,6 @@ from FPE.toolchain.assembler import IMM_handling
 from FPE.toolchain.assembler import PM_handling
 from FPE.toolchain.assembler import ZOL_handling
 
-
 def determine_require_generics(interface):
     generics = {}
     for generic in interface["generics"]:
@@ -133,8 +132,8 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     program_end, program = handler.get_output()
     write_mif_file(
         output_path + "\\" + pm_file,
-        config["program_fetch"]["program_length"],
-        config["instruction_decoder"]["opcode_width"] + sum(config["instruction_decoder"]["addr_widths"].values()),
+        config["program_flow"]["program_length"],
+        config["instr_decoder"]["opcode_width"] + sum(config["instr_decoder"]["addr_widths"]),
         program
     )
     generics["PM_mem_file"]  = pm_file

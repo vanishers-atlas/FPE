@@ -11,13 +11,61 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.memory import register
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    assert(config_in["reads"] >= 1)
+    config_out["reads"] = config_in["reads"]
+
+    assert(config_in["writes"] >= 1)
+    config_out["writes"] = config_in["writes"]
+
+    assert(config_in["depth"] >= 1)
+    config_out["depth"] = config_in["depth"]
+    config_out["addr_width"] = tc_utils.unsigned.width(config_in["depth"] - 1)
+
+    assert(config_in["data_width"] >= 1)
+    config_out["data_width"] = config_in["data_width"]
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name = "REG"
+
+        generated_name += "_%ir"%(config["reads"], )
+        generated_name += "_%iwr"%(config["writes"], )
+        generated_name += "_%iw"%(config["data_width"], )
+        generated_name += "_%id"%(config["depth"], )
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 

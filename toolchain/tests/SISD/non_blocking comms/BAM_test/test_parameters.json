@@ -18,8 +18,8 @@
 
     "data_memories": {
         "PUT": {
-            "data_width": 4,
-            "depth": 1
+            "FIFOs": 1,
+            "data_width": 4
         },
         "ROM": {
             "data_width": 4,

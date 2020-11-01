@@ -40,11 +40,16 @@ def generate_instr_op_void(ctx, program_context):
     if ctx.op_void_nop():
         return "#".join(
             [
+                # Mnemonic
                 "NOP",
+                # Sources
                 "~".join([]),
+                # Exe
                 get_component.get_component_op(ctx, program_context),
+                # Dests
                 "~".join([]),
-                "~".join( sorted( [] ) ),
+                # Mods
+                "~".join(sorted([]))
             ]
         )
     else:
@@ -55,7 +60,6 @@ def generate_instr_op_void(ctx, program_context):
                     error_reporting.ctx_start(ctx)
                 )
             )
-
 
 ####################################################################
 
@@ -64,13 +68,20 @@ def generate_instr_op_pc(ctx, program_context):
     if ctx.op_pc_jump():
         return "#".join(
             [
+                # Mnemonic
                 token_handling.token_to_text(ctx.op_pc_jump().mnemonic),
-                "~".join([
-                    generate_instr_access_imm(),
-                ]),
+                # Sources
+                "~".join(
+                    [
+                        generate_instr_access_imm(),
+                    ]
+                ),
+                # Exe
                 get_component.get_component_op(ctx, program_context),
+                # Dests
                 "~".join([]),
-                "~".join( sorted( [] ) ),
+                # Mods
+                "~".join(sorted([]))
             ]
         )
     else:
@@ -81,8 +92,6 @@ def generate_instr_op_pc(ctx, program_context):
                     error_reporting.ctx_start(ctx)
                 )
             )
-
-
 
 ####################################################################
 
@@ -104,11 +113,16 @@ def generate_instr_op_bam_reset(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
-            "RESET",
+            # Mnemonic
+            "BAM_RESET",
+            # Sources
             "~".join([]),
+            # Exe
             get_component.get_component_op(ctx, program_context),
+            # Dests
             "~".join([]),
-            "~".join( sorted( [] ) ),
+            # Mods
+            "~".join(sorted([]))
         ]
     )
 
@@ -117,18 +131,22 @@ def generate_instr_op_bam_seek(ctx, program_context):
 
     # Get all mods
     mods = set([mod.getText() for mod in ctx.op_bam_seek_mod()])
-    # include default mods it not already over
+    # include default mods if not already covered
     if not any([mod == "BACKWARD" for mod in mods]):
         mods.add("FORWARD")
 
     return "#".join(
         [
-
-            "SEEK",
+            # Mnemonic
+            "BAM_SEEK",
+            # Sources
             generate_instr_access(ctx.access_fetch(), program_context),
+            # Exe
             get_component.get_component_op(ctx, program_context),
+            # Dests
             "~".join([]),
-            "~".join( sorted( mods ) ),
+            # Mods
+            "~".join(sorted(mods))
         ]
     )
 
@@ -150,24 +168,28 @@ def generate_instr_op_alu(ctx, program_context):
                 )
             )
 
-
 def generate_instr_op_alu_1f_1s(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
+            # Mnemonic
             token_handling.token_to_text(ctx.mnemonic),
+            # Sources
             "~".join(
                 [
                     generate_instr_access_alu(ctx.access_fetch_alu(), program_context)
                 ]
             ),
+            # Exe
             get_component.get_component_op(ctx, program_context),
+            # Dests
             "~".join(
                 [
                     generate_instr_access_alu(ctx.access_store_alu(), program_context)
                 ]
             ),
-            "~".join( sorted( [] ) ),
+            # Mods
+            "~".join(sorted([]))
         ]
     )
 
@@ -175,16 +197,21 @@ def generate_instr_op_alu_2f_0s(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
+            # Mnemonic
             token_handling.token_to_text(ctx.mnemonic),
+            # Sources
             "~".join(
                 [
                     generate_instr_access_alu(access_ctx, program_context)
                     for access_ctx in ctx.access_fetch_alu()
                 ]
             ),
+            # Exe
             get_component.get_component_op(ctx, program_context),
+            # Dests
             "~".join([]),
-            "~".join( sorted( [] ) ),
+            # Mods
+            "~".join(sorted([]))
         ]
     )
 
@@ -192,23 +219,27 @@ def generate_instr_op_alu_2f_1s(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
+            # Mnemonic
             token_handling.token_to_text(ctx.mnemonic),
+            # Sources
             "~".join(
                 [
                     generate_instr_access_alu(access_ctx, program_context)
                     for access_ctx in ctx.access_fetch_alu()
                 ]
             ),
+            # Exe
             get_component.get_component_op(ctx, program_context),
+            # Dests
             "~".join(
                 [
                     generate_instr_access_alu(ctx.access_store_alu(), program_context)
                 ]
             ),
-            "~".join( sorted( [] ) ),
+            # Mods
+            "~".join(sorted([]))
         ]
     )
-
 
 def generate_instr_access_alu(ctx, program_context):
 
@@ -257,24 +288,33 @@ def generate_instr_access(ctx, program_context):
 def generate_instr_access_imm():
     return "'".join(
         [
+            # Mem
             "IMM",
+            # Addr
             generate_instr_addr_literal(),
+            # Mods
             "@".join( sorted( [] ) ),
         ]
     )
 
+access_get_default_mods = [
+    "NO_ADV"
+]
 def generate_instr_access_get(ctx, program_context):
     return "'".join(
         [
+            # Mem
             "GET",
+            # Addr
             generate_instr_addr(ctx.addr(), program_context),
+            # Mods
             "@".join(
                 sorted(
                     [
                         mod.getText().upper()
                         for mod in ctx.access_get_mod()
                         # skip default 'mods'
-                        if mod.getText().upper() not in ['NO_ADV']
+                        if mod.getText().upper() not in access_get_default_mods
                     ]
                 )
             ),
@@ -284,8 +324,11 @@ def generate_instr_access_get(ctx, program_context):
 def generate_instr_access_put(ctx, program_context):
     return "'".join(
         [
+            # Mem
             "PUT",
+            # Addr
             generate_instr_addr(ctx.addr(), program_context),
+            # Mods
             "@".join( sorted( [] ) ),
         ]
     )
@@ -293,8 +336,11 @@ def generate_instr_access_put(ctx, program_context):
 def generate_instr_access_reg(ctx, program_context):
     return "'".join(
         [
+            # Mem
             "REG",
+            # Addr
             generate_instr_addr(ctx.addr(), program_context),
+            # Mods
             "@".join( sorted( [] ) ),
         ]
     )
@@ -302,18 +348,23 @@ def generate_instr_access_reg(ctx, program_context):
 def generate_instr_access_ram(ctx, program_context):
     return "'".join(
         [
+            # Mem
             "RAM",
+            # Addr
             generate_instr_addr(ctx.addr(), program_context),
+            # Mods
             "@".join( sorted( [] ) ),
         ]
     )
 
-
 def generate_instr_access_rom(ctx, program_context):
     return "'".join(
         [
+            # Mem
             "ROM",
+            # Addr
             generate_instr_addr(ctx.addr(), program_context),
+            # Mods
             "@".join([]),
         ]
     )
@@ -338,8 +389,11 @@ def generate_instr_addr(ctx, program_context):
 def generate_instr_addr_literal():
     rtnStr = ";".join(
         [
+            # Com
             "ID",
+            # Port
             str(generate_instr_addr_literal.port),
+            # Mods
             ":".join( sorted( [ ] ) )
         ]
     )
@@ -349,8 +403,11 @@ def generate_instr_addr_literal():
 def generate_instr_addr_bam(ctx, program_context):
     return ";".join(
         [
+            # Com
             get_component.get_component_addr(ctx, program_context),
-            "",
+            # Port
+            "0",
+            # Mods
             ":".join(
                 sorted(
                     [

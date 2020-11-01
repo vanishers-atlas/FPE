@@ -12,13 +12,58 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.memory import register
 
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    # Data pori parameters
+    assert(config_in["reads"] >= 1)
+    config_out["reads"] = config_in["reads"]
+    assert(config_in["FIFOs"] >= 1)
+    config_out["FIFOs"] = config_in["FIFOs"]
+
+    # Datapath parametes
+    assert(config_in["data_width"] >= 0)
+    config_out["data_width"] = config_in["data_width"]
+    config_out["addr_width"] = tc_utils.unsigned.width(config_out["FIFOs"] - 1)
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name = "GET"
+
+        # Denote Data width, writes, and FIFOs parameters
+        generated_name += "_%ird_%if_%iw"%(config["reads"], config["FIFOs"], config["data_width"])
+
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
@@ -74,7 +119,7 @@ def gen_FIFO_ports():
 
     ARCH_BODY += "-- FIFO Latches\n"
 
-    for FIFO in range(CONFIG["depth"]):
+    for FIFO in range(CONFIG["FIFOs"]):
         # Declare ports
         INTERFACE["ports"] += [
             {
@@ -157,13 +202,13 @@ def gen_assignment_logic():
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Data Path\n"
-    if CONFIG["depth"] == 1:
+    if CONFIG["FIFOs"] == 1:
         for read in range(CONFIG["reads"]):
             ARCH_BODY += "read_%i_data_buffer_in <= FIFO_0_data_latched;\n"%(read, )
     else:
         for read in range(CONFIG["reads"]):
             ARCH_BODY += "read_%i_data_buffer_in <= \>"%(read, )
-            for addr in range(CONFIG["depth"]):
+            for addr in range(CONFIG["FIFOs"]):
                 ARCH_BODY += "FIFO_%i_data_latched when read_%i_addr_int = %i\nelse "%(
                     addr, read, addr
                 )
@@ -173,7 +218,7 @@ def gen_advance_logic():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    for FIFO in range(CONFIG["depth"]):
+    for FIFO in range(CONFIG["FIFOs"]):
         ARCH_BODY += "FIFO_%i_red <= \>"%(FIFO, )
         for port in range(CONFIG["reads"]):
             ARCH_BODY += "read_%i_adv when read_%i_addr = \"%s\"\nelse "%(

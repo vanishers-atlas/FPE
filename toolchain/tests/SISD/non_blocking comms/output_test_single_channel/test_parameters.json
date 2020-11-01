@@ -3,19 +3,11 @@
         "lanes": 1
     },
 
-    "program_fetch": {},
-
-    "instruction_decoder": {},
-
-    "address_sources": {},
-
-    "fetch_decode": {},
-
     "data_memories": {
         "IMM": {},
         "PUT": {
             "data_width": 4,
-            "depth": 1
+            "FIFOs": 1
         }
     },
 

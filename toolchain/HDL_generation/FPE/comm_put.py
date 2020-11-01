@@ -11,13 +11,58 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.memory import register
 
+
+#####################################################################
+
+def preprocess_config(config_in):
+    config_out = {}
+
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
+    # Data pori parameters
+    assert(config_in["writes"] >= 1)
+    config_out["writes"] = config_in["writes"]
+    assert(config_in["FIFOs"] >= 1)
+    config_out["FIFOs"] = config_in["FIFOs"]
+
+    # Datapath parametes
+    assert(config_in["data_width"] >= 0)
+    config_out["data_width"] = config_in["data_width"]
+    config_out["addr_width"] = tc_utils.unsigned.width(config_out["FIFOs"] - 1)
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
+
+    return config_out
+
+def handle_module_name(module_name, config, generate_name):
+    if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
+
+        generated_name = "PUT"
+
+        # Denote Data width, writes, and FIFOs parameters
+        generated_name += "_%iwr_%if_%iw"%(config["writes"], config["FIFOs"], config["data_width"])
+
+        #print(generated_name)
+        #exit()
+
+        return generated_name
+    else:
+        return module_name
+
+#####################################################################
+
 def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
 
     # Moves parameters into global scope
-    CONFIG = config
+    CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = gen_utils.handle_module_name(module_name, config, generate_name)
+    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
@@ -38,8 +83,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
 
         # Generation Module Code
-        INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
-        process_config()
+        gen_general_ports()
         gen_FIFO_ports ()
         gen_write_ports()
         gen_assignment_logic()
@@ -51,12 +95,14 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 
 #####################################################################
 
-def process_config():
+def gen_general_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    CONFIG["addr_width"] = tc_utils.unsigned.width(CONFIG["depth"] - 1)
-    INTERFACE["addr_width"] = CONFIG["addr_width"]
+    # handle clock port
+    INTERFACE["ports"] += [
+        { "name" : "clock", "type" : "std_logic", "direction" : "in" }
+    ]
 
 def gen_FIFO_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -77,8 +123,8 @@ def gen_FIFO_ports():
         False
     )
 
-    for FIFO in range(CONFIG["depth"]):
-        # Declare ports
+    for FIFO in range(CONFIG["FIFOs"]):
+        # Declare ports standard comm put ports
         INTERFACE["ports"] += [
             {
                 "name" : "FIFO_%i_data"%(FIFO, ),
@@ -142,7 +188,7 @@ def gen_assignment_logic():
 
     ARCH_BODY += "\n-- Data Path\n"
     if CONFIG["writes"] == 1:
-        for FIFO in range(CONFIG["depth"]):
+        for FIFO in range(CONFIG["FIFOs"]):
             ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data;\n"%(FIFO, )
             ARCH_BODY += "FIFO_%i_write_internal <= write_0_enable when write_0_addr = \"%s\" else '0';\n"%(FIFO, tc_utils.unsigned.encode(0, CONFIG["addr_width"]))
     else:

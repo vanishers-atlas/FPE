@@ -16,13 +16,10 @@ class extractor(ParseTreeListener):
         this.data_width = 0
 
     def get_updated_config(this):
-        if len(this.values):
-            this.config["data_memories"]["IMM"] = {}
-            this.config["data_memories"]["IMM"]["depth"] = len(this.values)
-            this.config["data_memories"]["IMM"]["data_width"] = this.data_width
-            this.config["data_memories"]["IMM"]["addr_width"] = tc_utils.unsigned.width(this.config["data_memories"]["IMM"]["depth"] - 1)
-        elif len(this.values) != 0:
-            raise ValueError("Immedate values found but no IMM declared within config")
+        this.config["data_memories"]["IMM"] = {}
+        this.config["data_memories"]["IMM"]["depth"] = len(this.values)
+        this.config["data_memories"]["IMM"]["data_width"] = this.data_width
+        this.config["data_memories"]["IMM"]["addr_width"] = tc_utils.unsigned.width(this.config["data_memories"]["IMM"]["depth"] - 1)
         return this.config
 
 
@@ -30,7 +27,7 @@ class extractor(ParseTreeListener):
         this.values.add(ctx.jump_label().IDENTIFER().getText())
         this.data_width = max(
             [
-                this.config["program_fetch"]["addr_width"],
+                this.config["program_flow"]["PC_width"],
                 this.data_width,
             ]
         )

@@ -1,6 +1,6 @@
 from FPE.toolchain import FPE_assembly as asm_utils
 
-def get_exe_operation_code(op_id):
+def get_exe_op(op_id):
     return "#".join(
         [
             asm_utils.instr_mnemonic(op_id),
