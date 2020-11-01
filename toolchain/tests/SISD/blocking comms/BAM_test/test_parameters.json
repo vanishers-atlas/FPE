@@ -8,23 +8,24 @@
     "instruction_decoder": {},
 
 
-    "address_sources": {},
-
-    "data_memories": {
-        "GET": {
-            "data_width": 4,
-            "depth": 1
-        },
-        "IMM": {},
-        "PUT": {
-            "data_width": 4,
-            "depth": 1
+    "address_sources": {
+        "BAM_0": {
+            "addr_max": 16,
+            "offset_max": 16,
+            "step_max": 4
         }
     },
 
-    "program_fetch": {},
-
-    "instruction_decoder": {},
+    "data_memories": {
+        "PUT": {
+            "FIFOs": 1,
+            "data_width": 4
+        },
+        "ROM": {
+            "data_width": 4,
+            "depth": 16
+        }
+    },
 
     "execute_units": {
         "ALU": {

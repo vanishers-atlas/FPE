@@ -31,7 +31,7 @@ def run_test(path="."):
     vhdl_files.append(path + "\\testbench.vhd")
     simulation_dir = path + "\\simulation_files"
     part = "xc7k160tiffv676-2L"
-
+    
     return utils.run_simulation(
         vhdl_files,
         simulation_dir,

@@ -4,7 +4,7 @@ if __name__ == "__main__":
     import os
     levels_below_FPE = 6
     sys.path.append("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
-
+    print("\\".join(os.getcwd().split("\\")[:-levels_below_FPE]))
 import os
 from FPE.toolchain.tests import utils
 
