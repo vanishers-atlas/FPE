@@ -21,6 +21,10 @@ def preprocess_config(config_in):
     #import json
     #print(json.dumps(config_in, indent=2, sort_keys=True))
 
+    # Handle stalling
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     # Handle counter value
     assert(config_in["program_length"] > 0)
     config_out["program_length"] = config_in["program_length"]
@@ -51,6 +55,11 @@ def handle_module_name(module_name, config, generate_name):
         generated_name = "PC"
 
         generated_name += "_%ir"%2**config["PC_width"]
+
+        if config["stallable"]:
+            generated_name += "_stall"
+        else:
+            generated_name += "_nostall"
 
         if config["jumping_enabled"]:
             jumps = str(config["uncondional_jump"])
@@ -348,6 +357,17 @@ def generate_next_value():
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "next_value <=\> "
+
+    if CONFIG["stallable"]:
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "in"
+            },
+        ]
+        ARCH_BODY += "internal_value when stall = '1'\nelse "
+
     if CONFIG["ZOLs_present"]:
         INTERFACE["ports"] += [
             {

@@ -139,6 +139,11 @@ def preprocess_config(config_in):
             assert(config_in["data_memories"][mem]["FIFOs"] > 0)
             config_out["data_memories"][mem]["FIFOs"] = config_in["data_memories"][mem]["FIFOs"]
 
+        # Check can_stall of comm memories
+        if mem in ["GET", "PUT"]:
+            assert(type(config_in["data_memories"][mem]["can_stall"]) == type(True))
+            config_out["data_memories"][mem]["can_stall"] = config_in["data_memories"][mem]["can_stall"]
+
         # Check depth for container memories
         if mem in ["IMM", "RAM", "ROM", "REG"]:
             assert(config_in["data_memories"][mem]["depth"] > 0)
@@ -187,6 +192,8 @@ def preprocess_config(config_in):
     ])
     config_out["program_flow"]["statuses"] = {}
 
+    config_out["program_flow"]["stallable"] = False
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -197,7 +204,6 @@ def preprocess_config(config_in):
     #exit()
 
     # Handle address_sources section of config
-
     for bam in config_in["address_sources"]:
         config_out["address_sources"][bam]["data"] = []
         # Check if any steps require data to be fetched
@@ -233,6 +239,11 @@ def preprocess_config(config_in):
 
     # Handle data_memory section of config
     for mem in config_out["data_memories"].keys():
+        # Check for stall sources
+        if mem in ["GET", "PUT"]:
+            if config_out["data_memories"][mem]["can_stall"] == True:
+                config_out["program_flow"]["stallable"] = True
+
         # Work out datapaths for fetchs
         # Only need to handle addrs as only inputs are muxed
         config_out["data_memories"][mem]["reads"] = []
@@ -491,10 +502,17 @@ def gen_non_pipelined_signals():
         }
     ]
 
+    # Create and pull down stall signal
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_HEAD += "signal stall : std_logic;\n"
+        ARCH_BODY += "stall <= 'L';\n"
+
+
 #####################################################################
 
 exe_predeclared_ports = [
-    "clock"
+    "clock",
+    "stall"
 ]
 
 exe_lib_lookup = {
@@ -522,6 +540,7 @@ def gen_execute_units():
                 "inputs" : len(config["inputs"]),
                 "outputs" : len(config["outputs"]),
                 "op_set" : list(config["op_set"].keys()),
+                "stallable" : CONFIG["program_flow"]["stallable"],
             },
             OUTPUT_PATH,
             exe,
@@ -610,7 +629,8 @@ mem_lib_lookup = {
 }
 
 mem_predeclared_ports = [
-    "clock"
+    "clock",
+    "stall"
 ]
 
 def gen_data_memories():
@@ -630,6 +650,7 @@ def gen_data_memories():
                 **config,
                 "reads" : len(config["reads"]),
                 "writes" : len(config["writes"]),
+                "stallable" : CONFIG["program_flow"]["stallable"],
             },
             OUTPUT_PATH,
             mem,
@@ -895,6 +916,11 @@ def gen_data_memories():
 
 #####################################################################
 
+addr_sources_predeclared_ports = [
+    "clock",
+    "stall"
+]
+
 def gen_addr_sources():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
@@ -904,6 +930,7 @@ def gen_addr_sources():
         interface, name = BAM.generate_HDL(
             {
                 **config,
+                "stallable" : CONFIG["program_flow"]["stallable"],
             },
             OUTPUT_PATH,
             "BAM",
@@ -930,8 +957,24 @@ def gen_addr_sources():
 
         ARCH_BODY += "port map (\>\n"
 
-        ARCH_BODY += "clock => clock,\n"
-        for port in sorted([port for port in interface["ports"] if port["name"] != "clock" ], key=lambda p : p["name"]):
+        # Handle predeclared ports
+        for port in sorted(
+            [
+                port for port in interface["ports"]
+                if port["name"] in addr_sources_predeclared_ports
+            ],
+            key=lambda p : p["name"]
+        ):
+            ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+
+        # Handle non predeclared ports
+        for port in sorted(
+            [
+                port for port in interface["ports"]
+                if port["name"] not in addr_sources_predeclared_ports
+            ],
+            key=lambda p : p["name"]
+        ):
             ARCH_HEAD += "signal %s_%s : %s;\n"%(bam, port["name"], port["type"])
             ARCH_BODY += "%s => %s_%s,\n"%(port["name"], bam, port["name"])
 
@@ -972,6 +1015,12 @@ def gen_program_fetch():
         gen_zero_overhead_loop()
     gen_program_memory()
 
+PC_predeclared_ports = [
+    "clock",
+    "kickoff",
+    "stall"
+]
+
 def gen_program_counter():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
@@ -983,7 +1032,9 @@ def gen_program_counter():
                 exe : config["statuses"]
                 for exe, config in CONFIG["execute_units"].items()
                 if "statuses" in config and len(config["statuses"]) != 0
-            }},
+            },
+            "stallable" : CONFIG["program_flow"]["stallable"],
+        },
         OUTPUT_PATH,
         MODULE_NAME + "_PC",
         True,
@@ -1006,25 +1057,19 @@ def gen_program_counter():
 
     ARCH_BODY += "port map (\>\n"
 
-    ARCH_BODY += "clock => clock,\n"
-
-    INTERFACE["ports"] += [
-        {
-            "name" : "kickoff",
-            "type" : "std_logic",
-            "direction" : "in"
-        }
-    ]
-
-    ARCH_HEAD += "signal PC_running : std_logic;\n"
-
-    ARCH_BODY += "kickoff => kickoff,\n"
-    ARCH_BODY += "running => PC_running,\n"
-
+    # Handle predefined ports
     for port in [
         port
         for port in interface["ports"]
-        if port["name"] not in ["clock", "kickoff", "running"]
+        if port["name"] in PC_predeclared_ports
+    ]:
+        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+
+    # Handle non predefined ports
+    for port in [
+        port
+        for port in interface["ports"]
+        if port["name"] not in PC_predeclared_ports
     ]:
         ARCH_HEAD += "signal PC_%s : %s;\n"%(port["name"], port["type"])
         ARCH_BODY += "%s => PC_%s,\n"%(port["name"], port["name"])
@@ -1034,7 +1079,16 @@ def gen_program_counter():
 
     ARCH_BODY += "\<\n\n"
 
-    # Handle tunning output
+    # Handle kickoff input
+    INTERFACE["ports"] += [
+        {
+            "name" : "kickoff",
+            "type" : "std_logic",
+            "direction" : "in"
+        }
+    ]
+
+    # Handle running output
     INTERFACE["ports"] += [
         {
             "name" : "running",
@@ -1043,7 +1097,6 @@ def gen_program_counter():
         }
     ]
     ARCH_BODY += "running <= PC_running;\n\n"
-
 
     # Handle jump valur port
     if any([port["name"] == "jump_value" for port in interface["ports"]]):
@@ -1058,7 +1111,8 @@ def gen_program_counter():
         {
             "width" : 1,
             # delay of 1 for PC's setup cycle
-            "depth" : 1
+            "depth" : 1,
+            "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
         "delay",
@@ -1072,6 +1126,8 @@ def gen_program_counter():
 
     ARCH_BODY += "port map (\n\>"
     ARCH_BODY += "clock => clock,\n"
+    if CONFIG["program_flow"]["stallable"]:
+            ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "data_in (0) => PC_running,\n"
     ARCH_BODY += "data_out(0) => PC_running_1\n"
     ARCH_BODY += "\<);\<\n\n"
@@ -1080,6 +1136,8 @@ def gen_program_counter():
 
     ARCH_BODY += "port map (\n\>"
     ARCH_BODY += "clock => clock,\n"
+    if CONFIG["program_flow"]["stallable"]:
+            ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "data_in (0) => PC_running_1,\n"
     ARCH_BODY += "data_out(0) => PC_running_2\n"
     ARCH_BODY += "\<);\<\n\n"
@@ -1091,7 +1149,8 @@ def gen_zero_overhead_loop():
     interface, name = ZOL_manager.generate_HDL(
         {
             "PC_width"  : CONFIG["program_flow"]["PC_width"],
-            "ZOLs"      : CONFIG["program_flow"]["ZOLs"]
+            "ZOLs"      : CONFIG["program_flow"]["ZOLs"],
+            "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
         MODULE_NAME + "_ZOL_manager",
@@ -1114,6 +1173,9 @@ def gen_zero_overhead_loop():
 
     ARCH_BODY += "port map (\>\n"
 
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_BODY += "stall => stall,\n"
+        
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "PC_running => PC_running_1,\n"
     ARCH_BODY += "value_in   => PC_value,\n"
@@ -1137,6 +1199,7 @@ def gen_program_memory():
             "addr_width" : CONFIG["program_flow"]["PC_width"],
             "data_width" : CONFIG["instr_decoder"]["instr_width"],
             "reads" : 1,
+            "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
         MODULE_NAME + "_PM",
@@ -1161,6 +1224,8 @@ def gen_program_memory():
 
     ARCH_BODY += "port map (\>\n"
     ARCH_BODY += "clock => clock,\n"
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "read_0_addr => PM_addr,\n"
     ARCH_BODY += "read_0_data => PM_data\n"
     ARCH_BODY += "\<);\n"
@@ -1173,6 +1238,7 @@ def gen_program_memory():
 
 ID_predeclared_ports = [
     "clock",
+    "stall"
 ]
 
 ID_non_fanout_ports = [

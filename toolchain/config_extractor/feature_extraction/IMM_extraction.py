@@ -16,10 +16,11 @@ class extractor(ParseTreeListener):
         this.data_width = 0
 
     def get_updated_config(this):
-        this.config["data_memories"]["IMM"] = {}
-        this.config["data_memories"]["IMM"]["depth"] = len(this.values)
-        this.config["data_memories"]["IMM"]["data_width"] = this.data_width
-        this.config["data_memories"]["IMM"]["addr_width"] = tc_utils.unsigned.width(this.config["data_memories"]["IMM"]["depth"] - 1)
+        if len(this.values) > 0:
+            this.config["data_memories"]["IMM"] = {}
+            this.config["data_memories"]["IMM"]["depth"] = len(this.values)
+            this.config["data_memories"]["IMM"]["data_width"] = this.data_width
+            this.config["data_memories"]["IMM"]["addr_width"] = tc_utils.unsigned.width(this.config["data_memories"]["IMM"]["depth"] - 1)
         return this.config
 
 

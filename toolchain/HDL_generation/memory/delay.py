@@ -23,6 +23,9 @@ def preprocess_config(config_in):
     assert(config_in["depth"] >= 1)
     config_out["depth"] = config_in["depth"]
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -39,6 +42,11 @@ def handle_module_name(module_name, config, generate_name):
         generated_name += "_%iw"%(config["width"])
 
         generated_name += "_%id"%(config["depth"])
+
+        if config["stallable"]:
+            generated_name += "_stall"
+        else:
+            generated_name += "_nostall"
 
         #print(generated_name)
         #exit()
@@ -98,8 +106,15 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1,),
                 "direction" : "out"
             }
-
         ]
+        if CONFIG["stallable"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "stall",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                },
+            ]
 
         # Delay of depth 0, is a wire
         if CONFIG["depth"] == 0:
@@ -113,7 +128,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
                 {
                     "async_forces"  : 0,
                     "sync_forces"   : 0,
-                    "has_enable"    : False
+                    "has_enable"    : CONFIG["stallable"]
                 },
                 OUTPUT_PATH,
                 "register",
@@ -125,6 +140,8 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["width"])
             ARCH_BODY += "port map (\n\>"
             ARCH_BODY += "trigger => clock,\n"
+            if CONFIG["stallable"]:
+                ARCH_BODY += "enable => not stall,\n"
             ARCH_BODY += "data_in  => data_in,\n"
             ARCH_BODY += "data_out => data_out\n"
             ARCH_BODY += "\<);\n\<"
@@ -137,8 +154,15 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             ARCH_BODY += "\<begin\>\n"
 
             ARCH_BODY += "if rising_edge(clock) then\>\n"
+
+            if CONFIG["stallable"]:
+                ARCH_BODY += "if stall /= '1' then\>\n"
+
             ARCH_BODY += "data(data'left - 1 downto 0) <= data(data'left downto 1);\n"
             ARCH_BODY += "data(data'left) <= data_in;\n"
+
+            if CONFIG["stallable"]:
+                ARCH_BODY += "\<end if;\n"
 
             ARCH_BODY += "\<end if;\n"
 

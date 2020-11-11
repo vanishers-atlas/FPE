@@ -96,9 +96,11 @@ class extractor(ParseTreeListener):
 
         # Ensure required parameters are in mem
         if "data_width" not in this.parameters["data_memories"][mem]:
-            this.parameters["data_memories"][mem]["data_width" ] = None
+            this.parameters["data_memories"][mem]["data_width"] = None
         if "FIFOs" not in this.parameters["data_memories"][mem]:
-            this.parameters["data_memories"][mem]["FIFOs" ] = None
+            this.parameters["data_memories"][mem]["FIFOs"] = None
+        if "can_stall" not in this.parameters["data_memories"][mem]:
+            this.parameters["data_memories"][mem]["can_stall"] = None
 
     def basic_mem_handling(this, mem):
         # Ensure mem is declared in config

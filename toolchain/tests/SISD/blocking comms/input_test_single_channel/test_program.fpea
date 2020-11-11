@@ -7,6 +7,25 @@
   MOV (GET[0]<ADV>, PUT[0]);
   MOV (GET[0]<ADV>, PUT[0]);
   MOV (GET[0]<ADV>, PUT[0]);
+
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+  MOV (GET[0]<ADV>, PUT[0]);
+
   MOV (GET[0]<ADV>, PUT[0]);
   MOV (GET[0]<ADV>, PUT[0]);
   MOV (GET[0]<ADV>, PUT[0]);

@@ -32,6 +32,9 @@ def preprocess_config(config_in):
     assert(config_in["data_width"] >= 1)
     config_out["data_width"] = config_in["data_width"]
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -44,6 +47,11 @@ def handle_module_name(module_name, config, generate_name):
         #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "REG"
+
+        if config["stallable"]:
+            generated_name += "_stallable"
+        else:
+            generated_name += "_nonstallable"
 
         generated_name += "_%ir"%(config["reads"], )
         generated_name += "_%iwr"%(config["writes"], )
@@ -86,7 +94,22 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
 
         # Generation Module Code
-        INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        INTERFACE["ports"] += [
+            {
+                "name" : "clock",
+                "type" : "std_logic",
+                "direction" : "in"
+            }
+        ]
+        if CONFIG["stallable"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "stall",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+
         gen_registers()
         gen_reads()
         gen_writes()
@@ -139,7 +162,7 @@ def gen_reads():
         {
             "async_forces"  : 0,
             "sync_forces"   : 0,
-            "has_enable"    : False
+            "has_enable"    : CONFIG["stallable"]
         },
         OUTPUT_PATH,
         "register",
@@ -168,11 +191,18 @@ def gen_reads():
         ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
 
         ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+
         ARCH_BODY += "port map (\n\>"
+
+        if CONFIG["stallable"]:
+            ARCH_BODY += "enable  => not stall,\n"
+
         ARCH_BODY += "trigger => clock,\n"
         ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
         ARCH_BODY += "data_out => read_%i_data\n"%(read, )
+
         ARCH_BODY += "\<);\n\<"
 
         ARCH_BODY += "read_%i_buffer_in <=\>"%(read, )
@@ -209,6 +239,9 @@ def gen_writes():
     if CONFIG["writes"] == 1:
         for reg in range(CONFIG["depth"]):
             ARCH_BODY += "reg_%i_in <= write_0_data;\n"%(reg, )
-            ARCH_BODY += "reg_%i_enable <= write_0_enable when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
+            if CONFIG["stallable"]:
+                ARCH_BODY += "reg_%i_enable <= write_0_enable and not stall when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
+            else:
+                ARCH_BODY += "reg_%i_enable <= write_0_enable when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
     else:
         raise NotImplementedError()

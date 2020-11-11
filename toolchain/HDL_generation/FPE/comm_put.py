@@ -20,6 +20,16 @@ def preprocess_config(config_in):
     #import json
     #print(json.dumps(config_in, indent=2, sort_keys=True))
 
+    # Stalling parameters
+    assert(type(config_in["can_stall"]) == type(True))
+    assert(type(config_in["stallable"]) == type(True))
+    if config_in["can_stall"] == True:
+        config_out["stalling"] = "ACTIVE"
+    elif config_in["stallable"] == True:
+        config_out["stalling"] = "PASSIVE"
+    else:
+        config_out["stalling"] = "NONE"
+
     # Data pori parameters
     assert(config_in["writes"] >= 1)
     config_out["writes"] = config_in["writes"]
@@ -45,7 +55,10 @@ def handle_module_name(module_name, config, generate_name):
         generated_name = "PUT"
 
         # Denote Data width, writes, and FIFOs parameters
-        generated_name += "_%iwr_%if_%iw"%(config["writes"], config["FIFOs"], config["data_width"])
+        generated_name += "_%iwr"%(config["writes"], )
+        generated_name += "_%if"%(config["FIFOs"], )
+        generated_name += "_%iw"%(config["data_width"], )
+        generated_name += "_%ss"%(config["stalling"][0], )
 
         #print(generated_name)
         #exit()
@@ -77,10 +90,19 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        INTERFACE = {
+            "ports" : [],
+            "generics" : []
+         }
 
         # Include extremely commom libs
-        IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
+        IMPORTS += [
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all"
+            }
+        ]
 
         # Generation Module Code
         gen_general_ports()
@@ -101,8 +123,29 @@ def gen_general_ports():
 
     # handle clock port
     INTERFACE["ports"] += [
-        { "name" : "clock", "type" : "std_logic", "direction" : "in" }
+        {
+            "name" : "clock",
+            "type" : "std_logic",
+            "direction" : "in"
+        }
     ]
+
+    if CONFIG["stalling"] == "ACTIVE":
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "inout"
+            }
+        ]
+    elif CONFIG["stalling"] == "PASSIVE":
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "in"
+            }
+        ]
 
 def gen_FIFO_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -137,6 +180,15 @@ def gen_FIFO_ports():
                 "direction" : "out"
             }
         ]
+
+        if CONFIG["stalling"] == "ACTIVE":
+            INTERFACE["ports"] += [
+                {
+                    "name" : "FIFO_%i_ready"%(FIFO, ),
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
 
         # Generate output buffers
         ARCH_HEAD += "signal FIFO_%i_write_internal : std_logic;\n"%(FIFO, )
@@ -186,10 +238,32 @@ def gen_assignment_logic():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
+    # Handle stalling
+    if CONFIG["stalling"] == "ACTIVE":
+        if CONFIG["writes"] == 1:
+            ARCH_BODY += "stall <=\> %s\nelse 'Z';\<\n"%(
+                "\nelse ".join(
+                    [
+                        "'1' when write_0_enable = '1' and write_0_addr = \"%s\" and FIFO_%i_ready /= '1'"%(
+                            tc_utils.unsigned.encode(FIFO, CONFIG["addr_width"]),
+                            FIFO
+                        )
+                        for FIFO in range(CONFIG["FIFOs"])
+                    ]
+                )
+            )
+        else:
+            raise NotImplementedError()
+
+    # Data paths
     ARCH_BODY += "\n-- Data Path\n"
     if CONFIG["writes"] == 1:
         for FIFO in range(CONFIG["FIFOs"]):
             ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data;\n"%(FIFO, )
-            ARCH_BODY += "FIFO_%i_write_internal <= write_0_enable when write_0_addr = \"%s\" else '0';\n"%(FIFO, tc_utils.unsigned.encode(0, CONFIG["addr_width"]))
+
+            if CONFIG["stalling"] == "NONE":
+                ARCH_BODY += "FIFO_%i_write_internal <= '1' when write_0_enable = '1' and write_0_addr = \"%s\" else '0';\n"%(FIFO, tc_utils.unsigned.encode(0, CONFIG["addr_width"]))
+            else:
+                ARCH_BODY += "FIFO_%i_write_internal <= '1' when write_0_enable = '1' and write_0_addr = \"%s\" and stall /= '1' else '0';\n"%(FIFO, tc_utils.unsigned.encode(0, CONFIG["addr_width"]))
     else:
         raise NotImplementedError()

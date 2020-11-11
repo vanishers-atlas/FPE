@@ -17,6 +17,9 @@ def preprocess_config(config_in):
     #import json
     #print(json.dumps(config_in, indent=2, sort_keys=True))
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     assert(config_in["data_width"] > 0)
     config_out["data_width"] = config_in["data_width"]
 
@@ -56,6 +59,11 @@ def handle_module_name(module_name, config, generate_name):
         #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "ALU_48E1"
+
+        if config["stallable"]:
+            generated_name += "_stallable"
+        else:
+            generated_name += "_nonstallable"
 
         # Hash op_set
         generated_name += "_%sop"%str( hex( zlib.adler32("\n".join(config["op_set"]).encode('utf-8')) )).lstrip("0x").zfill(8)
@@ -354,8 +362,16 @@ def generate_ports():
 
     # Generate common control
     INTERFACE["ports"] += [
-        { "name" : "clock" , "type" : "std_logic", "direction" : "in" },
-        { "name" : "enable", "type" : "std_logic", "direction" : "in" },
+        {
+            "name" : "clock",
+            "type" : "std_logic",
+            "direction" : "in"
+        },
+        {
+            "name" : "enable",
+            "type" : "std_logic",
+            "direction" : "in"
+        },
         {
             "name" : "op_sel",
 
@@ -365,6 +381,16 @@ def generate_ports():
             "direction" : "in"
         },
     ]
+
+    if CONFIG["stallable"]:
+        # Generate common control
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "in"
+            },
+        ]
 
     # Generate data inputs
     for read in range(CONFIG["inputs"]):
@@ -508,7 +534,10 @@ def instanate_Slice():
     ARCH_BODY += "CEAD => '0',\n"
     ARCH_BODY += "CED  => '0',\n"
     ARCH_BODY += "CEM  => '0',\n"
-    ARCH_BODY += "CEP  => enable,\n"
+    if CONFIG["stallable"]:
+        ARCH_BODY += "CEP  => enable and not stall,\n"
+    else:
+        ARCH_BODY += "CEP  => enable,\n"
 
     ARCH_BODY += "CECTRL => '0',\n"
     ARCH_BODY += "CEINMODE  => '0',\n"

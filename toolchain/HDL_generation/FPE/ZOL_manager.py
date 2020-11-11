@@ -28,6 +28,9 @@ def preprocess_config(config_in):
         assert(ZOL > 0)
         config_out["ZOLs"].append(ZOL)
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -35,11 +38,16 @@ def preprocess_config(config_in):
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
+        generated_name = "ZOL_manager"
 
         #import json
         #print(json.dumps(config, indent=2, sort_keys=True))
 
-        generated_name = "ZOL_manager"
+        if config["stallable"]:
+            generated_name += "_stallable"
+        else:
+            generated_name += "_nonstallable"
+
         generated_name += "_%iw"%(config["PC_width"], )
         generated_name += "_%iz"%(len(config["ZOLs"]), )
 
@@ -94,13 +102,36 @@ def generate_loops():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Example port
     INTERFACE["ports"] += [
-        { "name" : "value_in"   , "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1), "direction" : "in"  },
-        { "name" : "value_out"  , "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1), "direction" : "out" },
-        { "name" : "overwrite"  , "type" : "std_logic", "direction" : "out" },
-        { "name" : "PC_running" , "type" : "std_logic", "direction" : "in" },
+        {
+            "name" : "value_in",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
+            "direction" : "in"
+        },
+        {
+            "name" : "value_out",
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
+            "direction" : "out"
+        },
+        {
+            "name" : "overwrite",
+            "type" : "std_logic",
+            "direction" : "out"
+        },
+        {
+            "name" : "PC_running",
+            "type" : "std_logic",
+            "direction" : "in"
+        },
     ]
+    if CONFIG["stallable"]:
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "in"
+            },
+        ]
 
     value_out = "value_out <= \>"
     overwrite = "overwrite <= \>"
@@ -111,6 +142,7 @@ def generate_loops():
             {
                 "count" : loop_count,
                 "width" : CONFIG["PC_width"],
+                "stallable" : CONFIG["stallable"],
             },
             OUTPUT_PATH,
             "ZOL_tracker",
@@ -138,6 +170,9 @@ def generate_loops():
         ARCH_HEAD += "signal tracker_%i_overwrite : std_logic;\n"%(loop_id)
 
         ARCH_BODY += "port map (\>\n"
+
+        if CONFIG["stallable"]:
+            ARCH_BODY += "stall => stall,\n"
 
         ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "PC_running => PC_running,\n"

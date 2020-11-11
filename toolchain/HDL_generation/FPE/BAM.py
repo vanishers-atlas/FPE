@@ -43,6 +43,9 @@ def preprocess_config(config_in):
         assert(step not in config_out["steps"])
         config_out["steps"].append(step)
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -56,6 +59,11 @@ def handle_module_name(module_name, config, generate_name):
 
         #import json
         #print(json.dumps(config, indent=2, sort_keys=True))
+
+        if config["stallable"]:
+            generated_name += "_stallable"
+        else:
+            generated_name += "_nonstallable"
 
         generated_name += "_%ia"%(config["addr_width"])
         generated_name += "_%io"%(config["offset_width"])
@@ -116,6 +124,15 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
                 "direction" : "in",
             }
         ]
+
+        if CONFIG["stallable"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "stall",
+                    "type" : "std_logic",
+                    "direction" : "in",
+                }
+            ]
 
         # Generation Module Code
         generate_step_controls()
@@ -242,16 +259,26 @@ def generate_outset_adder_acc():
     )
 
     ARCH_BODY += "offset_acc : entity work.%s(arch)\>\n"%(reg_name)
+
     ARCH_BODY += "generic map (\>\n"
+
     ARCH_BODY += "asyn_0_value => 0,\n"
     ARCH_BODY += "data_width => %i\n"%(CONFIG["offset_width"])
+
     ARCH_BODY += "\<)\n"
+
     ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "enable => step_forward or step_backward,\n"
+
+    if CONFIG["stallable"]:
+        ARCH_BODY += "enable => ( step_forward or step_backward ) and not stall,\n"
+    else:
+        ARCH_BODY += "enable => step_forward or step_backward,\n"
+        
     ARCH_BODY += "trigger => clock,\n"
     ARCH_BODY += "data_in => next_offset,\n"
     ARCH_BODY += "data_out => curr_offset,\n"
     ARCH_BODY += "asyn_reset_sel(0) => reset\n"
+
     ARCH_BODY += "\<);\n\<"
 
 def generate_base_adders():
@@ -289,6 +316,7 @@ def generate_base_adders():
         {
             "width" : CONFIG["addr_width"],
             "depth" : 2,
+            "stallable" : CONFIG["stallable"]
         },
         OUTPUT_PATH,
         "delay",
@@ -299,7 +327,12 @@ def generate_base_adders():
     ARCH_BODY += "pre_addr_0_store_delay : entity work.%s(arch)\>\n"%(delay_name)
 
     ARCH_BODY += "port map (\n\>"
+
+    if CONFIG["stallable"]:
+        ARCH_BODY += "stall => stall,\n"
+
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => addr_0_fetch_internal,\n"
     ARCH_BODY += "data_out => addr_0_store\n"
+
     ARCH_BODY += "\<);\n\<\n"

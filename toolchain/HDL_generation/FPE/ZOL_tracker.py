@@ -34,6 +34,9 @@ def preprocess_config(config_in):
         config_out["delay_encoding"]["range"]
     )
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -41,11 +44,16 @@ def preprocess_config(config_in):
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
+        generated_name = "ZOL"
 
         #import json
         #print(json.dumps(config, indent=2, sort_keys=True))
 
-        generated_name = "ZOL"
+        if config["stallable"]:
+            generated_name += "_stallable"
+        else:
+            generated_name += "_nonstallable"
+
         generated_name += "_%iw"%(config["width"])
         generated_name += "_%ireg"%(config["registers"])
         generated_name += "_%ib"%(config["delay_encoding"]["bais"])
@@ -162,6 +170,15 @@ def generate_PC_checking():
             "direction" : "in"
         },
     ]
+    if CONFIG["stallable"]:
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "in"
+            },
+        ]
+
     ARCH_HEAD += "type tracker_state is (INACTIVE, SETUP, ACTIVE, CLEAR);\n"
     ARCH_HEAD += "signal last_state : tracker_state := INACTIVE;\n"
     ARCH_HEAD += "signal curr_state : tracker_state;\n"
@@ -186,7 +203,11 @@ def generate_PC_checking():
     ARCH_HEAD += "signal end_found_delayed : std_logic;\n"
 
     ARCH_BODY += "start_found <= '1' when PC_running = '1' and start_value = to_integer(unsigned(value_in)) else '0';\n"
-    ARCH_BODY += "end_found   <= '1' when PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
+
+    if CONFIG["stallable"]:
+        ARCH_BODY += "end_found   <= '1' when stall /= '1' and PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
+    else:
+        ARCH_BODY += "end_found   <= '1' when PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
 
     ARCH_BODY += "process (clock)\>\n"
     ARCH_BODY += "\<begin\>\n"

@@ -13,6 +13,7 @@
         "IMM": {},
         "PUT": {
             "data_width": 4,
+            "can_stall": true,
             "FIFOs": 1
         }
     },

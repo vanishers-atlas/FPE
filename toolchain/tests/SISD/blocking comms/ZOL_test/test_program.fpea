@@ -1,12 +1,19 @@
 {
-  ZOL (4)
+  ZOL (3)
   {
-    MOV ( 0, PUT[0]);
+    ZOL (8)
+    {
+      MOV ( 0, PUT[0]);
+    }
+
+    ZOL (8)
+    {
+      MOV ( 1, PUT[0]);
+    }
+
+    NOP;
   }
-  ZOL (4)
-  {
-    MOV ( 1, PUT[0]);
-  }
+
   ZOL (3)
   {
     MOV ( 0, PUT[0]);
@@ -26,5 +33,6 @@
     MOV (14, PUT[0]);
     MOV (15, PUT[0]);
   }
+
   NOP;
 }

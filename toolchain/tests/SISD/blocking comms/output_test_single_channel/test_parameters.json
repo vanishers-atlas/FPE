@@ -2,18 +2,20 @@
     "SIMD": {
         "lanes": 1
     },
-
+    "address_sources": {},
     "data_memories": {
         "IMM": {},
         "PUT": {
-            "data_width": 4,
-            "FIFOs": 1
+            "FIFOs": 1,
+            "can_stall": true,
+            "data_width": 4
         }
     },
-
     "execute_units": {
         "ALU": {
             "data_width": 5
         }
-    }
+    },
+    "instr_decoder": {},
+    "program_flow": {}
 }

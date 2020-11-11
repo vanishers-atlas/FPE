@@ -33,6 +33,9 @@ def preprocess_config(config_in):
     assert(config_in["data_width"] >= 1)
     config_out["data_width"] = config_in["data_width"]
 
+    assert(type(config_in["stallable"]) == type(True))
+    config_out["stallable"] = config_in["stallable"]
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -45,6 +48,11 @@ def handle_module_name(module_name, config, generate_name):
         #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "RAM"
+
+        if config["stallable"]:
+            generated_name += "_stallable"
+        else:
+            generated_name += "_nonstallable"
 
         generated_name += "_%ir"%(config["reads"], )
         generated_name += "_%iwr"%(config["writes"], )
@@ -85,15 +93,39 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         INTERFACE = { "ports" : [], "generics" : [] }
 
         # Include extremely commom libs
-        IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
-        IMPORTS += [ {"library" : "ieee", "package" : "Numeric_Std", "parts" : "all"} ]
+        IMPORTS += [
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all"
+            },
+            {
+                "library" : "ieee",
+                "package" : "Numeric_Std",
+                "parts" : "all"
+            }
+        ]
 
         # Generation Module Code
-        INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        INTERFACE["ports"] += [
+            {
+                "name" : "clock",
+                "type" : "std_logic",
+                "direction" : "in"
+            }
+        ]
+        if CONFIG["stallable"]:
+            INTERFACE["ports"] += [
+                {
+                    "name" : "stall",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+
         gen_value_array()
         gen_reads()
         gen_writes()
-
 
         # Save code to file
         gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
@@ -118,7 +150,7 @@ def gen_reads():
         {
             "async_forces"  : 0,
             "sync_forces"   : 0,
-            "has_enable"    : False
+            "has_enable"    : CONFIG["stallable"]
         },
         OUTPUT_PATH,
         "register",
@@ -149,11 +181,18 @@ def gen_reads():
         ARCH_BODY += "read_%i_buffer_in <= data(read_%i_addr_int) when 0 <= read_%i_addr_int and read_%i_addr_int < data'Length else (others => 'U');\n"%(read, read, read, read)
 
         ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+
         ARCH_BODY += "port map (\n\>"
+
+        if CONFIG["stallable"]:
+            ARCH_BODY += "enable  => not stall,\n"
+
         ARCH_BODY += "trigger => clock,\n"
         ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
         ARCH_BODY += "data_out => read_%i_data\n"%(read, )
+
         ARCH_BODY += "\<);\n\<"
 
 def gen_writes():
@@ -187,12 +226,22 @@ def gen_writes():
 
         ARCH_BODY += "\n-- Write proccess\n"
         ARCH_BODY += "process (clock)\>\n"
+
         ARCH_BODY += "\<begin\>\n"
+
         ARCH_BODY += "if rising_edge(clock) then\>\n"
-        ARCH_BODY += "if write_0_enable = '1' then\>\n"
+
+        if CONFIG["stallable"]:
+            ARCH_BODY += "if write_0_enable = '1' and stall /= '1' then\>\n"
+        else:
+            ARCH_BODY += "if write_0_enable = '1' then\>\n"
+
         ARCH_BODY += "data(write_0_addr_int) <= write_0_data;\n"
+
         ARCH_BODY += "\<end if;\n"
+
         ARCH_BODY += "\<end if;\n"
+
         ARCH_BODY += "\<end process;\n"
 
     else:
