@@ -3,6 +3,7 @@ import antlr4
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 from FPE.toolchain.FPE_assembly.interface import error_reporting
+from FPE.toolchain.FPE_assembly.interface import evaluate_expr
 from FPE.toolchain.FPE_assembly.interface import get_component
 from FPE.toolchain.FPE_assembly.interface import token_handling
 
@@ -155,6 +156,8 @@ def generate_instr_op_bam_seek(ctx, program_context):
 def generate_instr_op_alu(ctx, program_context):
     if   ctx.op_alu_1f_1s() != None:
         return generate_instr_op_alu_1f_1s(ctx.op_alu_1f_1s(), program_context)
+    elif ctx.op_alu_1f_1e_1s() != None:
+        return generate_instr_op_alu_1f_1e_1s(ctx.op_alu_1f_1e_1s(), program_context)
     elif ctx.op_alu_2f_0s() != None:
         return generate_instr_op_alu_2f_0s(ctx.op_alu_2f_0s(), program_context)
     elif ctx.op_alu_2f_1s() != None:
@@ -174,6 +177,34 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
         [
             # Mnemonic
             token_handling.token_to_text(ctx.mnemonic),
+            # Sources
+            "~".join(
+                [
+                    generate_instr_access_alu(ctx.access_fetch_alu(), program_context)
+                ]
+            ),
+            # Exe
+            get_component.get_component_op(ctx, program_context),
+            # Dests
+            "~".join(
+                [
+                    generate_instr_access_alu(ctx.access_store_alu(), program_context)
+                ]
+            ),
+            # Mods
+            "~".join(sorted([]))
+        ]
+    )
+
+def generate_instr_op_alu_1f_1e_1s(ctx, program_context):
+    generate_instr_addr_literal.port = 0
+    return "#".join(
+        [
+            # Mnemonic
+            "%s_%s"%(
+                token_handling.token_to_text(ctx.mnemonic),
+                evaluate_expr(ctx.expr(), program_context)
+            ),
             # Sources
             "~".join(
                 [

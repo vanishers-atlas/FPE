@@ -11,6 +11,8 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain import FPE_assembly as asm_utils
 
+from FPE.toolchain.HDL_generation.FPE import alu_dsp48e1
+
 from FPE.toolchain.HDL_generation.memory import delay
 from FPE.toolchain.HDL_generation.memory import register
 
@@ -678,6 +680,10 @@ jump_mnemonic_jump_statuses_map = {
     }
 }
 
+exe_lib_lookup = {
+    "ALU" : alu_dsp48e1,
+}
+
 def generate_exe_signals():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
@@ -788,7 +794,7 @@ def generate_exe_signals():
 
             # Buffer assementment logic
             ARCH_BODY += "pre_%s <=\> (others => 'U') when %s /= '1'\n"%(port_name, INPUT_SIGNALS["enable"])
-            for op, value in config["values"].items():
+            for oper, value in config["values"].items():
                 ARCH_BODY +=  "else \"%s\" when\> "%(value)
                 ARCH_BODY += "\nor ".join(
                     [
@@ -796,7 +802,7 @@ def generate_exe_signals():
                         for instr_id, instr_val in CONFIG["instr_set"].items()
                         if (
                             asm_utils.instr_exe_unit(instr_id) == exe
-                            and gen_utils.get_exe_op(instr_id) == op
+                            and exe_lib_lookup[exe].instr_to_oper(instr_id) == oper
                         )
                     ]
                 )
@@ -1451,8 +1457,8 @@ def generate_store_signals():
                 True,
                 False
             )
-
             ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
+
 
             ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
 

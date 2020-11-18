@@ -187,8 +187,8 @@ def preprocess_config(config_in):
 
     # Handle program_flow section of config
     config_out["program_flow"]["uncondional_jump"] = any([
-        asm_utils.instr_mnemonic(op) == "JMP"
-        for op in config_out["instr_set"].keys()
+        asm_utils.instr_mnemonic(instr) == "JMP"
+        for instr in config_out["instr_set"].keys()
     ])
     config_out["program_flow"]["statuses"] = {}
 
@@ -208,10 +208,10 @@ def preprocess_config(config_in):
         config_out["address_sources"][bam]["data"] = []
         # Check if any steps require data to be fetched
         if any([step.startswith("fetched_") for step in config_out["address_sources"][bam]["steps"] ]):
-            for op in config_out["instr_set"].keys():
-                exe_unit = asm_utils.instr_exe_unit(op)
+            for instr in config_out["instr_set"].keys():
+                exe_unit = asm_utils.instr_exe_unit(instr)
 
-                fetches = asm_utils.instr_fetches(op)
+                fetches = asm_utils.instr_fetches(instr)
                 fatch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
 
                 if bam == exe_unit:
@@ -247,8 +247,8 @@ def preprocess_config(config_in):
         # Work out datapaths for fetchs
         # Only need to handle addrs as only inputs are muxed
         config_out["data_memories"][mem]["reads"] = []
-        for op in config_out["instr_set"].keys():
-            fetches = asm_utils.instr_fetches(op)
+        for instr in config_out["instr_set"].keys():
+            fetches = asm_utils.instr_fetches(instr)
             fatch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
             fatch_addrs = [ asm_utils.access_addr(fetch) for fetch in fetches ]
 
@@ -287,9 +287,9 @@ def preprocess_config(config_in):
         # Work out datapaths for stores
         # Need to handle addrs and data as inputs are muxed
         config_out["data_memories"][mem]["writes"] = []
-        for op in config_out["instr_set"].keys():
-            exe_unit = asm_utils.instr_exe_unit(op)
-            stores = asm_utils.instr_stores(op)
+        for instr in config_out["instr_set"].keys():
+            exe_unit = asm_utils.instr_exe_unit(instr)
+            stores = asm_utils.instr_stores(instr)
             store_mems = [ asm_utils.access_mem(store) for store in stores ]
             store_addrs = [ asm_utils.access_addr(store) for store in stores ]
 
@@ -352,10 +352,10 @@ def preprocess_config(config_in):
         # Work out datapaths for inputs
         # Only need to handle addrs as only inputs are muxed
         config_out["execute_units"][exe]["inputs"] = []
-        for op in config_out["instr_set"].keys():
-            exe_unit = asm_utils.instr_exe_unit(op)
+        for instr in config_out["instr_set"].keys():
+            exe_unit = asm_utils.instr_exe_unit(instr)
 
-            fetches = asm_utils.instr_fetches(op)
+            fetches = asm_utils.instr_fetches(instr)
             fatch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
 
             if exe == exe_unit:
@@ -384,10 +384,10 @@ def preprocess_config(config_in):
         # Work out datapaths for outputs
         # Only number of outputs needed, therefore create blank dicts for furture expandion
         config_out["execute_units"][exe]["outputs"] = []
-        for op in config_out["instr_set"].keys():
-            exe_unit = asm_utils.instr_exe_unit(op)
+        for instr in config_out["instr_set"].keys():
+            exe_unit = asm_utils.instr_exe_unit(instr)
 
-            stores = asm_utils.instr_stores(op)
+            stores = asm_utils.instr_stores(instr)
             store_mems = [ asm_utils.access_mem(store) for store in stores ]
 
             if exe == exe_unit:
@@ -395,22 +395,26 @@ def preprocess_config(config_in):
                 for _ in range(len(config_out["execute_units"][exe]["outputs"]), len(store_mems)):
                     config_out["execute_units"][exe]["outputs"].append( { } )
 
-        # Extract execute_unit op_set, used to tell the ID what control signals the exe unit requires
-        config_out["execute_units"][exe]["op_set"] = {
-            op : None
-            for op in sorted( set( [
-                gen_utils.get_exe_op(op)
-                for op in config_out["instr_set"].keys()
-                if exe == asm_utils.instr_exe_unit(op)
-            ] ) )
+        # Extract execute_unit oper_set, used to tell the ID what control signals the exe unit requires
+        config_out["execute_units"][exe]["oper_set"] = {
+            oper : None
+            for oper in sorted(
+                set(
+                    [
+                        exe_lib_lookup[exe].instr_to_oper(instr)
+                        for instr in config_out["instr_set"].keys()
+                        if exe == asm_utils.instr_exe_unit(instr)
+                    ]
+                )
+            )
         }
 
         # Extract statuses execute_unit has to generate
         config_out["execute_units"][exe]["statuses"] = []
         if exe in jump_exe_status_map:
-            for op in config_out["instr_set"].keys():
-                if asm_utils.instr_mnemonic(op) in jump_exe_status_map[exe]:
-                    for status in jump_exe_status_map[exe][asm_utils.instr_mnemonic(op)]:
+            for instr in config_out["instr_set"].keys():
+                if asm_utils.instr_mnemonic(instr) in jump_exe_status_map[exe]:
+                    for status in jump_exe_status_map[exe][asm_utils.instr_mnemonic(instr)]:
                         if status not in config_out["execute_units"][exe]["statuses"]:
                             config_out["execute_units"][exe]["statuses"].append(status)
 
@@ -527,7 +531,7 @@ def gen_execute_units():
 
     CONFIG["exe_stages"] = 0
 
-    # Loop over all exe components
+    # Loinstr over all exe components
     for exe, config in CONFIG["execute_units"].items():
 
         #import json
@@ -539,7 +543,7 @@ def gen_execute_units():
                 **config,
                 "inputs" : len(config["inputs"]),
                 "outputs" : len(config["outputs"]),
-                "op_set" : list(config["op_set"].keys()),
+                "oper_set" : list(config["oper_set"].keys()),
                 "stallable" : CONFIG["program_flow"]["stallable"],
             },
             OUTPUT_PATH,
@@ -638,7 +642,7 @@ def gen_data_memories():
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Memories components\n"
-    # loop over all data memories
+    # loinstr over all data memories
     for mem, config in CONFIG["data_memories"].items():
 
         #import json
@@ -807,7 +811,7 @@ def gen_data_memories():
                     key=lambda d : d["name"]
                 ):
                     if port["name"].startswith("FIFO_"):
-                        # Handle rippliing FIFO ports to top level:
+                        # Handle rippliing FIFO ports to tinstr level:
                         INTERFACE["ports"] += [
                             {
                                 "name" : inst + "_" + port["name"],
@@ -1175,7 +1179,7 @@ def gen_zero_overhead_loop():
 
     if CONFIG["program_flow"]["stallable"]:
         ARCH_BODY += "stall => stall,\n"
-        
+
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "PC_running => PC_running_1,\n"
     ARCH_BODY += "value_in   => PC_value,\n"
