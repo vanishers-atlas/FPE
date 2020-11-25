@@ -1,0 +1,36 @@
+{
+  // Test op_alu_1f_1s
+  MOV(0, PUT[0]);
+  MOV(1, PUT[0]);
+
+  NOT(0b1100, PUT[0]);
+  NOT(0b0011, PUT[0]);
+
+  // Test op_alu_1f_1e_1s
+  LSH(0b0110, 1, PUT[0]);
+  LSH(0b0110, 2, PUT[0]);
+
+  RSH(0b0110, 1, PUT[0]);
+  RSH(0b0110, 2, PUT[0]);
+
+  // op_alu_2f_1s
+  ADD(1, 1, PUT[0]);
+  ADD(1, 2, PUT[0]);
+
+  SUB(2, 1, PUT[0]);
+  SUB(1, 2, PUT[0]);
+
+  AND(0b0011, 0b1100, PUT[0]);
+  AND(0b0111, 0b1110, PUT[0]);
+
+  OR(0b0011, 0b1100, PUT[0]);
+  OR(0b0111, 0b1110, PUT[0]);
+
+  XOR(0b0011, 0b1100, PUT[0]);
+  XOR(0b0111, 0b1110, PUT[0]);
+
+  MUL(1, 1, PUT[0]);
+  MUL(1, 2, PUT[0]);
+  MUL(1, 0, PUT[0]);
+  MUL(0, 1, PUT[0]);
+}

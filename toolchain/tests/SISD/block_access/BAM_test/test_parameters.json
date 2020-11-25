@@ -1,0 +1,35 @@
+{
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "program_fetch": {},
+
+    "instruction_decoder": {},
+
+
+    "address_sources": {
+        "BAM_0": {
+            "addr_max": 16,
+            "offset_max": 16,
+            "step_max": 4
+        }
+    },
+
+    "data_memories": {
+        "PUT": {
+            "FIFOs": 1,
+            "data_width": 4
+        },
+        "ROM": {
+            "data_width": 4,
+            "depth": 16
+        }
+    },
+
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    }
+}

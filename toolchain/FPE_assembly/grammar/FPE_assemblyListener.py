@@ -296,12 +296,12 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#op_alu_1f_1e_1s.
-    def enterOp_alu_1f_1e_1s(self, ctx:FPE_assemblyParser.Op_alu_1f_1e_1sContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_alu_shifts.
+    def enterOp_alu_shifts(self, ctx:FPE_assemblyParser.Op_alu_shiftsContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#op_alu_1f_1e_1s.
-    def exitOp_alu_1f_1e_1s(self, ctx:FPE_assemblyParser.Op_alu_1f_1e_1sContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_alu_shifts.
+    def exitOp_alu_shifts(self, ctx:FPE_assemblyParser.Op_alu_shiftsContext):
         pass
 
 

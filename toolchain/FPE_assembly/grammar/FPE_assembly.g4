@@ -52,9 +52,9 @@ grammar FPE_assembly;
 	access_get : 'GET' '[' addr ']' ('<' access_get_mod (',' access_get_mod)* '>')? ;
 		access_get_mod : 'ADV' ;
 	access_put : 'PUT' '[' addr ']' ;
-	access_reg : 'REG' '[' addr ':' expr ']' ;
-	access_ram : 'RAM' '[' addr ':' expr ']' ;
-	access_rom : 'ROM' '[' addr ':' expr ']' ;
+	access_reg : 'REG' '[' addr (':' expr )? ']' ;
+	access_ram : 'RAM' '[' addr (':' expr )? ']' ;
+	access_rom : 'ROM' '[' addr (':' expr )? ']' ;
 
 	addr 	: addr_literal
 	 			| addr_bam
@@ -108,10 +108,10 @@ grammar FPE_assembly;
 					| 'BACKWARD'	/* seek back */
 					;
 
-		op_alu 	: op_alu_1f_1s | op_alu_1f_1e_1s | op_alu_2f_0s | op_alu_2f_1s ;
+		op_alu 	: op_alu_1f_1s | op_alu_shifts | op_alu_2f_0s | op_alu_2f_1s ;
 			op_alu_1f_1s :  mnemonic=('MOV'|'NOT')
 											'(' access_fetch_alu ',' access_store_alu ')' ;
-			op_alu_1f_1e_1s :  mnemonic=('LSH'|'RSH')
+			op_alu_shifts :  mnemonic=('LSH'|'RSH')
 											'(' access_fetch_alu ',' expr ',' access_store_alu ')' ;
 			op_alu_2f_0s :  mnemonic=('CMP'|'CMP')
 											'(' access_fetch_alu ',' access_fetch_alu ')' ;

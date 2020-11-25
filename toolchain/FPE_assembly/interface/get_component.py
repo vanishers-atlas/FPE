@@ -166,7 +166,7 @@ def get_component_op_alu(ctx, program_context):
     if any(
         [
             ctx.op_alu_1f_1s(),
-            ctx.op_alu_1f_1e_1s(),
+            ctx.op_alu_shifts(),
             ctx.op_alu_2f_0s(),
             ctx.op_alu_2f_1s(),
         ]
