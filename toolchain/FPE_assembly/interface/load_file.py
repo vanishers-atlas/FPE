@@ -16,17 +16,18 @@ def load_file(inputFile):
 		"program_tree"	: tree,
 	}
 
-	# Check asm rules not enforced by grammar
 	walker = ParseTreeWalker()
-	for hyper_rule in hypergrammar.hyper_rules:
-		extractor = hyper_rule.extractor()
-		walker.walk(extractor, tree)
-		extractor.final_check()
 
 	# Preload all const def
 	extractor = const_def_estactor(program_context)
 	walker.walk(extractor, program_context["program_tree"])
 	program_context = extractor.get_updated_program_context()
+
+	# Check asm rules not enforced by grammar
+	for hyper_rule in hypergrammar.hyper_rules:
+		extractor = hyper_rule.extractor(program_context)
+		walker.walk(extractor, tree)
+		extractor.final_check()
 
 	return program_context
 

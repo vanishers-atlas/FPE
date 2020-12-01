@@ -21,9 +21,5 @@
         "ALU": {
             "data_width": 4
         }
-    },
-    "instr_decoder": {},
-    "instruction_decoder": {},
-    "program_fetch": {},
-    "program_flow": {}
+    }
 }

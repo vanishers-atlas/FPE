@@ -1,12 +1,13 @@
 # Import ParseTreeListener to extend
 from antlr4 import ParseTreeListener
 
-from FPE.toolchain.FPE_assembly.interface.error_reporting import ctx_start
+from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 class extractor(ParseTreeListener):
 
-    def __init__(this):
+    def __init__(this, program_context):
+        this.program_context = program_context
         this.declared_labels = {}
         this.referanced_labels = {}
 
@@ -20,7 +21,7 @@ class extractor(ParseTreeListener):
                         label,
                         ", ".join(
                             [
-                                ctx_start(ctx)
+                                asm_utils.ctx_start(ctx)
                                 for ctx in this.referanced_labels[label]
                             ]
                         ),
@@ -39,8 +40,8 @@ class extractor(ParseTreeListener):
                     "ERROR: Multiple declarations of jump label, %s, at %s and  %s\n"%
                     (
                         label,
-                        ctx_start(this.declared_labels[label]),
-                        ctx_start(ctx.parentCtx),
+                        asm_utils.ctx_start(this.declared_labels[label]),
+                        asm_utils.ctx_start(ctx.parentCtx),
                     )
                 )
             else:

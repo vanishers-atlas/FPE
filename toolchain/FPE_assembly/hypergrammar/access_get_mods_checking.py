@@ -1,13 +1,13 @@
 # Import ParseTreeListener to extend
 from antlr4 import ParseTreeListener
 
-from FPE.toolchain.FPE_assembly.interface.error_reporting import ctx_start
+from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 class extractor(ParseTreeListener):
 
-    def __init__(this):
-        pass
+    def __init__(this, program_context):
+        this.program_context = program_context
 
     def final_check(this):
         pass
@@ -28,8 +28,8 @@ class extractor(ParseTreeListener):
                     "ERROR: Multiple occurances of a single use mod, %s, in access from %s to %s"%
                     (
                         mod,
-                        ctx_start(this.enclosing_ctx),
-                        ctx_end  (this.enclosing_ctx),
+                        asm_utils.ctx_start(this.enclosing_ctx),
+                        asm_utils.ctx_end  (this.enclosing_ctx),
                     )
                 )
 

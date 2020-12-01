@@ -522,7 +522,7 @@ def generate_fetch_signals():
             )
             ARCH_BODY += "\<\nelse '0';\<\n\n"
 
-        # Handle bam step forward signal
+        # Handle bam step BACKWARD signal
         step_backward_instr_vals = []
         for instr_id, instr_val in CONFIG["instr_set"].items():
             # Collect all accesses of instr

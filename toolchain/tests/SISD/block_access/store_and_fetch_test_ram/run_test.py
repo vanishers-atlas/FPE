@@ -23,7 +23,7 @@ def run_test(path="."):
     )
 
     exit()
-    
+
     # Symulate testbench
     vhdl_files = [
         output_dir + "\\" + file

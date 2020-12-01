@@ -22,8 +22,20 @@ def preprocess_config(config_in):
     assert(config_in["reads"] >= 1)
     config_out["reads"] = config_in["reads"]
 
+    assert(type(config_in["block_reads"]) == type([]))
+    config_out["block_reads"] = []
+    for block_write in config_in["block_reads"]:
+        assert(block_write >= 1)
+        config_out["block_reads"].append(block_write)
+
     assert(config_in["writes"] >= 1)
     config_out["writes"] = config_in["writes"]
+
+    assert(type(config_in["block_writes"]) == type([]))
+    config_out["block_writes"] = []
+    for block_write in config_in["block_writes"]:
+        assert(block_write >= 1)
+        config_out["block_writes"].append(block_write)
 
     assert(config_in["depth"] >= 1)
     config_out["depth"] = config_in["depth"]

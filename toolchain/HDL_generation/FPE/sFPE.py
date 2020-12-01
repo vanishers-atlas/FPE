@@ -35,7 +35,7 @@ jump_exe_status_map = {
     },
 }
 
-def preprocess_config(config_in):
+def precheck_config(config_in):
     config_out = {}
 
     #####################################################################
@@ -149,6 +149,20 @@ def preprocess_config(config_in):
             assert(config_in["data_memories"][mem]["depth"] > 0)
             config_out["data_memories"][mem]["depth"] = config_in["data_memories"][mem]["depth"]
 
+        # Handle block accesses
+        if mem in ["RAM", "ROM", "REG"]:
+            assert(type(config_in["data_memories"][mem]["block_reads"]) == type([]))
+            config_out["data_memories"][mem]["block_reads"] = []
+            for block_write in config_in["data_memories"][mem]["block_reads"]:
+                assert(block_write >= 1)
+                config_out["data_memories"][mem]["block_reads"].append(block_write)
+        if mem in ["RAM", "REG"]:
+            assert(type(config_in["data_memories"][mem]["block_writes"]) == type([]))
+            config_out["data_memories"][mem]["block_writes"] = []
+            for block_write in config_in["data_memories"][mem]["block_writes"]:
+                assert(block_write >= 1)
+                config_out["data_memories"][mem]["block_writes"].append(block_write)
+
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
 
@@ -165,6 +179,11 @@ def preprocess_config(config_in):
 
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
+
+    return config_out
+
+def preprocess_config(config_in):
+    config_out = precheck_config(config_in)
 
     #####################################################################
     # Process copied Config
@@ -339,7 +358,7 @@ def preprocess_config(config_in):
                             "signal" : data_signal,
                             "com" : exe_unit,
                             "port" : index,
-                            "width" : config_out["execute_units"][exe]["data_width"]
+                            "width" : config_out["execute_units"][exe_unit]["data_width"]
                         }
                     )
 
@@ -485,10 +504,6 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         # Save code to file
         gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
 
-        import json
-        with open("dump.json", "w") as f:
-            f.write(json.dumps(config, sort_keys=True, indent=4))
-
         return INTERFACE, MODULE_NAME
 
 #####################################################################
@@ -593,6 +608,7 @@ def gen_execute_units():
             ARCH_BODY += "\<\n);\n"
             ARCH_BODY += "\<\n"
 
+        if False: # TEMP
             # Create input port muxes
             for input, signals in enumerate(config["inputs"]):
                 dst_sig = lane + exe + "_in_%i"%(input,)
@@ -718,6 +734,7 @@ def gen_data_memories():
 
             ARCH_BODY += "\<\n"
 
+        if False: # TEMP
             # Create read addr port muxes
             for read, signals in enumerate(config["reads"]):
                 #print(read, signals)
@@ -830,6 +847,7 @@ def gen_data_memories():
 
                 ARCH_BODY += "\<\n"
 
+            if False: # TEMP
                 # Create read addr port muxes
                 for read, signals in enumerate(config["reads"]):
                     dst_sig = inst + "_read_%i_addr"%(read,)
@@ -987,6 +1005,7 @@ def gen_addr_sources():
 
         ARCH_BODY += "\<\n"
 
+    if False: # TEMP
         # Create input port muxes
         if any( port["name"] == "data_in" for port in interface["ports"] ):
             dst_sig = bam + "_data_in"
@@ -1131,7 +1150,7 @@ def gen_program_counter():
     ARCH_BODY += "port map (\n\>"
     ARCH_BODY += "clock => clock,\n"
     if CONFIG["program_flow"]["stallable"]:
-            ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "data_in (0) => PC_running,\n"
     ARCH_BODY += "data_out(0) => PC_running_1\n"
     ARCH_BODY += "\<);\<\n\n"
@@ -1141,7 +1160,7 @@ def gen_program_counter():
     ARCH_BODY += "port map (\n\>"
     ARCH_BODY += "clock => clock,\n"
     if CONFIG["program_flow"]["stallable"]:
-            ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "data_in (0) => PC_running_1,\n"
     ARCH_BODY += "data_out(0) => PC_running_2\n"
     ARCH_BODY += "\<);\<\n\n"
@@ -1202,6 +1221,7 @@ def gen_program_memory():
             "depth" : CONFIG["program_flow"]["program_length"],
             "addr_width" : CONFIG["program_flow"]["PC_width"],
             "data_width" : CONFIG["instr_decoder"]["instr_width"],
+            "block_reads" : [1],
             "reads" : 1,
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
@@ -1231,7 +1251,7 @@ def gen_program_memory():
     if CONFIG["program_flow"]["stallable"]:
         ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "read_0_addr => PM_addr,\n"
-    ARCH_BODY += "read_0_data => PM_data\n"
+    ARCH_BODY += "read_0_data_word_0 => PM_data\n"
     ARCH_BODY += "\<);\n"
 
     ARCH_BODY += "\<\n"
@@ -1313,7 +1333,6 @@ def gen_instr_decoder():
     ):
         ARCH_BODY += "PC_%s <= ID_%s;\n"%(port["name"], port["name"])
 
-
     # Handle fanning out control signals
     for port in sorted(
         [
@@ -1325,6 +1344,7 @@ def gen_instr_decoder():
                 and not port["name"].startswith("addr_")
                 and not port["name"].startswith("jump_")
                 and not (port["name"].startswith("update_") and port["name"].endswith("_statuses"))
+                and not port["name"].endswith("_sel") # TEMP
 
             )
         ],
