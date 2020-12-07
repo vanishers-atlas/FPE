@@ -41,9 +41,6 @@ def instr_to_oper(instr):
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
@@ -72,18 +69,12 @@ def preprocess_config(config_in):
 
     config_out["statuses"] = config_in["statuses"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 import zlib
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "ALU_48E1"
 
@@ -97,9 +88,6 @@ def handle_module_name(module_name, config, generate_name):
 
         # Append data width
         generated_name += "_%sw"%config["data_width"]
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -117,7 +105,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -151,9 +139,6 @@ def populate_interface():
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["controls"] = {}
-
-    # Flag number of clock cycles needed
-    INTERFACE["cycles required"] = 1
 
 def generate_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -194,33 +179,36 @@ def generate_ports():
 
     # Generate data inputs
     for read in range(CONFIG["inputs"]):
-        INTERFACE["ports"] += [
-            {
-                "name" : "in_%i"%(read),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "in"
-            }
-        ]
+        for word in range(1): #TEMP
+            INTERFACE["ports"] += [
+                {
+                    "name" : "in_%i_word_%i"%(read, word,),
+                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
+                    "direction" : "in"
+                }
+            ]
 
     # Generate data outputs
     for write in range(CONFIG["outputs"]):
-        INTERFACE["ports"] += [
-            {
-                "name" : "out_%i"%(write),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "out"
-            }
-        ]
+        for word in range(1): #TEMP
+            INTERFACE["ports"] += [
+                {
+                    "name" : "out_%i_word_%i"%(write, word,),
+                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
+                    "direction" : "out"
+                }
+            ]
 
     # Generate status outputs
-    for port in sorted(CONFIG["statuses"]):
+    for status in sorted(CONFIG["statuses"]):
         INTERFACE["ports"] += [
             {
-                "name" : "status_%s"(port, ),
+                "name" : "status_%s"%(status, ),
                 "type" : "std_logic",
                 "direction" : "out"
             }
         ]
+
 
 #####################################################################
 
@@ -261,6 +249,14 @@ def get_DSP_mappings(oper):
     elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
+            return {
+                "A" : None,
+                "B" : None,
+                "C" : "shifter_out",
+                "D" : None,
+                "A:B" : None,
+            }
+        elif inputs[0] == "acc":
             return {
                 "A" : None,
                 "B" : None,
@@ -315,6 +311,14 @@ def get_DSP_mappings(oper):
                 "A:B" : "in_1",
             }
         elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return {
+                "A" : None,
+                "B" : None,
+                "C" : "in_0",
+                "D" : None,
+                "A:B" : None,
+            }
+        elif inputs[0] == "acc" and inputs[1] == "fetch":
             return {
                 "A" : None,
                 "B" : None,
@@ -438,11 +442,27 @@ def get_DSP_OP_MODE(oper):
                     "00",   # X => 0
                 ]
             )
+        elif inputs[0] == "acc":
+            return "".join(
+                [
+                    "011",  # Z => C
+                    "00",   # Y => 0
+                    "00",   # X => 0
+                ]
+            )
         else:
             raise NotImplementedError(oper)
     elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
+            return "".join(
+                [
+                    "011",  # Z => C
+                    "00",   # Y => 0
+                    "00",   # X => 0
+                ]
+            )
+        elif inputs[0] == "acc":
             return "".join(
                 [
                     "011",  # Z => C
@@ -502,6 +522,14 @@ def get_DSP_OP_MODE(oper):
                     "011",  # Z => C
                     "00",   # Y => 0
                     "10",   # X => P
+                ]
+            )
+        elif inputs[0] == "acc" and inputs[1] == "fetch":
+            return "".join(
+                [
+                    "100",  # Z => P
+                    "11",   # Y => C
+                    "00",   # X => 0
                 ]
             )
         else:
@@ -602,11 +630,15 @@ def get_DSP_ALU_MODE(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
             return "0000" # P => Z + Y + X + CarryIn
+        elif inputs[0] == "acc":
+            return "0000" # P => Z + Y + X + CarryIn
         else:
             raise NotImplementedError(oper)
     elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
+            return "0000" # P => Z + Y + X + CarryIn
+        elif inputs[0] == "acc":
             return "0000" # P => Z + Y + X + CarryIn
         else:
             raise NotImplementedError(oper)
@@ -631,6 +663,8 @@ def get_DSP_ALU_MODE(oper):
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return "0011" # P => Z - (Y + X + CarryIn)
         elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return "0011" # P => Z - (Y + X + CarryIn)
+        elif inputs[0] == "acc" and inputs[1] == "fetch":
             return "0011" # P => Z - (Y + X + CarryIn)
         else:
             raise NotImplementedError(oper)
@@ -678,19 +712,6 @@ def handle_DSP():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Generate required DSP control signals for each oper
-    INTERFACE["controls"]["DSP_ALU_MODE"] = {}
-    INTERFACE["controls"]["DSP_ALU_MODE"]["width"] = 4
-    INTERFACE["controls"]["DSP_ALU_MODE"]["values"] = {}
-
-    INTERFACE["controls"]["DSP_OP_MODE"] = {}
-    INTERFACE["controls"]["DSP_OP_MODE"]["width"] = 7
-    INTERFACE["controls"]["DSP_OP_MODE"]["values"] = {}
-
-    for oper in CONFIG["oper_set"]:
-        INTERFACE["controls"]["DSP_OP_MODE"]["values"][oper]  = get_DSP_OP_MODE(oper)
-        INTERFACE["controls"]["DSP_ALU_MODE"]["values"][oper] = get_DSP_ALU_MODE(oper)
-
     # Instancate DSP slice
     IMPORTS += [
         {
@@ -699,6 +720,14 @@ def handle_DSP():
             "parts" : "all"
         }
     ]
+
+    for input in range(CONFIG["inputs"]):     #TEMP
+        ARCH_HEAD += "signal in_%i : std_logic_vector(%i downto 0);\n"%(input, CONFIG["data_width"] - 1, )
+        ARCH_BODY += "in_%i <= in_%i_word_0;\n"%(input, input, )
+    for output in range(CONFIG["outputs"]):    #TEMP
+        ARCH_HEAD += "signal out_%i : std_logic_vector(%i downto 0);\n"%(output, CONFIG["data_width"] - 1, )
+        ARCH_BODY += "out_%i_word_0 <= out_%i;\n"%(output, output, )
+
 
     ARCH_BODY += "DSP48E1_inst : DSP48E1\>\n"
 
@@ -723,7 +752,7 @@ def handle_DSP():
     )
     AB_used = any(
         [
-            "A:B" in get_DSP_mappings(oper)
+            get_DSP_mappings(oper)["A:B"]
             for oper in CONFIG["oper_set"]
         ]
     )
@@ -803,8 +832,46 @@ def handle_DSP():
     # Handle Control ports
     ARCH_BODY += "-- Handle Control ports\n"
     ARCH_BODY += "CLK => clock,\n"
-    ARCH_BODY += "OPMODE  => DSP_OP_MODE,\n"
-    ARCH_BODY += "ALUMODE => DSP_ALU_MODE,\n"
+
+
+    # Generate DSP_ALU_MODE
+    DSP_ALU_MODE = {
+        "width" : 4,
+        "values" : {
+            oper : get_DSP_ALU_MODE(oper)
+            for oper in CONFIG["oper_set"]
+        }
+    }
+
+    # If only only 1 value tie to post
+    if len(set(DSP_ALU_MODE["values"].values())) == 1:
+        ARCH_BODY += "ALUMODE  => \"%s\",\n"%(
+            list(DSP_ALU_MODE["values"].values())[0]
+        )
+    # else create control port
+    else:
+        INTERFACE["controls"]["DSP_ALU_MODE"] = DSP_ALU_MODE
+        ARCH_BODY += "ALUMODE  => DSP_ALU_MODE,\n"
+
+    # Generate DSP_OP_MODE
+    DSP_OP_MODE = {
+        "width" : 7,
+        "values" : {
+            oper : get_DSP_OP_MODE(oper)
+            for oper in CONFIG["oper_set"]
+        }
+    }
+
+    # If only only 1 value tie to post
+    if len(set(DSP_OP_MODE["values"].values())) == 1:
+        ARCH_BODY += "OPMODE  => \"%s\",\n"%(
+            list(DSP_OP_MODE["values"].values())[0]
+        )
+    # else create control port
+    else:
+        INTERFACE["controls"]["DSP_OP_MODE"] = DSP_OP_MODE
+        ARCH_BODY += "OPMODE  => DSP_OP_MODE,\n"
+
     ARCH_BODY += "INMODE  => (others => '0'),\n"
     ARCH_BODY += "CARRYINSEL => (others => '0'),\n"
 
@@ -935,12 +1002,10 @@ def handle_DSP():
             v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["DSP_C_SEL"]["width"] )
             for i, v in enumerate(data_mapping["C"])
         }
-
         for oper in CONFIG["oper_set"]:
-            try:
-                INTERFACE["controls"]["DSP_C_SEL"]["values"][oper] = sel_map[get_DSP_mappings(oper)["C"]]
-            except KeyError:
-                pass
+            src = get_DSP_mappings(oper)["C"]
+            if src in sel_map.keys():
+                INTERFACE["controls"]["DSP_C_SEL"]["values"][oper] = sel_map[src]
 
         ARCH_BODY += "slice_C <=\>"
         for src, control_code in sel_map.items():
@@ -968,74 +1033,345 @@ def handle_DSP():
 
 
     # Connect data outputs
-    ARCH_BODY += "out_0 <= slice_p(out_0'left downto 0);\n"
+    ARCH_HEAD += "signal ACC : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
+    ARCH_BODY += "ACC <= slice_p(ACC'left downto 0);\n"
+
+    ARCH_BODY += "out_0 <= ACC;\n"
     if "lesser" in CONFIG["statuses"]:
         ARCH_BODY += "status_lesser <= slice_p(out_0'left);\n"
 
 #####################################################################
 
+def get_shifter_mappings(oper):
+    # Pass though slice
+    if   gen_utils.oper_mnemonic(oper) == "MOV":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return {
+                "in" : None,
+            }
+        elif inputs[0] == "acc":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return {
+                "in" : "in_0",
+            }
+        elif inputs[0] == "acc":
+            return {
+                "in" : "ACC",
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return {
+                "in" : "in_0",
+            }
+        elif inputs[0] == "acc":
+            return {
+                "in" : "ACC",
+            }
+        else:
+            raise NotImplementedError(oper)
+
+    # Arithmetic Operations
+    elif gen_utils.oper_mnemonic(oper) == "MUL":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "ADD":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "SUB":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return {
+                "in" : None,
+            }
+        elif inputs[0] == "acc" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "CMP":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        elif inputs[0] == "acc"   and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+
+    # Logical Operations
+    elif gen_utils.oper_mnemonic(oper) == "NOT":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return {
+                "in" : None,
+            }
+        elif inputs[0] == "acc":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "OR":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "AND":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "XOR":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return {
+                "in" : None,
+            }
+        else:
+            raise NotImplementedError(oper)
+
+    else:
+        raise NotImplementedError(oper)
+
+def get_shifter_modes(oper):
+    # Passthrough Operations
+    if   gen_utils.oper_mnemonic(oper) == "MOV":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return None
+        elif inputs[0] == "acc":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return gen_utils.oper_mnemonic(oper)
+        elif inputs[0] == "acc":
+            return gen_utils.oper_mnemonic(oper)
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return gen_utils.oper_mnemonic(oper)
+        elif inputs[0] == "acc":
+            return gen_utils.oper_mnemonic(oper)
+        else:
+            raise NotImplementedError(oper)
+
+    # Arithmetic Operations
+    elif gen_utils.oper_mnemonic(oper) == "MUL":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "ADD":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "SUB":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return None
+        elif inputs[0] == "acc" and inputs[1] == "fetch":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "CMP":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        elif inputs[0] == "acc"   and inputs[1] == "fetch":
+            return None
+        else:
+            raise NotImplementedError(oper)
+
+    # Logical Operations
+    elif gen_utils.oper_mnemonic(oper) == "NOT":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch":
+            return None
+        elif inputs[0] == "acc":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "OR":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "AND":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        else:
+            raise NotImplementedError(oper)
+    elif gen_utils.oper_mnemonic(oper) == "XOR":
+        inputs = gen_utils.oper_srcs(oper)
+        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+            return None
+        else:
+            raise NotImplementedError(oper)
+
+    else:
+        raise NotImplementedError(oper)
+
 def handle_shifter():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    shifts = set (
-        [
-            gen_utils.oper_mnemonic(oper)
-            for oper in CONFIG["oper_set"]
-            if (
-                gen_utils.oper_mnemonic(oper).startswith("LSH_")
-                or gen_utils.oper_mnemonic(oper).startswith("RSH_")
-            )
-        ]
-    )
+    # Compute how shift input and AlU inputs connect
+    data_mapping = {
+        "in" : set(),
+    }
+    for oper in CONFIG["oper_set"]:
+        for port, input in get_shifter_mappings(oper).items():
+            if input != None:
+                data_mapping[port].add(input)
+    for k, v in data_mapping.items():
+        data_mapping[k] = list(sorted(v))
 
-    if len(shifts) != 0:
-        # Generate required control signals for each oper
-        INTERFACE["controls"]["SHIFT_SEL"] = {}
-        INTERFACE["controls"]["SHIFT_SEL"]["width"] = tc_utils.unsigned.width(len(shifts) - 1)
-        INTERFACE["controls"]["SHIFT_SEL"]["values"] = {}
+    # Compute control signals for shifter
+    shifter_modes = set ()
+    for oper in CONFIG["oper_set"]:
+        mode = get_shifter_modes(oper)
+        if mode != None:
+            shifter_modes.add(mode)
+    shifter_modes = list(sorted(shifter_modes))
 
-        shift_map = {
-            v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["SHIFT_SEL"]["width"] )
-            for i, v in enumerate(shifts)
-        }
+    # Check both data_mapping and shifter_modes say the same thing
+    # Either there are are shifts, both return False
+    # or there are no shifts. both return True
+    assert((len(data_mapping["in"]) == 0) == (len(shifter_modes) == 0))
 
-        for oper in CONFIG["oper_set"]:
-            try:
-                INTERFACE["controls"]["SHIFT_SEL"]["values"][oper] = shift_map[gen_utils.oper_mnemonic(oper)]
-            except KeyError:
-                pass
+    # Check it there are shifts
+    if len(shifter_modes) != 0:
+        # Declare shift output
+        ARCH_HEAD += "signal shifter_out : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"])
 
-        # Generate shifter VHDL
-        ARCH_HEAD += "signal shifter_out : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1)
-        ARCH_BODY += "shifter_out <=\>"
-        for shift, control_code in shift_map.items():
-            dir, bits = shift.split("_")
+        # Handle input muxing
+        if len(data_mapping["in"]) == 1:
+            ARCH_HEAD += "signal shifter_in : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] -1, )
+            ARCH_BODY += "shifter_in <= %s;\n"%(data_mapping["in"][0], )
+        else:
+            raise ImplementedError()
+
+        # Handle shifting logic
+        if len(shifter_modes) == 1:
+            dir, bits = shifter_modes[0].split("_")
             bits = int(bits)
 
-            print(dir, bits)
             # Handle left shift
             if dir == "LSH":
-                ARCH_BODY += "(%s, others => '0') when SHIFT_SEL = \"%s\"\nelse "%(
+                ARCH_BODY += "shifter_out <= (%s, others => '0');\n"%(
                     ", ".join(
                         [
                             "(%i) => in_0(%i)"%(i, i - bits)
                             for i in range(bits, CONFIG["data_width"], 1)
                         ]
                     ),
-                    control_code,
                 )
             # Handle right shift
             elif dir == "RSH":
-                ARCH_BODY += "(%s, others => '0') when SHIFT_SEL = \"%s\"\nelse "%(
+                ARCH_BODY += "shifter_out <= (%s, others => '0');\n"%(
                     ", ".join(
                         [
                             "(%i) => in_0(%i)"%(i - bits, i)
                             for i in range(bits, CONFIG["data_width"], 1)
                         ]
                     ),
-                    control_code,
                 )
             else:
-                raise NotImplementedError(shift)
-        ARCH_BODY += "(others => 'U')\<\n;"
+                raise NotImplementedError(shifter_modes[0])
+        else:
+            # Create shift_sel control signal
+            sel_width = tc_utils.unsigned.width(len(shifter_modes) - 1, )
+            INTERFACE["controls"]["shift_sel"] = {
+                "width" : sel_width,
+                "values" : {
+                    oper : tc_utils.unsigned.encode(sorted(shifter_modes).index(get_shifter_modes(oper)), sel_width)
+                    for oper in CONFIG["oper_set"]
+                    if get_shifter_modes(oper) in shifter_modes
+                }
+            }
+
+            # Build shift
+            ARCH_BODY += "shifter_out <=\>"
+            for mode_sel, shifter_mode in enumerate(sorted(shifter_modes)):
+                dir, bits = shifter_mode.split("_")
+                bits = int(bits)
+
+                # Handle left shift
+                if dir == "LSH":
+                    ARCH_BODY += "(%s, others => '0') when shift_sel = \"%s\"\nelse "%(
+                        ", ".join(
+                            [
+                                "(%i) => in_0(%i)"%(i, i - bits)
+                                for i in range(bits, CONFIG["data_width"], 1)
+                            ]
+                        ),
+                        tc_utils.unsigned.encode(mode_sel, sel_width),
+                    )
+                # Handle right shift
+                elif dir == "RSH":
+                    ARCH_BODY += "(%s, others => '0') when shift_sel = \"%s\"\nelse "%(
+                        ", ".join(
+                            [
+                                "(%i) => in_0(%i)"%(i - bits, i)
+                                for i in range(bits, CONFIG["data_width"], 1)
+                            ]
+                        ),
+                        tc_utils.unsigned.encode(mode_sel, sel_width),
+                    )
+                else:
+                    raise NotImplementedError(shifter_mode)
+
+            ARCH_BODY += "(others => 'U');\<\n"

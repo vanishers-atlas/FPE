@@ -16,9 +16,6 @@ from FPE.toolchain.HDL_generation.FPE import ZOL_tracker
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(config_in["PC_width"] > 0)
     config_out["PC_width"] = config_in["PC_width"]
 
@@ -31,17 +28,11 @@ def preprocess_config(config_in):
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
         generated_name = "ZOL_manager"
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         if config["stallable"]:
             generated_name += "_stallable"
@@ -50,9 +41,6 @@ def handle_module_name(module_name, config, generate_name):
 
         generated_name += "_%iw"%(config["PC_width"], )
         generated_name += "_%iz"%(len(config["ZOLs"]), )
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -70,7 +58,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:

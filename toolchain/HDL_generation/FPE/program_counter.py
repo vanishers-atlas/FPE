@@ -18,9 +18,6 @@ import copy
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     # Handle stalling
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
@@ -39,8 +36,12 @@ def preprocess_config(config_in):
     config_out["statuses"] = copy.deepcopy(config_in["statuses"])
     config_out["jumping_enabled"] = config_out["uncondional_jump"] or len(config_out["statuses"]) > 0
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
+    # Handle inputs
+    assert(type(config_in["inputs"]) == type([]))
+    config_out["inputs"] = []
+    for words in config_in["inputs"]:
+        assert(words == 1)
+        config_out["inputs"].append(words)
 
     return config_out
 
@@ -48,9 +49,6 @@ import zlib
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "PC"
 
@@ -75,9 +73,6 @@ def handle_module_name(module_name, config, generate_name):
         else:
             generated_name += "_noZOL"
 
-        #print(generated_name)
-        #exit()
-
         return generated_name
     else:
         return module_name
@@ -94,7 +89,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -118,6 +113,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 
         # Generation Module Code
         populate_interface()
+        generate_data_ports()
         generate_state_management()
         generate_generate_running()
         generate_value_register()
@@ -138,12 +134,33 @@ def populate_interface():
 
     INTERFACE["PC_width"] = CONFIG["PC_width"]
 
+def generate_data_ports():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    for input, words in enumerate(CONFIG["inputs"]):
+        for word in range(words):
+            INTERFACE["ports"] += [
+                {
+                    "name" : "in_%i_word_%i"%(input, word,),
+                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
+                    "direction" : "in"
+                }
+            ]
+
+
+
+
 def generate_state_management():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
-        { "name" : "kickoff", "type" : "std_logic", "direction" : "in"  }
+        {
+            "name" : "kickoff",
+            "type" : "std_logic",
+            "direction" : "in"
+        }
     ]
 
     ARCH_HEAD += "type PC_states is (INACTIVE, STARTING, ACTIVE);\n"
@@ -265,16 +282,11 @@ def generate_jumping():
         CONFIG["jumping_enabled"] = False
         return
 
-    # Create signals and ports required for all jumps
-    CONFIG["jumping_enabled"] = True
-    INTERFACE["ports"] += [
-        {
-            "name" : "jump_value",
-            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
-            "direction" : "in"
-        }
-    ]
+    # Check there is enough input ports for jumping
+    assert(len(CONFIG["inputs"]) >= 1)
+    assert(CONFIG["inputs"][0] >= 1)
 
+    CONFIG["jumping_enabled"] = True
     ARCH_HEAD += "signal jump_occured : std_logic;\n"
     jump_occured = "jump_occured <=\>"
 
@@ -385,6 +397,6 @@ def generate_next_value():
         ARCH_BODY += "ZOL_value when ZOL_overwrite = '1'\nelse "
 
     if CONFIG["jumping_enabled"]:
-        ARCH_BODY += "jump_value when jump_occured = '1'\nelse "
+        ARCH_BODY += "in_0_word_0 when jump_occured = '1'\nelse "
 
     ARCH_BODY += "std_logic_vector(to_unsigned(to_integer(unsigned(internal_value)) + 1, next_value'length));\n\<"

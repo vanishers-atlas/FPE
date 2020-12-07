@@ -1,4 +1,6 @@
 {
+  NOP;
+
   MOV ( 0, PUT[0]);
   MOV ( 1, PUT[0]);
   MOV ( 2, PUT[0]);

@@ -16,26 +16,23 @@ from FPE.toolchain.HDL_generation.memory import register
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(config_in["reads"] >= 1)
     config_out["reads"] = config_in["reads"]
 
-    assert(type(config_in["block_reads"]) == type([]))
-    config_out["block_reads"] = []
-    for block_write in config_in["block_reads"]:
+    assert(type(config_in["read_blocks"]) == type([]))
+    config_out["read_blocks"] = []
+    for block_write in config_in["read_blocks"]:
         assert(block_write >= 1)
-        config_out["block_reads"].append(block_write)
+        config_out["read_blocks"].append(block_write)
 
     assert(config_in["writes"] >= 1)
     config_out["writes"] = config_in["writes"]
 
-    assert(type(config_in["block_writes"]) == type([]))
-    config_out["block_writes"] = []
-    for block_write in config_in["block_writes"]:
+    assert(type(config_in["write_blocks"]) == type([]))
+    config_out["write_blocks"] = []
+    for block_write in config_in["write_blocks"]:
         assert(block_write >= 1)
-        config_out["block_writes"].append(block_write)
+        config_out["write_blocks"].append(block_write)
 
     assert(config_in["depth"] >= 1)
     config_out["depth"] = config_in["depth"]
@@ -47,16 +44,10 @@ def preprocess_config(config_in):
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "REG"
 
@@ -69,9 +60,6 @@ def handle_module_name(module_name, config, generate_name):
         generated_name += "_%iwr"%(config["writes"], )
         generated_name += "_%iw"%(config["data_width"], )
         generated_name += "_%id"%(config["depth"], )
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -89,7 +77,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -193,16 +181,16 @@ def gen_reads():
                 "direction" : "in"
             },
             {
-                "name" : "read_%i_data"%(read, ),
+                "name" : "read_%i_data_word_0"%(read, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "out"
             }
         ]
 
         # Generate output buffers
-        ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+        ARCH_HEAD += "signal read_%i_word_0_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
 
-        ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+        ARCH_BODY += "read_%i_word_0_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
 
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
 
@@ -212,12 +200,12 @@ def gen_reads():
             ARCH_BODY += "enable  => not stall,\n"
 
         ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
-        ARCH_BODY += "data_out => read_%i_data\n"%(read, )
+        ARCH_BODY += "data_in  => read_%i_word_0_buffer_in,\n"%(read, )
+        ARCH_BODY += "data_out => read_%i_data_word_0\n"%(read, )
 
         ARCH_BODY += "\<);\n\<"
 
-        ARCH_BODY += "read_%i_buffer_in <=\>"%(read, )
+        ARCH_BODY += "read_%i_word_0_buffer_in <=\>"%(read, )
         for reg in range(CONFIG["depth"]):
             ARCH_BODY += "reg_%i_out when read_%i_addr = \"%s\"\nelse "%(reg, read, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
         ARCH_BODY += "(others => 'X');\n\<"
@@ -237,7 +225,7 @@ def gen_writes():
                 "direction" : "in"
             },
             {
-                "name" : "write_%i_data"%(write, ),
+                "name" : "write_%i_data_word_0"%(write, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "in"
             },
@@ -250,7 +238,7 @@ def gen_writes():
 
     if CONFIG["writes"] == 1:
         for reg in range(CONFIG["depth"]):
-            ARCH_BODY += "reg_%i_in <= write_0_data;\n"%(reg, )
+            ARCH_BODY += "reg_%i_in <= write_0_data_word_0;\n"%(reg, )
             if CONFIG["stallable"]:
                 ARCH_BODY += "reg_%i_enable <= write_0_enable and not stall when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
             else:

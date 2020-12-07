@@ -16,25 +16,24 @@ from FPE.toolchain.HDL_generation.memory import register
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(config_in["reads"] >= 1)
     config_out["reads"] = config_in["reads"]
 
-    assert(type(config_in["block_reads"]) == type([]))
-    config_out["block_reads"] = []
-    for block_write in config_in["block_reads"]:
+    assert(type(config_in["read_blocks"]) == type([]))
+    config_out["read_blocks"] = []
+    for block_write in config_in["read_blocks"]:
         assert(block_write >= 1)
-        config_out["block_reads"].append(block_write)
+        config_out["read_blocks"].append(block_write)
 
-    if len(config_out["block_reads"]) == 1:
-        config_out["block_read_sel"] = None
+    if len(config_out["read_blocks"]) == 1:
+        config_out["read_block_sel"] = None
     else:
-        config_out["block_read_sel"] =  tc_utils.unsigned.width(len(config_out["block_reads"]) - 1)
+        config_out["read_block_sel"] =  tc_utils.unsigned.width(len(config_out["read_blocks"]) - 1)
 
-    config_out["block_size"] = max( config_out["block_reads"] )
-    config_out["word_addr_width"] = tc_utils.unsigned.width(config_out["block_size"] - 1)
+    config_out["block_size"] = max( config_out["read_blocks"] )
+    if config_out["block_size"] != 1:
+        config_out["word_addr_width"] = tc_utils.unsigned.width(config_out["block_size"] - 1, )
+    assert(config_out["block_size"] == 1)
 
 
     assert(config_in["depth"] >= 1)
@@ -49,16 +48,10 @@ def preprocess_config(config_in):
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "ROM"
 
@@ -70,9 +63,6 @@ def handle_module_name(module_name, config, generate_name):
         generated_name += "_%ir"%(config["reads"], )
         generated_name += "_%iw"%(config["data_width"], )
         generated_name += "_%id"%(config["depth"], )
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -90,7 +80,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -247,107 +237,35 @@ def gen_reads():
                     "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                     "direction" : "out"
                 }
-                for word in range(max(CONFIG["block_reads"]))
+                for word in range(max(CONFIG["read_blocks"]))
             ],
         ]
 
-        if CONFIG["block_read_sel"] != None:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "read_%i_block_sel"%(read, ),
-                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["block_read_sel"] - 1, ),
-                    "direction" : "in"
-                },
-            ]
-
 
         # Handle read addr
-        ARCH_HEAD += "signal read_%i_addr_block : std_logic_vector(%i downto 0);\n"%(
-            read, CONFIG["addr_width"] - CONFIG["word_addr_width"] - 1
-        )
-        ARCH_BODY += "read_%i_addr_block <= read_%i_addr(%i downto %i);\n"%(
-        read, read, CONFIG["addr_width"] - 1, CONFIG["word_addr_width"]
-        )
+        ARCH_HEAD += "signal read_%i_addr_int : integer;\n"%(read)
+        ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n"%(read, read)
 
-        ARCH_HEAD += "signal read_%i_addr_word  : std_logic_vector(%i downto 0);\n"%(
-            read, CONFIG["word_addr_width"] - 1
-        )
-        ARCH_BODY += "read_%i_addr_word  <= read_%i_addr(%i downto 0);\n"%(
-            read, read, CONFIG["word_addr_width"] - 1
-        )
+        ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1, )
 
-        ARCH_HEAD += "signal read_%i_addr_block_int  : integer;\n"%(read)
-        ARCH_BODY += "read_%i_addr_block_int <= to_integer(unsigned(read_%i_addr_block));\n"%(read, read)
-
-        # Generate output buffers
-        ARCH_HEAD += "signal read_%i_buffer_in, read_%i_buffer_out : std_logic_vector(%i downto 0);\n"%(
-            read, read,
-            CONFIG["block_size"] * CONFIG["data_width"] - 1
-        )
 
         # Map data into buffer
-        ARCH_BODY += "\n-- Read map proccess\n"
-        if CONFIG["block_read_sel"] == None:
-            ARCH_BODY += "process (clock, read_%i_addr)\>\n"%(read, )
-        else:
-            ARCH_BODY += "process (clock, read_%i_addr, read_%i_block_sel)\>\n"%(read, read,)
+        ARCH_BODY += "process (clock, read_%i_addr)\>\n"%(read, )
+
         ARCH_BODY += "\<begin\>\n"
 
         if CONFIG["stallable"]:
             ARCH_BODY += "if stall /= '1' then\>\n"
 
-        ARCH_BODY += "-- Blank out buffer input\n"
-        ARCH_BODY += "read_%i_buffer_in <= (others => 'U');\n\n"%(
-            read,
-        )
-
-        ARCH_BODY += "-- Check that block addr is valid\n"
-        ARCH_BODY += "if 0 <= read_%i_addr_block_int and read_%i_addr_block_int < data'Length then\>\n"%(
+        ARCH_BODY += "-- Check that addr is valid\n"
+        ARCH_BODY += "if 0 <= read_%i_addr_int and read_%i_addr_int < data'Length then\>\n"%(
             read,
             read,
         )
 
-        if CONFIG["block_read_sel"] == None:
-            ARCH_BODY += "read_%i_buffer_in <= data(read_%i_addr_block_int);\n"%(
-                read, read,
-            )
-        else:
-            ARCH_BODY += "-- handle different block sizes\n"
-            for block_read_sel_val, read_size in enumerate(CONFIG["block_reads"]):
-                ARCH_BODY += "if read_%i_block_sel = \"%s\" then\>\n"%(
-                    read,
-                    tc_utils.unsigned.encode(block_read_sel_val, CONFIG["block_read_sel"]),
-                )
-                subblock_addr_width = tc_utils.unsigned.width(int(CONFIG["block_size"]/read_size) - 1)
-
-                if int(CONFIG["block_size"]/read_size) == 1:
-                    ARCH_BODY += "read_%i_buffer_in <= data(read_%i_addr_block_int);\n"%(
-                        read, read,
-                    )
-                else:
-                    ARCH_BODY += "-- handle different subblocks\n"
-                    for subblock in range(int(CONFIG["block_size"]/read_size)):
-                        ARCH_BODY += "if read_%i_addr_word(%i downto %i) = \"%s\" then\>\n"%(
-                            read,
-                            CONFIG["word_addr_width"] - 1,
-                            CONFIG["word_addr_width"] - subblock_addr_width,
-                            tc_utils.unsigned.encode(subblock, subblock_addr_width),
-                        )
-
-                        ARCH_BODY += "read_%i_buffer_in(%i downto %i) <= data(read_%i_addr_block_int)(%i downto %i);\n"%(
-                            read,
-                            CONFIG["block_size"] * CONFIG["data_width"] - 1,
-                            (CONFIG["block_size"] - read_size) * CONFIG["data_width"],
-                            read,
-                            (CONFIG["block_size"] - subblock*read_size) * CONFIG["data_width"] - 1,
-                            (CONFIG["block_size"] - (subblock + 1)*read_size) * CONFIG["data_width"],
-                        )
-                        ARCH_BODY += "\<els"
-                    ARCH_BODY.drop_last_X(3)
-                    ARCH_BODY += "end if;\n"
-                ARCH_BODY += "\<els"
-            ARCH_BODY.drop_last_X(3)
-            ARCH_BODY += "end if;\n"
+        ARCH_BODY += "read_%i_buffer_in <= data(read_%i_addr_int);\n"%(
+            read, read,
+        )
 
         ARCH_BODY += "\<end if;\n"
 
@@ -359,7 +277,7 @@ def gen_reads():
         # Instance read data buffer
         ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
 
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["block_size"] * CONFIG["data_width"])
+        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"], )
 
         ARCH_BODY += "port map (\n\>"
 
@@ -368,14 +286,6 @@ def gen_reads():
 
         ARCH_BODY += "trigger => clock,\n"
         ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
-        ARCH_BODY += "data_out => read_%i_buffer_out\n"%(read, )
+        ARCH_BODY += "data_out => read_%i_data_word_0\n"%(read, )
 
         ARCH_BODY += "\<);\n\<"
-
-        # Map data out of buffer
-        for word in range(max(CONFIG["block_reads"])):
-            ARCH_BODY += "read_%i_data_word_%i <= read_%i_buffer_out(%i downto %i);\n"%(
-                read, word, read,
-                (CONFIG["block_size"] - word) * CONFIG["data_width"] - 1,
-                (CONFIG["block_size"] - (word + 1)) * CONFIG["data_width"],
-            )

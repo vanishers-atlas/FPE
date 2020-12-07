@@ -1,5 +1,4 @@
 from . import PC_extraction
-from . import block_access_extraction
 
 from . import IMM_extraction
 from . import BAM_extraction
@@ -10,7 +9,6 @@ from . import instruction_set_extraction
 features = [
     # Early passes, produce data required for laster passes
     PC_extraction,
-    block_access_extraction,
 
     # Mid passes, dependant on data for Early passes but no other dependanes
     IMM_extraction,

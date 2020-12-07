@@ -4,13 +4,10 @@
     },
     "address_sources": {},
     "data_memories": {
-        "GET": {
-            "data_width": 4,
-            "FIFOs": 1
-        },
         "IMM": {},
         "PUT": {
             "data_width": 4,
+            "can_stall": false,
             "FIFOs": 1
         }
     },

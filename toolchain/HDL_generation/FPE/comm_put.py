@@ -17,9 +17,6 @@ from FPE.toolchain.HDL_generation.memory import register
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     # Stalling parameters
     assert(type(config_in["can_stall"]) == type(True))
     assert(type(config_in["stallable"]) == type(True))
@@ -41,16 +38,10 @@ def preprocess_config(config_in):
     config_out["data_width"] = config_in["data_width"]
     config_out["addr_width"] = tc_utils.unsigned.width(config_out["FIFOs"] - 1)
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "PUT"
 
@@ -59,9 +50,6 @@ def handle_module_name(module_name, config, generate_name):
         generated_name += "_%if"%(config["FIFOs"], )
         generated_name += "_%iw"%(config["data_width"], )
         generated_name += "_%ss"%(config["stalling"][0], )
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -79,7 +67,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -223,7 +211,7 @@ def gen_write_ports():
                 "direction" : "in"
             },
             {
-                "name" : "write_%i_data"%(port, ),
+                "name" : "write_%i_data_word_0"%(port, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "in"
             },
@@ -259,7 +247,7 @@ def gen_assignment_logic():
     ARCH_BODY += "\n-- Data Path\n"
     if CONFIG["writes"] == 1:
         for FIFO in range(CONFIG["FIFOs"]):
-            ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data;\n"%(FIFO, )
+            ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data_word_0;\n"%(FIFO, )
 
             if CONFIG["stalling"] == "NONE":
                 ARCH_BODY += "FIFO_%i_write_internal <= '1' when write_0_enable = '1' and write_0_addr = \"%s\" else '0';\n"%(FIFO, tc_utils.unsigned.encode(0, CONFIG["addr_width"]))

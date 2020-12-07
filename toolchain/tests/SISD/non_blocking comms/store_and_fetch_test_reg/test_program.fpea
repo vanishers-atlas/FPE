@@ -32,4 +32,6 @@
   MOV (REG[0xd], PUT[0]);
   MOV (REG[0xe], PUT[0]);
   MOV (REG[0xf], PUT[0]);
+
+  NOP;
 }

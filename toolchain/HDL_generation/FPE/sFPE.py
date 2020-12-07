@@ -42,145 +42,269 @@ def precheck_config(config_in):
     # Precheck and copy input
     #####################################################################
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     # Handle SIMD section of config
     config_out["SIMD"] = {}
+    config_out["SIMD"] = copy.deepcopy(config_in["SIMD"])
     assert(config_in["SIMD"]["lanes"] >= 0)
-    config_out["SIMD"]["lanes"] = config_in["SIMD"]["lanes"]
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle instr_set section of config
     assert(len(config_in["instr_set"]) > 0)
     config_out["instr_set"] = copy.deepcopy(config_in["instr_set"])
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     # Handle program_flow section of config
     config_out["program_flow"] = {}
-
+    config_out["program_flow"] = copy.deepcopy(config_in["program_flow"])
     assert(config_in["program_flow"]["program_length"] >= 0)
-    config_out["program_flow"]["program_length"] = config_in["program_flow"]["program_length"]
-
     assert(len(config_in["program_flow"]["ZOLs"]) >= 0)
-    config_out["program_flow"]["ZOLs"] = copy.deepcopy(config_in["program_flow"]["ZOLs"])
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle instr_decoder section of config
     config_out["instr_decoder"] = {}
-
+    config_out["instr_decoder"] = copy.deepcopy(config_in["instr_decoder"])
     assert(config_in["instr_decoder"]["opcode_width"] > 0)
-    config_out["instr_decoder"]["opcode_width"] = config_in["instr_decoder"]["opcode_width"]
-
     assert(type(config_in["instr_decoder"]["addr_widths"]) == type([]))
-    config_out["instr_decoder"]["addr_widths"] = []
     for width in config_in["instr_decoder"]["addr_widths"]:
         assert(width > 0)
-        config_out["instr_decoder"]["addr_widths"].append(width)
-
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle address_sources section of config
     config_out["address_sources"] = {}
-
+    config_out["address_sources"] = copy.deepcopy(config_in["address_sources"])
     for bam in config_in["address_sources"]:
-        config_out["address_sources"][bam] = {}
-
         assert(config_in["address_sources"][bam]["addr_width"] > 0)
-        config_out["address_sources"][bam]["addr_width"] = config_in["address_sources"][bam]["addr_width"]
-
-        assert(config_in["address_sources"][bam]["offset_width"] > 0)
-        config_out["address_sources"][bam]["offset_width"] = config_in["address_sources"][bam]["offset_width"]
-
         assert(config_in["address_sources"][bam]["step_width"] > 0)
-        config_out["address_sources"][bam]["step_width"] = config_in["address_sources"][bam]["step_width"]
 
-        assert(type(config_in["address_sources"][bam]["steps"]) == type([]))
-        config_out["address_sources"][bam]["steps"] = []
-        for step in config_in["address_sources"][bam]["steps"]:
-            assert(step in [
-                    "fetched_backward",
-                    "fetched_forward",
-                    "generic_backward",
-                    "generic_forward",
-                ]
-            )
-            assert(step not in config_out["address_sources"][bam]["steps"])
-            config_out["address_sources"][bam]["steps"].append(step)
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle data_memory section of config
     config_out["data_memories"] = {}
-
+    config_out["data_memories"] = copy.deepcopy(config_in["data_memories"])
     assert(len(config_in["data_memories"]) > 0)
     for mem in config_in["data_memories"].keys():
-        config_out["data_memories"][mem] = {}
-
-        # Check data_width for all memories
-        assert(config_in["data_memories"][mem]["data_width"] > 0)
-        config_out["data_memories"][mem]["data_width"] = config_in["data_memories"][mem]["data_width"]
-
-        # Check data_width for all memories
         assert(config_in["data_memories"][mem]["addr_width"] > 0)
-        config_out["data_memories"][mem]["addr_width"] = config_in["data_memories"][mem]["addr_width"]
-
-        # Check FIFOs of comm memories
-        if mem in ["GET", "PUT"]:
-            assert(config_in["data_memories"][mem]["FIFOs"] > 0)
-            config_out["data_memories"][mem]["FIFOs"] = config_in["data_memories"][mem]["FIFOs"]
+        assert(config_in["data_memories"][mem]["data_width"] > 0)
 
         # Check can_stall of comm memories
         if mem in ["GET", "PUT"]:
             assert(type(config_in["data_memories"][mem]["can_stall"]) == type(True))
-            config_out["data_memories"][mem]["can_stall"] = config_in["data_memories"][mem]["can_stall"]
-
-        # Check depth for container memories
-        if mem in ["IMM", "RAM", "ROM", "REG"]:
-            assert(config_in["data_memories"][mem]["depth"] > 0)
-            config_out["data_memories"][mem]["depth"] = config_in["data_memories"][mem]["depth"]
-
-        # Handle block accesses
-        if mem in ["RAM", "ROM", "REG"]:
-            assert(type(config_in["data_memories"][mem]["block_reads"]) == type([]))
-            config_out["data_memories"][mem]["block_reads"] = []
-            for block_write in config_in["data_memories"][mem]["block_reads"]:
-                assert(block_write >= 1)
-                config_out["data_memories"][mem]["block_reads"].append(block_write)
-        if mem in ["RAM", "REG"]:
-            assert(type(config_in["data_memories"][mem]["block_writes"]) == type([]))
-            config_out["data_memories"][mem]["block_writes"] = []
-            for block_write in config_in["data_memories"][mem]["block_writes"]:
-                assert(block_write >= 1)
-                config_out["data_memories"][mem]["block_writes"].append(block_write)
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle execute_units section of config
     config_out["execute_units"] = {}
+    config_out["execute_units"] = copy.deepcopy(config_in["execute_units"])
 
     assert(len(config_in["execute_units"]) > 0)
     for exe in config_in["execute_units"].keys():
-        config_out["execute_units"][exe] = {}
-
-        # Check data_width for all execute_units
         assert(config_in["execute_units"][exe]["data_width"] > 0)
-        config_out["execute_units"][exe]["data_width"] = config_in["execute_units"][exe]["data_width"]
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     return config_out
+
+
+#####################################################################
+
+def preprocess_mem_addr_datapath(config, stage, dst_mem):
+    addr_datapath = []
+
+    for instr in config["instr_set"].keys():
+        if stage == "fetch":
+            accesses = asm_utils.instr_fetches(instr)
+        elif stage == "store":
+            accesses = asm_utils.instr_stores(instr)
+        else:
+            raise ValueError(stage)
+
+        access_mems = [ asm_utils.access_mem(access) for access in accesses ]
+        access_addrs = [ asm_utils.access_addr(access) for access in accesses ]
+
+        # Find all indexes (accesses) that use this mem
+        indexes = [i for i, mem in enumerate(access_mems) if mem == dst_mem]
+
+        # Add more accesses if needed
+        for _ in range(len(addr_datapath), len(indexes)):
+            addr_datapath.append([])
+
+        # Map the found indexes to accesses
+        for access, index in  enumerate(indexes):
+            # Compute the addr source signal
+            src_com = asm_utils.addr_com(access_addrs[index])
+            src_port = int(asm_utils.addr_port(access_addrs[index]))
+            src_signal = "%s_addr_%i_%s"%(src_com, src_port, stage)
+
+
+            if not any([
+                src_signal == addr["signal"]
+                for addr in addr_datapath[access]
+            ]):
+                if src_com == "ID":
+                    src_width = config["instr_decoder"]["addr_widths"][src_port]
+                else:
+                    src_width = config["address_sources"][src_com]["addr_width"]
+
+                addr_datapath[access].append(
+                    {
+                        "signal" : src_signal,
+                        "com" : src_com,
+                        "port" : src_port,
+                        "width" : src_width
+                    }
+                )
+    return addr_datapath
+
+def preprocess_mem_data_datapath(config, mem):
+    input_datapath = []
+
+    for instr in config["instr_set"].keys():
+        exe_unit = asm_utils.instr_exe_unit(instr)
+
+        stores = asm_utils.instr_stores(instr)
+        store_mems = [ asm_utils.access_mem(store) for store in stores ]
+        store_mods = [ asm_utils.access_mods(store) for store in stores ]
+
+        indexes = [ index for index, store_mem in enumerate(store_mems) if store_mem == mem]
+
+        # Add more inputs if needed
+        for _ in range(len(input_datapath), len(indexes)):
+            input_datapath.append( [] )
+
+        for write, index in enumerate(indexes):
+
+            # Work out number of words in access, defaulting in 1
+            try:
+                words = int(store_mods[index]["block_size"])
+            except KeyError:
+                words = 1
+
+
+            # Add more words if needed
+            for _ in range(len(input_datapath[write]), words):
+                input_datapath[write].append( [] )
+
+            for word in range(words):
+                data_signal = "%s_out_%i_word_%i"%(exe_unit, index, word)
+
+                if not any([
+                    data_signal == scr["signal"]
+                    for scr in input_datapath[write][word]
+                ]):
+                    input_datapath[write][word].append(
+                        {
+                            "signal" : data_signal,
+                            "com" : exe_unit,
+                            "port" : index,
+                            "width" : config["execute_units"][exe_unit]["data_width"]
+                        }
+                    )
+
+    return input_datapath
+
+def preprocess_mem_access_blocks(config, stage, dst_mem):
+    access_blocks = set()
+
+    for instr in config["instr_set"].keys():
+        if stage == "fetch":
+            accesses = asm_utils.instr_fetches(instr)
+        elif stage == "store":
+            accesses = asm_utils.instr_stores(instr)
+        else:
+            raise ValueError(stage)
+
+        access_mems  = [ asm_utils.access_mem(access) for access in accesses ]
+        access_addrs = [ asm_utils.access_addr(access) for access in accesses ]
+        access_mods  = [ asm_utils.access_mods(access) for access in accesses ]
+
+
+        # Find all indexes (accesses) that use this mem
+        indexes = [i for i, mem in enumerate(access_mems) if mem == dst_mem]
+
+        # Add block size of each found accesses
+        for access in indexes:
+            if "block_size" in access_mods[access]:
+                access_blocks.add(int(access_mods[access]["block_size"]))
+            else:
+                access_blocks.add(1)
+
+    return list(sorted(access_blocks))
+
+#####################################################################
+# Functions for preprocessing the data paths of any exe component
+# ie. any component that reads fetched/writes stored data
+#####################################################################
+
+def preprocess_exe_input_datapath(config, exe, exe_width):
+    input_datapath = []
+
+    for instr in config["instr_set"].keys():
+        exe_unit = asm_utils.instr_exe_unit(instr)
+
+        fetches = asm_utils.instr_fetches(instr)
+        fetch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
+        fetch_mods = [ asm_utils.access_mods(fetch) for fetch in fetches ]
+
+        if exe == exe_unit:
+            # Add more inputs if needed
+            for _ in range(len(input_datapath), len(fetch_mems)):
+                input_datapath.append( [] )
+
+            # Process each input
+            for input, fetch_mem in enumerate(fetch_mems):
+                fetch_read = fetch_mems[:input + 1].count(fetch_mem) - 1
+
+                # Work out number of words in access, defaulting in 1
+                try:
+                    words = int(fetch_mods[input]["block_size"])
+                except KeyError:
+                    words = 1
+
+                # Add more words if needed
+                for _ in range(len(input_datapath[input]), words):
+                    input_datapath[input].append( [] )
+
+                for word in range(words):
+                    data_signal = "%s_read_%i_data_word_%i"%(fetch_mem, fetch_read, word)
+
+                    if not any([
+                        data_signal == scr["signal"]
+                        for scr in input_datapath[input][word]
+                    ]):
+                        input_datapath[input][word].append(
+                            {
+                                "signal" : data_signal,
+                                "com" : fetch_mem,
+                                "port" : fetch_read,
+                                "width" : config["data_memories"][fetch_mem]["data_width"],
+                            }
+                        )
+
+    return input_datapath
+
+def preprocess_exe_output_datapath(config, exe):
+    output_datapaths = []
+
+    for instr in config["instr_set"].keys():
+        exe_unit = asm_utils.instr_exe_unit(instr)
+
+        stores = asm_utils.instr_stores(instr)
+        store_mems = [ asm_utils.access_mem(store) for store in stores ]
+        store_mods = [ asm_utils.access_mods(store) for store in stores ]
+
+        if exe == exe_unit:
+            # Add more outputs if needed
+            for _ in range(len(output_datapaths), len(store_mems)):
+                output_datapaths.append( [] )
+
+            # Process each input
+            for output, fetch_mem in enumerate(store_mods):
+                store_write = store_mems[:output + 1].count(store_mems) - 1
+
+                # Work out number of words in access, defaulting in 1
+                try:
+                    words = int(store_mods[output]["block_size"])
+                except KeyError:
+                    words = 1
+
+                # Add more words if needed
+                for _ in range(len(output_datapaths[output]), words):
+                    output_datapaths[output].append( [] )
+
+    return output_datapaths
+
+#####################################################################
 
 def preprocess_config(config_in):
     config_out = precheck_config(config_in)
@@ -188,9 +312,6 @@ def preprocess_config(config_in):
     #####################################################################
     # Process copied Config
     #####################################################################
-
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
 
     # Handle SIMD section of config
     if config_out["SIMD"]["lanes"] == 1:
@@ -201,60 +322,37 @@ def preprocess_config(config_in):
              for l in range(CONFIG["SIMD"]["lanes"])
         ]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     # Handle program_flow section of config
     config_out["program_flow"]["uncondional_jump"] = any([
         asm_utils.instr_mnemonic(instr) == "JMP"
         for instr in config_out["instr_set"].keys()
     ])
     config_out["program_flow"]["statuses"] = {}
+    config_out["program_flow"]["inputs"] = []
+    pc_input = preprocess_exe_input_datapath(config_out, "PC", config_out["program_flow"]["PC_width"])
+    for data in pc_input:
+        config_out["program_flow"]["inputs"].append(
+            {
+                "data" : data,
+            }
+        )
 
     config_out["program_flow"]["stallable"] = False
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle instr_decoder section of config
     config_out["instr_decoder"]["instr_width"] = config_out["instr_decoder"]["opcode_width"] + sum(config_out["instr_decoder"]["addr_widths"])
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     # Handle address_sources section of config
-    for bam in config_in["address_sources"]:
-        config_out["address_sources"][bam]["data"] = []
-        # Check if any steps require data to be fetched
-        if any([step.startswith("fetched_") for step in config_out["address_sources"][bam]["steps"] ]):
-            for instr in config_out["instr_set"].keys():
-                exe_unit = asm_utils.instr_exe_unit(instr)
-
-                fetches = asm_utils.instr_fetches(instr)
-                fatch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
-
-                if bam == exe_unit:
-                    assert(len(fetches) <= 1)
-                    for fatch_mem in fatch_mems:
-                        fetch_port = 0
-                        data_signal = "%s_read_%i_data"%(fatch_mem, fetch_port,)
-
-                        if not any([
-                            data_signal == data["signal"]
-                            for data in config_out["address_sources"][bam]["data"]
-                        ]):
-                            config_out["address_sources"][bam]["data"].append(
-                                {
-                                    "signal" : data_signal,
-                                    "com" : fatch_mem,
-                                    "port" : fetch_port,
-                                    "width" : config_out["data_memories"][fatch_mem]["data_width"]
-                                }
-                            )
-
-    #import json
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
+    for bam in config_out["address_sources"]:
+        config_out["address_sources"][bam]["inputs"] = []
+        bam_data = preprocess_exe_input_datapath(config_out, bam, config_out["address_sources"][bam]["step_width"])
+        for data in bam_data:
+            config_out["address_sources"][bam]["inputs"].append(
+                {
+                    "data" : data,
+                }
+            )
 
     # Handle data_memory section of config
     for mem in config_out["data_memories"].keys():
@@ -263,170 +361,71 @@ def preprocess_config(config_in):
             if config_out["data_memories"][mem]["can_stall"] == True:
                 config_out["program_flow"]["stallable"] = True
 
+        # Work out read blocks
+        config_out["data_memories"][mem]["read_blocks"] = preprocess_mem_access_blocks(config_out, "fetch", mem)
+
         # Work out datapaths for fetchs
         # Only need to handle addrs as only inputs are muxed
         config_out["data_memories"][mem]["reads"] = []
-        for instr in config_out["instr_set"].keys():
-            fetches = asm_utils.instr_fetches(instr)
-            fatch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
-            fatch_addrs = [ asm_utils.access_addr(fetch) for fetch in fetches ]
+        reads_addrs = preprocess_mem_addr_datapath(config_out, "fetch", mem)
+        for addr in reads_addrs:
+            config_out["data_memories"][mem]["reads"].append(
+                {
+                    "addr" : addr,
+                }
+            )
 
-            # Find all indexes (fetches) that use this mem
-            indexes = [i for i, fatch_mem in enumerate(fatch_mems) if mem == fatch_mem]
-
-            # Add more reads if needed
-            for _ in range(len(config_out["data_memories"][mem]["reads"]), len(indexes)):
-                config_out["data_memories"][mem]["reads"].append( { "addr" : [] } )
-
-            # Map the found indexes to reads
-            for read, index in  enumerate(indexes):
-                # Compute the addr source signal
-                addr_com = asm_utils.addr_com(fatch_addrs[index])
-                addr_port = int(asm_utils.addr_port(fatch_addrs[index]))
-                addr_signal = "%s_addr_%i_fetch"%(addr_com, addr_port)
-
-                if not any([
-                    addr_signal == addr["signal"]
-                    for addr in config_out["data_memories"][mem]["reads"][read]["addr"]
-                ]):
-                    if addr_com == "ID":
-                        width = config_out["instr_decoder"]["addr_widths"][addr_port]
-                    else:
-                        width = config_out["address_sources"][addr_com]["addr_width"]
-
-                    config_out["data_memories"][mem]["reads"][read]["addr"].append(
-                        {
-                            "signal" : addr_signal,
-                            "com" : addr_com,
-                            "port" : addr_port,
-                            "width" : width
-                        }
-                    )
+        # Work out read blocks
+        config_out["data_memories"][mem]["write_blocks"] = preprocess_mem_access_blocks(config_out, "store", mem)
 
         # Work out datapaths for stores
         # Need to handle addrs and data as inputs are muxed
         config_out["data_memories"][mem]["writes"] = []
-        for instr in config_out["instr_set"].keys():
-            exe_unit = asm_utils.instr_exe_unit(instr)
-            stores = asm_utils.instr_stores(instr)
-            store_mems = [ asm_utils.access_mem(store) for store in stores ]
-            store_addrs = [ asm_utils.access_addr(store) for store in stores ]
-
-            # Find all indexes (stores) that use this mem
-            indexes = [i for i, store_mem in enumerate(store_mems) if mem == store_mem]
-
-            # Add more writes if needed
-            for _ in range(len(config_out["data_memories"][mem]["writes"]), len(indexes)):
-                config_out["data_memories"][mem]["writes"].append( { "addr" : [], "data" : [] } )
-
-            # Map the found indexes to stores
-            for write, index in  enumerate(indexes):
-                # Handle addr mapping
-                # Compute the addr source signal
-                addr_com = asm_utils.addr_com(store_addrs[index])
-                addr_port = int(asm_utils.addr_port(store_addrs[index]))
-                addr_signal = "%s_addr_%i_store"%(addr_com, addr_port)
-
-                if not any([
-                    addr_signal == addr["signal"]
-                    for addr in config_out["data_memories"][mem]["writes"][write]["addr"]
-                ]):
-                    if addr_com == "ID":
-                        width = config_out["instr_decoder"]["addr_widths"][addr_port]
-                    else:
-                        width = config_out["address_sources"][addr_com]["addr_width"]
-
-                    config_out["data_memories"][mem]["writes"][write]["addr"].append(
-                        {
-                            "signal" : addr_signal,
-                            "com" : addr_com,
-                            "port" : addr_port,
-                            "width" : width
-                        }
-                    )
-
-                # Handle data mapping
-                # Compute the data source signal
-                data_signal = "%s_out_%i"%(exe_unit, index)
-
-                if not any([
-                    data_signal == data["signal"]
-                    for data in config_out["data_memories"][mem]["writes"][write]["data"]
-                ]):
-                    config_out["data_memories"][mem]["writes"][write]["data"].append(
-                        {
-                            "signal" : data_signal,
-                            "com" : exe_unit,
-                            "port" : index,
-                            "width" : config_out["execute_units"][exe_unit]["data_width"]
-                        }
-                    )
-
-    #import json
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
+        write_addrs = preprocess_mem_addr_datapath(config_out, "store", mem)
+        write_data =  preprocess_mem_data_datapath(config_out, mem)
+        for addr, data in zip(
+            preprocess_mem_addr_datapath(config_out, "store", mem),
+            preprocess_mem_data_datapath(config_out, mem)
+        ):
+            config_out["data_memories"][mem]["writes"].append(
+                {
+                    "addr" : addr,
+                    "data" : data,
+                }
+            )
 
     # Handle execute_units section of config
-    for exe in config_in["execute_units"].keys():
-        # Work out datapaths for inputs
-        # Only need to handle addrs as only inputs are muxed
+    for exe in config_out["execute_units"].keys():
+        # Work out input datapaths
         config_out["execute_units"][exe]["inputs"] = []
-        for instr in config_out["instr_set"].keys():
-            exe_unit = asm_utils.instr_exe_unit(instr)
-
-            fetches = asm_utils.instr_fetches(instr)
-            fatch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
-
-            if exe == exe_unit:
-                # Add more inputs if needed
-                for _ in range(len(config_out["execute_units"][exe]["inputs"]), len(fatch_mems)):
-                    config_out["execute_units"][exe]["inputs"].append( { "data" : [] } )
-
-                # Map the fetches to inputs
-                for input, fatch_mem in  enumerate(fatch_mems):
-                    fetch_port = fatch_mems[input - 1:].count(fatch_mem) - 1
-                    data_signal = "%s_read_%i_data"%(fatch_mem,fetch_port, )
-
-                    if not any([
-                        data_signal == data["signal"]
-                        for data in config_out["execute_units"][exe]["inputs"][input]["data"]
-                    ]):
-                        config_out["execute_units"][exe]["inputs"][input]["data"].append(
-                            {
-                                "signal" : data_signal,
-                                "com" : fatch_mem,
-                                "port" : fetch_port,
-                                "width" : config_out["data_memories"][fatch_mem]["data_width"]
-                            }
-                        )
-
-        # Work out datapaths for outputs
-        # Only number of outputs needed, therefore create blank dicts for furture expandion
-        config_out["execute_units"][exe]["outputs"] = []
-        for instr in config_out["instr_set"].keys():
-            exe_unit = asm_utils.instr_exe_unit(instr)
-
-            stores = asm_utils.instr_stores(instr)
-            store_mems = [ asm_utils.access_mem(store) for store in stores ]
-
-            if exe == exe_unit:
-                # Add more outputs if needed
-                for _ in range(len(config_out["execute_units"][exe]["outputs"]), len(store_mems)):
-                    config_out["execute_units"][exe]["outputs"].append( { } )
-
-        # Extract execute_unit oper_set, used to tell the ID what control signals the exe unit requires
-        config_out["execute_units"][exe]["oper_set"] = {
-            oper : None
-            for oper in sorted(
-                set(
-                    [
-                        exe_lib_lookup[exe].instr_to_oper(instr)
-                        for instr in config_out["instr_set"].keys()
-                        if exe == asm_utils.instr_exe_unit(instr)
-                    ]
-                )
+        input_data = preprocess_exe_input_datapath(config_out, exe, config_out["execute_units"][exe]["data_width"])
+        for data in input_data:
+            config_out["execute_units"][exe]["inputs"].append(
+                {
+                    "data" : data,
+                }
             )
-        }
+
+        # Work out outputs datapaths
+        # Only number of outputs and words needed
+        config_out["execute_units"][exe]["outputs"] = []
+        output_data = preprocess_exe_output_datapath(config_out, exe)
+        for data in output_data:
+            config_out["execute_units"][exe]["outputs"].append(
+                {
+                    "data" : data,
+                }
+            )
+
+        # Extract execute_unit oper_set,
+        # Tell exe unit what oper to implanent
+        config_out["execute_units"][exe]["oper_set"] = list( sorted( set(
+            [
+                exe_lib_lookup[exe].instr_to_oper(instr)
+                for instr in config_out["instr_set"].keys()
+                if exe == asm_utils.instr_exe_unit(instr)
+            ]
+        ) ) )
 
         # Extract statuses execute_unit has to generate
         config_out["execute_units"][exe]["statuses"] = []
@@ -439,17 +438,10 @@ def preprocess_config(config_in):
 
         config_out["program_flow"]["statuses"][exe] = config_out["execute_units"][exe]["statuses"]
 
-    #import json
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = ""
 
@@ -471,7 +463,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -526,6 +518,39 @@ def gen_non_pipelined_signals():
         ARCH_HEAD += "signal stall : std_logic;\n"
         ARCH_BODY += "stall <= 'L';\n"
 
+#####################################################################
+
+def mux_signals(lane, dst_sig, dst_width, srcs):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    # Handle case of only 1 source, ie an unmuxed connection
+    if len(srcs) == 1:
+        ARCH_BODY += "%s <= %s;\n"%(
+            dst_sig,
+            gen_utils.connect_signals(
+                srcs[0]["signal"],
+                srcs[0]["width"],
+                dst_width
+            )
+        )
+    # Handle case of multiple sources, ie a muxed connection
+    else:
+        # Determine mux sel port width
+        # - 1 to go from number of inputs to largest sel value
+        sel_width = tc_utils.unsigned.width(len(srcs) - 1)
+        sel_sig = dst_sig + "_sel"
+        ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(sel_sig, sel_width - 1)
+
+        # Imply mux via VHDL condissional assignment of input signal
+        ARCH_BODY += "%s <=\>"%(dst_sig, )
+        for sel_val, src in enumerate( sorted( srcs, key=lambda d : d["signal"] ) ):
+            ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
+                gen_utils.connect_signals(lane + src["signal"], src["width"], dst_width),
+                sel_sig,
+                tc_utils.unsigned.encode(sel_val, sel_width),
+            )
+        ARCH_BODY += "(others => 'U');\<\n"
 
 #####################################################################
 
@@ -549,16 +574,13 @@ def gen_execute_units():
     # Loinstr over all exe components
     for exe, config in CONFIG["execute_units"].items():
 
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
-
         # Generate exe code
         interface, name = exe_lib_lookup[exe].generate_HDL(
             {
                 **config,
                 "inputs" : len(config["inputs"]),
                 "outputs" : len(config["outputs"]),
-                "oper_set" : list(config["oper_set"].keys()),
+                "oper_set" : config["oper_set"],
                 "stallable" : CONFIG["program_flow"]["stallable"],
             },
             OUTPUT_PATH,
@@ -569,9 +591,6 @@ def gen_execute_units():
 
         # Store exe details
         config["controls"] = copy.deepcopy(interface["controls"])
-
-        #print(json.dumps(config, indent=2, sort_keys=True))
-        #exit()
 
         # instantiate exe for each lane
         for lane in CONFIG["SIMD"]["lanes_names"]:
@@ -608,33 +627,11 @@ def gen_execute_units():
             ARCH_BODY += "\<\n);\n"
             ARCH_BODY += "\<\n"
 
-        if False: # TEMP
-            # Create input port muxes
-            for input, signals in enumerate(config["inputs"]):
-                dst_sig = lane + exe + "_in_%i"%(input,)
-
-                # Handle case of only 1 source, ie an unmuxed connection
-                if len(signals["data"]) == 1:
-                    src_sig = lane + signals["data"][0]["signal"]
-                    ARCH_BODY += "%s <= %s;\n"%(dst_sig, gen_utils.connect_signals(src_sig, signals["data"][0]["width"], config["data_width"]) )
-                # Handle case of multiple sources, ie a muxed connection
-                else:
-                    # Determine mux sel port width
-                    # - 1 to go from number of inputs to largest sel value
-                    sel_val_width = tc_utils.unsigned.width(len(signals["data"]) - 1)
-                    mux_name = dst_sig + "_sel"
-                    ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(mux_name, sel_val_width - 1)
-
-                    # Imply mnx via VHDL condissional assignment of input signal
-                    ARCH_BODY += "%s <=\>"%(dst_sig, )
-                    for sel_val, src in enumerate( sorted( signals["data"], key=lambda x : x["signal"] ) ):
-                        src_sig = lane + src["signal"]
-                        ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                            gen_utils.connect_signals(src_sig, src["width"], config["data_width"]),
-                            mux_name,
-                            tc_utils.unsigned.encode(sel_val, sel_val_width),
-                        )
-                    ARCH_BODY += "(others => 'U');\<\n"
+        # Create input port muxes
+        for input, channels in enumerate(config["inputs"]):
+            for word, srcs  in enumerate(channels["data"]):
+                dst_sig = "%s%s_in_%i_word_%i"%(lane, exe, input, word)
+                mux_signals(lane, dst_sig, config["data_width"], srcs)
 
 
 #####################################################################
@@ -653,6 +650,88 @@ mem_predeclared_ports = [
     "stall"
 ]
 
+def inst_data_memory(lane, mem, config, comp, interface):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    inst = lane + mem
+
+    # instantiate memory
+    ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, comp)
+
+    if len(interface["generics"]) != 0:
+        ARCH_BODY += "generic map (\>\n"
+
+        for generic in sorted(interface["generics"]):
+            INTERFACE["generics"] += [
+                {
+                    "name" : inst + "_" + generic["name"],
+                    "type" : generic["type"]
+                }
+            ]
+            ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], inst, generic["name"])
+
+        ARCH_BODY.drop_last_X(2)
+        ARCH_BODY += "\<\n)\n"
+
+    ARCH_BODY += "port map (\>\n"
+
+    # Handle non prefixed ports
+    for port in sorted(
+        [
+            port
+            for port in interface["ports"]
+            if port["name"] in mem_predeclared_ports
+        ],
+        key=lambda d : d["name"]
+    ):
+        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+
+    # Handle prefixed ports
+    for port in sorted(
+        [
+            port
+            for port in interface["ports"]
+            if port["name"] not in mem_predeclared_ports
+        ],
+        key=lambda d : d["name"]
+    ):
+        if port["name"].startswith("FIFO_"):
+            # Handle rippliing FIFO ports to tinstr level:
+            INTERFACE["ports"] += [
+                {
+                    "name" : inst + "_" + port["name"],
+                    "type" : port["type"],
+                    "direction" : port["direction"]
+                }
+            ]
+        else:
+            # handle ports useding internal to FPE
+            ARCH_HEAD += "signal %s_%s : %s;\n"%(inst, port["name"], port["type"])
+        # Connect prt
+        ARCH_BODY += "%s => %s_%s,\n"%(port["name"], inst, port["name"])
+
+    ARCH_BODY.drop_last_X(2)
+    ARCH_BODY += "\<\n);\n"
+
+    ARCH_BODY += "\<\n"
+    # Create read addr port muxes
+    for read, signals in enumerate(config["reads"]):
+        # Handle Addr signals
+        dst_sig = inst + "_read_%i_addr"%(read,)
+        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"])
+
+    # Create write port muxes
+    for write, signals in enumerate(config["writes"]):
+        # Handle Addr signals
+        dst_sig = inst + "_write_%i_addr"%(write,)
+        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"])
+
+        # Data port
+        for word, details in enumerate(signals["data"]):
+            dst_sig = inst + "_write_%i_data_word_%i"%(write,word)
+            mux_signals(lane, dst_sig, config["data_width"], details)
+
 def gen_data_memories():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
@@ -660,9 +739,6 @@ def gen_data_memories():
     ARCH_BODY += "\n-- Memories components\n"
     # loinstr over all data memories
     for mem, config in CONFIG["data_memories"].items():
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         # Generate memory code
         interface, name = mem_lib_lookup[mem].generate_HDL(
@@ -678,263 +754,18 @@ def gen_data_memories():
             FORCE_GENERATION
         )
 
-        # Store memory details
-
-        #print(json.dumps(config, indent=2, sort_keys=True))
-        #exit()
-
         # Handle shared (across lanes) memories
         if mem in ["IMM"]:
-            com_name = mem
-            # instantiate single mem
-            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(mem, name)
+            inst_data_memory("", mem, config, name, interface)
 
-            if len(interface["generics"]) != 0:
-                ARCH_BODY += "generic map (\>\n"
-
-                for generic in sorted(interface["generics"]):
-                    INTERFACE["generics"] += [
-                        {
-                            "name" : mem + "_" + generic["name"],
-                            "type" : generic["type"]
-                        }
-                    ]
-                    ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], mem, generic["name"])
-
-                ARCH_BODY.drop_last_X(2)
-                ARCH_BODY += "\<\n)\n"
-
-            ARCH_BODY += "port map (\>\n"
-
-            # Handle predeclared ports
-            for port in sorted(
-                [
-                    port
-                    for port in interface["ports"]
-                    if port["name"] in mem_predeclared_ports
-                ],
-                key=lambda d : d["name"]
-            ):
-                ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
-
-            # Handle prefixed ports
-            for port in sorted(
-                [
-                    port
-                    for port in interface["ports"]
-                    if port["name"] not in mem_predeclared_ports
-                ],
-                key=lambda d : d["name"]
-            ):
-                ARCH_HEAD += "signal %s_%s : %s;\n"%(com_name, port["name"], port["type"])
-                ARCH_BODY += "%s => %s_%s,\n"%(port["name"], com_name, port["name"])
-
-            ARCH_BODY.drop_last_X(2)
-            ARCH_BODY += "\<\n);\n"
-
-            ARCH_BODY += "\<\n"
-
-        if False: # TEMP
-            # Create read addr port muxes
-            for read, signals in enumerate(config["reads"]):
-                #print(read, signals)
-                dst_sig = mem + "_read_%i_addr"%(read,)
-                #print(dst_sig)
-
-                # Handle case of only 1 source, ie an unmuxed connection
-                if len(signals["addr"]) == 1:
-                    src_sig = signals["addr"][0]["signal"]
-                    ARCH_BODY += "%s <= %s;\n"%(dst_sig, gen_utils.connect_signals(src_sig, signals["addr"][0]["width"], config["addr_width"]) )
-                # Handle case of multiple sources, ie a muxed connection
-                else:
-                    raise NotTestedError()
-                    # Determine mux sel port width
-                    # - 1 to go from number of inputs to largest sel value
-                    sel_val_width = tc_utils.unsigned.width(len(signals["addr"]) - 1)
-                    mux_name = dst_sig + "_sel"
-                    ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(mux_name, sel_val_width - 1)
-
-                    # Imply mnx via VHDL condissional assignment of input signal
-                    ARCH_BODY += "%s <=\>"%(dst_sig, )
-                    for sel_val, src in enumerate( sorted( signals["addr"], key=lambda x : x["signal"] ) ):
-                        src_sig = lane + src["signal"]
-                        ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                            gen_utils.connect_signals(src_sig, src["width"], config["data_width"]),
-                            mux_name,
-                            tc_utils.unsigned.encode(sel_val, sel_val_width),
-                        )
-                    ARCH_BODY += "(others => 'U');\<\n"
-
-            # Create read data signals for each lane
-            for read in range(len(config["reads"])):
-                src_sig = mem + "_read_%i_data"%(read,)
-                signal_type = "std_logic_vector(%i downto 0)"%(config["data_width"] - 1)
-                for lane in CONFIG["SIMD"]["lanes_names"]:
-                    if lane != "":
-                        dst_sig = lane + src_sig
-                        ARCH_Head += "signal %s : %s;\n"%(dst_sig, signal_type)
-                        ARCH_BODY += "%s <= %s;\n"%(dst_sig, src_sig)
-
-
-            # Create write port muxes
-            for write, signals in enumerate(config["writes"]):
+            # Fan read data signals to each lane
+            if len(CONFIG["SIMD"]["lanes_names"]) < 1:
                 raise NotImplementedError()
-
-
         # Handle private (to each lane) memories
         else:
             # Repeat instantiation for each lane
             for lane in CONFIG["SIMD"]["lanes_names"]:
-                inst = lane + mem
-
-                # instantiate each memory
-                ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, name)
-
-                if len(interface["generics"]) != 0:
-                    ARCH_BODY += "generic map (\>\n"
-
-                    for generic in sorted(interface["generics"]):
-                        INTERFACE["generics"] += [
-                            {
-                                "name" : lane + mem + "_" + generic["name"],
-                                "type" : generic["type"]
-                            }
-                        ]
-                        ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], inst, generic["name"])
-
-                    ARCH_BODY.drop_last_X(2)
-                    ARCH_BODY += "\<\n)\n"
-
-                ARCH_BODY += "port map (\>\n"
-
-                # Handle non prefixed ports
-                for port in sorted(
-                    [
-                        port
-                        for port in interface["ports"]
-                        if port["name"] in mem_predeclared_ports
-                    ],
-                    key=lambda d : d["name"]
-                ):
-                    ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
-
-                # Handle prefixed ports
-                for port in sorted(
-                    [
-                        port
-                        for port in interface["ports"]
-                        if port["name"] not in mem_predeclared_ports
-                    ],
-                    key=lambda d : d["name"]
-                ):
-                    if port["name"].startswith("FIFO_"):
-                        # Handle rippliing FIFO ports to tinstr level:
-                        INTERFACE["ports"] += [
-                            {
-                                "name" : inst + "_" + port["name"],
-                                "type" : port["type"],
-                                "direction" : port["direction"]
-                            }
-                        ]
-                    else:
-                        # handle ports useding internal to FPE
-                        ARCH_HEAD += "signal %s_%s : %s;\n"%(inst, port["name"], port["type"])
-                    # Connect prt
-                    ARCH_BODY += "%s => %s_%s,\n"%(port["name"], inst, port["name"])
-
-                ARCH_BODY.drop_last_X(2)
-                ARCH_BODY += "\<\n);\n"
-
-                ARCH_BODY += "\<\n"
-
-            if False: # TEMP
-                # Create read addr port muxes
-                for read, signals in enumerate(config["reads"]):
-                    dst_sig = inst + "_read_%i_addr"%(read,)
-
-                    # Handle case of only 1 source, ie an unmuxed connection
-                    if len(signals["addr"]) == 1:
-                        src_sig = signals["addr"][0]["signal"]
-                        ARCH_BODY += "%s <= %s;\n"%(dst_sig, gen_utils.connect_signals(src_sig, signals["addr"][0]["width"], config["addr_width"]) )
-                    # Handle case of multiple sources, ie a muxed connection
-                    else:
-                        raise NotTestedError()
-                        # Determine mux sel port width
-                        # - 1 to go from number of inputs to largest sel value
-                        sel_val_width = tc_utils.unsigned.width(len(signals["addr"]) - 1)
-                        mux_name = dst_sig + "_sel"
-                        ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(mux_name, sel_val_width - 1)
-
-                        # Imply mnx via VHDL condissional assignment of input signal
-                        ARCH_BODY += "%s <=\>"%(dst_sig, )
-                        for sel_val, src in enumerate( sorted( signals["addr"], key=lambda x : x["signal"] ) ):
-                            src_sig = lane + src["signal"]
-                            ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                                gen_utils.connect_signals(src_sig, src["width"], config["data_width"]),
-                                mux_name,
-                                tc_utils.unsigned.encode(sel_val, sel_val_width),
-                            )
-                        ARCH_BODY += "(others => 'U');\<\n"
-
-                # Create write port muxes
-                for write, signals in enumerate(config["writes"]):
-                    # Addr port
-                    dst_sig = inst + "_write_%i_addr"%(write,)
-
-                    # Handle case of only 1 source, ie an unmuxed connection
-                    if len(signals["addr"]) == 1:
-                        src_sig = signals["addr"][0]["signal"]
-                        ARCH_BODY += "%s <= %s;\n"%(dst_sig, gen_utils.connect_signals(src_sig, signals["addr"][0]["width"], config["addr_width"]) )
-
-                    # Handle case of multiple sources, ie a muxed connection
-                    else:
-                        # Determine mux sel port width
-                        # - 1 to go from number of inputs to largest sel value
-                        sel_val_width = tc_utils.unsigned.width(len(signals["addr"]) - 1)
-                        mux_name = dst_sig + "_sel"
-                        ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(mux_name, sel_val_width - 1)
-
-                        # Imply mnx via VHDL condissional assignment of input signal
-                        ARCH_BODY += "%s <=\>"%(dst_sig, )
-                        for sel_val, src in enumerate( sorted( signals["addr"], key=lambda x : x["signal"] ) ):
-                            src_sig = lane + src["signal"]
-                            ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                                gen_utils.connect_signals(src_sig, src["width"], config["addr_width"]),
-                                mux_name,
-                                tc_utils.unsigned.encode(sel_val, sel_val_width),
-                            )
-                        ARCH_BODY += "(others => 'U');\<\n"
-
-                    # Data port
-                    dst_sig = inst + "_write_%i_data"%(write,)
-                    #print(dst_sig)
-
-                    # Handle case of only 1 source, ie an unmuxed connection
-                    if len(signals["data"]) == 1:
-                        src_sig = signals["data"][0]["signal"]
-                        ARCH_BODY += "%s <= %s;\n"%(dst_sig, gen_utils.connect_signals(src_sig, signals["data"][0]["width"], config["data_width"]) )
-                    # Handle case of multiple sources, ie a muxed connection
-                    else:
-                        raise NotTestedError()
-                        # Determine mux sel port width
-                        # - 1 to go from number of inputs to largest sel value
-                        sel_val_width = tc_utils.unsigned.width(len(signals["data"]) - 1)
-                        mux_name = dst_sig + "_sel"
-                        ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(mux_name, sel_val_width - 1)
-
-                        # Imply mnx via VHDL condissional assignment of input signal
-                        ARCH_BODY += "%s <=\>"%(dst_sig, )
-                        for sel_val, src in enumerate( sorted( signals["data"], key=lambda x : x["signal"] ) ):
-                            src_sig = lane + src["signal"]
-                            ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                                gen_utils.connect_signals(src_sig, src["width"], config["data_width"]),
-                                mux_name,
-                                tc_utils.unsigned.encode(sel_val, sel_val_width),
-                            )
-                        ARCH_BODY += "(others => 'U');\<\n"
-
-    #print(json.dumps(CONFIG["execute_units"][exe], indent=2, sort_keys=True))
-    #exit()
+                inst_data_memory(lane, mem, config, name, interface)
 
 #####################################################################
 
@@ -952,6 +783,7 @@ def gen_addr_sources():
         interface, name = BAM.generate_HDL(
             {
                 **config,
+                "inputs" : [len(words) for words in config["inputs"]],
                 "stallable" : CONFIG["program_flow"]["stallable"],
             },
             OUTPUT_PATH,
@@ -1005,25 +837,13 @@ def gen_addr_sources():
 
         ARCH_BODY += "\<\n"
 
-    if False: # TEMP
-        # Create input port muxes
-        if any( port["name"] == "data_in" for port in interface["ports"] ):
-            dst_sig = bam + "_data_in"
 
-            # Handle case of only 1 source, ie an unmuxed connection
-            if len(CONFIG["address_sources"][bam]["data"]) == 1:
-                src_sig = CONFIG["address_sources"][bam]["data"][0]["signal"]
-                ARCH_BODY += "%s <= %s;\n"%(
-                    dst_sig,
-                    gen_utils.connect_signals(
-                        src_sig,
-                        CONFIG["address_sources"][bam]["data"][0]["width"],
-                        config["step_width"]
-                    )
-                )
-            # Handle case of multiple sources, ie a muxed connection
-            else:
-                raise NotImplementedError()
+        # Create input port muxes
+        for input, channels in enumerate(config["inputs"]):
+            for word, srcs  in enumerate(channels["data"]):
+                dst_sig = "%s_in_%i_word_%i"%(bam, input, word)
+                # Only use lane 0 as BAM as shared across lanes
+                mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, config["step_width"], srcs)
 
 #####################################################################
 
@@ -1056,6 +876,7 @@ def gen_program_counter():
                 for exe, config in CONFIG["execute_units"].items()
                 if "statuses" in config and len(config["statuses"]) != 0
             },
+            "inputs" : [len(words) for words in CONFIG["program_flow"]["inputs"]],
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
@@ -1121,9 +942,11 @@ def gen_program_counter():
     ]
     ARCH_BODY += "running <= PC_running;\n\n"
 
-    # Handle jump valur port
-    if any([port["name"] == "jump_value" for port in interface["ports"]]):
-        ARCH_BODY += "PC_jump_value <= IMM_read_0_data;\n"
+    # Create input port muxes
+    for input, channels in enumerate(CONFIG["program_flow"]["inputs"]):
+        for word, srcs  in enumerate(channels["data"]):
+            dst_sig = "%s_in_%i_word_%i"%("PC", input, word)
+            mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, CONFIG["program_flow"]["PC_width"], srcs)
 
     # Handle jump status ports
     for port in [port for port in interface["ports"] if "_status_" in port["name"] ]:
@@ -1221,7 +1044,7 @@ def gen_program_memory():
             "depth" : CONFIG["program_flow"]["program_length"],
             "addr_width" : CONFIG["program_flow"]["PC_width"],
             "data_width" : CONFIG["instr_decoder"]["instr_width"],
-            "block_reads" : [1],
+            "read_blocks" : [1],
             "reads" : 1,
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
@@ -1344,8 +1167,6 @@ def gen_instr_decoder():
                 and not port["name"].startswith("addr_")
                 and not port["name"].startswith("jump_")
                 and not (port["name"].startswith("update_") and port["name"].endswith("_statuses"))
-                and not port["name"].endswith("_sel") # TEMP
-
             )
         ],
         key=lambda d : d["name"]

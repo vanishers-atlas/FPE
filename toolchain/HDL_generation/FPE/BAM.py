@@ -18,9 +18,6 @@ from FPE.toolchain.HDL_generation.memory import delay
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(config_in["addr_width"] > 0)
     config_out["addr_width"] = config_in["addr_width"]
 
@@ -29,6 +26,13 @@ def preprocess_config(config_in):
 
     assert(config_in["step_width"] > 0)
     config_out["step_width"] = config_in["step_width"]
+
+    assert(type(config_in["inputs"]) == type([]))
+    config_out["inputs"] = []
+    assert(len(config_in["inputs"]) <= 1)
+    for words in config_in["inputs"]:
+        assert(words == 1)
+        config_out["inputs"].append(words)
 
     assert(type(config_in["steps"]) == type([]))
     config_out["steps"] = []
@@ -46,9 +50,6 @@ def preprocess_config(config_in):
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 import zlib
@@ -56,9 +57,6 @@ import zlib
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
         generated_name = "BAM"
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         if config["stallable"]:
             generated_name += "_stallable"
@@ -70,9 +68,6 @@ def handle_module_name(module_name, config, generate_name):
         generated_name += "_%is"%(config["step_width"])
 
         generated_name += "_%s"%str( hex( zlib.adler32("\n".join(config["steps"]).encode('utf-8')) )).lstrip("0x").zfill(8)
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -90,7 +85,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -135,6 +130,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             ]
 
         # Generation Module Code
+        generate_data_ports()
         generate_step_controls()
         generate_outset_adder_acc()
         generate_base_adders()
@@ -145,6 +141,20 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         return INTERFACE, MODULE_NAME
 
 #####################################################################
+
+def generate_data_ports():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    for input, words in enumerate(CONFIG["inputs"]):
+        for word in range(words):
+            INTERFACE["ports"] += [
+                {
+                    "name" : "in_%i_word_%i"%(input, word, ) ,
+                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["step_width"] - 1, ),
+                    "direction" : "in"
+                }
+            ]
 
 def generate_step_controls():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -182,13 +192,10 @@ def generate_step_controls():
 
     # Handle fetched/data step
     if set(CONFIG["steps"])&set(["fetched_forward", "fetched_backward"]):
-        INTERFACE["ports"] += [
-            {
-                "name" : "data_in" ,
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["step_width"] - 1, ),
-                "direction" : "in"
-            }
-        ]
+        # Check inputs
+        assert(len(CONFIG["inputs"]) >= 1)
+        assert(CONFIG["inputs"][0] >= 1)
+
         if "fetched_forward" in CONFIG["steps"]:
             INTERFACE["ports"] += [
                 {
@@ -197,7 +204,7 @@ def generate_step_controls():
                     "direction" : "in"
                 }
             ]
-            ARCH_BODY += "data_in when step_fetched_forward = '1'\nelse "
+            ARCH_BODY += "in_0_word_0 when step_fetched_forward = '1'\nelse "
         if "fetched_backward" in CONFIG["steps"]:
             INTERFACE["ports"] += [
                 {
@@ -206,7 +213,7 @@ def generate_step_controls():
                     "direction" : "in"
                 }
             ]
-            ARCH_BODY += "data_in when step_fetched_backward = '1'\nelse "
+            ARCH_BODY += "in_0_word_0 when step_fetched_backward = '1'\nelse "
 
     ARCH_BODY += "(others => '0');\<\n"
 
@@ -273,7 +280,7 @@ def generate_outset_adder_acc():
         ARCH_BODY += "enable => ( step_forward or step_backward ) and not stall,\n"
     else:
         ARCH_BODY += "enable => step_forward or step_backward,\n"
-        
+
     ARCH_BODY += "trigger => clock,\n"
     ARCH_BODY += "data_in => next_offset,\n"
     ARCH_BODY += "data_out => curr_offset,\n"

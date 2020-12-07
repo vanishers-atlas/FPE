@@ -14,9 +14,6 @@ from FPE.toolchain.HDL_generation import utils as gen_utils
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(config_in["width"] >= 1)
     config_out["width"] = config_in["width"]
 
@@ -26,16 +23,11 @@ def preprocess_config(config_in):
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "delay"
 
@@ -47,9 +39,6 @@ def handle_module_name(module_name, config, generate_name):
             generated_name += "_stall"
         else:
             generated_name += "_nostall"
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -67,7 +56,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:

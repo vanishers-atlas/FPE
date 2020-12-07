@@ -50,7 +50,9 @@ grammar FPE_assembly;
 
 	access_imm : expr ;
 	access_get : 'GET' '[' addr ']' ('<' access_get_mod (',' access_get_mod)* '>')? ;
-		access_get_mod : 'ADV' ;
+		access_get_mod	: 'ADV'				/* Advance fifo to next press of data after read */
+		 								| 'No_ADV' 		/* don't Advance fifo to next press of data after read */
+										;
 	access_put : 'PUT' '[' addr ']' ;
 	access_reg : 'REG' '[' addr (':' expr )? ']' ;
 	access_ram : 'RAM' '[' addr (':' expr )? ']' ;
@@ -63,8 +65,9 @@ grammar FPE_assembly;
 		addr_literal  : expr ;
 		addr_bam : 	'BAM' '[' expr ']'
 								('<' addr_bam_mod (',' addr_bam_mod)* '>')? ;
-			addr_bam_mod 	: 'FORWARD'  /* seek forward  after read*/
-										| 'BACKWARD' /* seek BACKWARD after read */
+			addr_bam_mod 	: 'FORWARD'  	/* seek forward  after read*/
+										| 'BACKWARD' 	/* seek BACKWARD after read */
+										| 'No_ADV'		/* don't seek after read */
 										;
 
 	/* Statements are parts of an FPE program which don't map to program code

@@ -17,9 +17,6 @@ from FPE.toolchain.HDL_generation.memory import register
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     # Stalling parameters
     assert(type(config_in["can_stall"]) == type(True))
     assert(type(config_in["stallable"]) == type(True))
@@ -42,16 +39,10 @@ def preprocess_config(config_in):
     config_out["data_width"] = config_in["data_width"]
     config_out["addr_width"] = tc_utils.unsigned.width(config_out["FIFOs"] - 1)
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "GET"
 
@@ -60,10 +51,6 @@ def handle_module_name(module_name, config, generate_name):
         generated_name += "_%if"%(config["FIFOs"], )
         generated_name += "_%iw"%(config["data_width"], )
         generated_name += "_%ss"%(config["stalling"][0], )
-
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -81,7 +68,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -217,7 +204,7 @@ def gen_read_ports():
         {
             "async_forces"  : 0,
             "sync_forces"   : 0,
-            "has_enable"    : True
+            "has_enable"    : CONFIG["stalling"] != "NONE"
         },
         OUTPUT_PATH,
         "register",
@@ -236,14 +223,9 @@ def gen_read_ports():
                 "direction" : "in"
             },
             {
-                "name" : "read_%i_data"%(read, ),
+                "name" : "read_%i_data_word_0"%(read, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "out"
-            },
-            {
-                "name" : "read_%i_enable"%(read, ),
-                "type" : "std_logic",
-                "direction" : "in"
             },
             {
                 "name" : "read_%i_adv"%(read, ),
@@ -256,7 +238,7 @@ def gen_read_ports():
         ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n\n"%(read, read)
 
         # Generate output buffers
-        ARCH_HEAD += "signal read_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+        ARCH_HEAD += "signal read_%i_data_word_0_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
 
         ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
 
@@ -264,13 +246,18 @@ def gen_read_ports():
 
         ARCH_BODY += "port map (\n\>"
 
-        if CONFIG["stalling"] == "NONE":
-            ARCH_BODY += "enable => read_%i_enable,\n"%(read, )
-        else:
+        if CONFIG["stalling"] != "NONE":
+            INTERFACE["ports"] += [
+                {
+                    "name" : "read_%i_enable"%(read, ),
+                    "type" : "std_logic",
+                    "direction" : "in"
+                },
+            ]
             ARCH_BODY += "enable => read_%i_enable and not stall,\n"%(read, )
         ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => read_%i_data_buffer_in,\n"%(read, )
-        ARCH_BODY += "data_out => read_%i_data\n"%(read, )
+        ARCH_BODY += "data_in  => read_%i_data_word_0_buffer_in,\n"%(read, )
+        ARCH_BODY += "data_out => read_%i_data_word_0\n"%(read, )
 
         ARCH_BODY += "\<);\n\<\n"
 
@@ -282,10 +269,10 @@ def gen_read_logic():
     ARCH_BODY += "\n-- Data Path\n"
     if CONFIG["FIFOs"] == 1:
         for read in range(CONFIG["reads"]):
-            ARCH_BODY += "read_%i_data_buffer_in <= FIFO_0_data;\n"%(read, )
+            ARCH_BODY += "read_%i_data_word_0_buffer_in <= FIFO_0_data;\n"%(read, )
     else:
         for read in range(CONFIG["reads"]):
-            ARCH_BODY += "read_%i_data_buffer_in <= \>"%(read, )
+            ARCH_BODY += "read_%i_data_buffer_word_0_in <= \>"%(read, )
             for addr in range(CONFIG["FIFOs"]):
                 ARCH_BODY += "FIFO_%i_data when read_%i_addr_int = %i\nelse "%(
                     addr, read, addr

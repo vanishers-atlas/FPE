@@ -14,9 +14,6 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     assert(type(config_in["has_enable"]) == type(True))
     config_out["has_enable"] = config_in["has_enable"]
 
@@ -26,16 +23,10 @@ def preprocess_config(config_in):
     assert(config_in["sync_forces"] >= 0 )
     config_out["sync_forces"] = config_in["sync_forces"]
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "register"
 
@@ -45,9 +36,6 @@ def handle_module_name(module_name, config, generate_name):
 
         # Handle forces
         generated_name += "_%ia_%is"%(config["async_forces"], config["sync_forces"])
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -65,7 +53,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:

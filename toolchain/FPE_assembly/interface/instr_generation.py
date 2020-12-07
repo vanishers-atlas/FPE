@@ -131,10 +131,11 @@ def generate_instr_op_bam_seek(ctx, program_context):
     generate_instr_addr_literal.port = 0
 
     # Get all mods
-    mods = set([mod.getText() for mod in ctx.op_bam_seek_mod()])
-    # include default mods if not already covered
-    if not any([mod == "BACKWARD" for mod in mods]):
-        mods.add("FORWARD")
+    mods = [mod.getText() for mod in ctx.op_bam_seek_mod()]
+
+    # include "FORWARD" as default direction if one is not given
+    if "BACKWARD" not in mods and "FORWARD" not in mods:
+        mods.append("FORWARD")
 
     return "#".join(
         [
@@ -156,8 +157,8 @@ def generate_instr_op_bam_seek(ctx, program_context):
 def generate_instr_op_alu(ctx, program_context):
     if   ctx.op_alu_1f_1s() != None:
         return generate_instr_op_alu_1f_1s(ctx.op_alu_1f_1s(), program_context)
-    elif ctx.op_alu_1f_1e_1s() != None:
-        return generate_instr_op_alu_1f_1e_1s(ctx.op_alu_1f_1e_1s(), program_context)
+    elif ctx.op_alu_shifts() != None:
+        return generate_instr_op_alu_shifts(ctx.op_alu_shifts(), program_context)
     elif ctx.op_alu_2f_0s() != None:
         return generate_instr_op_alu_2f_0s(ctx.op_alu_2f_0s(), program_context)
     elif ctx.op_alu_2f_1s() != None:
@@ -196,7 +197,7 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
         ]
     )
 
-def generate_instr_op_alu_1f_1e_1s(ctx, program_context):
+def generate_instr_op_alu_shifts(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
@@ -328,10 +329,17 @@ def generate_instr_access_imm():
         ]
     )
 
-access_get_default_mods = [
-    "NO_ADV"
-]
 def generate_instr_access_get(ctx, program_context):
+    # Get all given mods
+    mods = [
+        mod.getText().upper()
+        for mod in ctx.access_get_mod()
+    ]
+
+    # Add default NO_ADV, if neither NO_ADV nor ADV is given
+    if "NO_ADV" not in mods and "ADV" not in mods:
+        mods.append("NO_ADV")
+
     return "'".join(
         [
             # Mem
@@ -339,16 +347,7 @@ def generate_instr_access_get(ctx, program_context):
             # Addr
             generate_instr_addr(ctx.addr(), program_context),
             # Mods
-            "@".join(
-                sorted(
-                    [
-                        mod.getText().upper()
-                        for mod in ctx.access_get_mod()
-                        # skip default 'mods'
-                        if mod.getText().upper() not in access_get_default_mods
-                    ]
-                )
-            ),
+            "@".join( sorted(mods) ),
         ]
     )
 
@@ -365,6 +364,16 @@ def generate_instr_access_put(ctx, program_context):
     )
 
 def generate_instr_access_reg(ctx, program_context):
+
+    # Get all given mods
+    mods = [ ]
+
+    # Handle speacil syntax for block access mod
+    block_size = 1
+    if ctx.expr() != None:
+        block_size = evaluate_expr(ctx.expr(), program_context)
+    mods.append("block_size;%i"%(block_size,))
+
     return "'".join(
         [
             # Mem
@@ -372,11 +381,20 @@ def generate_instr_access_reg(ctx, program_context):
             # Addr
             generate_instr_addr(ctx.addr(), program_context),
             # Mods
-            "@".join( sorted( [] ) ),
+            "@".join( sorted( mods ) ),
         ]
     )
 
 def generate_instr_access_ram(ctx, program_context):
+    # Get all given mods
+    mods = [ ]
+
+    # Handle speacil syntax for block access mod
+    block_size = 1
+    if ctx.expr() != None:
+        block_size = evaluate_expr(ctx.expr(), program_context)
+    mods.append("block_size;%i"%(block_size,))
+
     return "'".join(
         [
             # Mem
@@ -384,11 +402,20 @@ def generate_instr_access_ram(ctx, program_context):
             # Addr
             generate_instr_addr(ctx.addr(), program_context),
             # Mods
-            "@".join( sorted( [] ) ),
+            "@".join( sorted( mods ) ),
         ]
     )
 
 def generate_instr_access_rom(ctx, program_context):
+    # Get all given mods
+    mods = [ ]
+
+    # Handle speacil syntax for block access mod
+    block_size = 1
+    if ctx.expr() != None:
+        block_size = evaluate_expr(ctx.expr(), program_context)
+    mods.append("block_size;%i"%(block_size,))
+
     return "'".join(
         [
             # Mem
@@ -396,7 +423,7 @@ def generate_instr_access_rom(ctx, program_context):
             # Addr
             generate_instr_addr(ctx.addr(), program_context),
             # Mods
-            "@".join([]),
+            "@".join( sorted( mods ) ),
         ]
     )
 

@@ -21,7 +21,7 @@ def run_test(path="."):
         path + "\\test_generics.json",
         output_dir, processor, generate_name, force_generation
     )
-
+    
     # Symulate testbench
     vhdl_files = [
         output_dir + "\\" + file

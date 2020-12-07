@@ -24,15 +24,9 @@ import copy
 def preprocess_config(config_in):
     config_out = {}
 
-    #import json
-    #print(json.dumps(config_in, indent=2, sort_keys=True))
-
     # Handle instr_set section of config
     assert(len(config_in["instr_set"]) > 0)
     config_out["instr_set"] = copy.deepcopy(config_in["instr_set"])
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle program_flow section of config
     config_out["program_flow"] = {}
@@ -47,10 +41,6 @@ def preprocess_config(config_in):
     for exe, statuses in config_in["program_flow"]["statuses"].items():
         assert(type(statuses) == type([]))
         config_out["program_flow"]["statuses"][exe] = copy.copy(statuses)
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
 
     # Handle instruction decoder section of config
     config_out["instr_decoder"] = {}
@@ -67,18 +57,11 @@ def preprocess_config(config_in):
         assert(width > 0)
         config_out["instr_decoder"]["addr_widths"].append(width)
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     # Handle address_sources section of config
     assert(type(config_in["address_sources"]) == type({}))
     config_out["address_sources"] = {}
     for addr in config_in["address_sources"]:
         config_out["address_sources"][addr] = {}
-
-
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
 
     # Handle data_memory section of config
     config_out["data_memories"] = {}
@@ -123,9 +106,6 @@ def preprocess_config(config_in):
             assert(len(write["data"]) > 0)
             config_out["data_memories"][mem]["writes"].append(write)
 
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     # Handle execute_units section of config
     config_out["execute_units"] = {}
 
@@ -161,24 +141,14 @@ def preprocess_config(config_in):
                 assert(type(value) == type(""))
                 config_out["execute_units"][exe]["controls"][control_name]["values"][op] = value
 
-    #import json
-    #print(json.dumps(config_out, indent=2, sort_keys=True))
-    #exit()
-
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
 
-        #import json
-        #print(json.dumps(config, indent=2, sort_keys=True))
-
         generated_name = ""
 
         raise NotImplementedError()
-
-        #print(generated_name)
-        #exit()
 
         return generated_name
     else:
@@ -196,7 +166,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -234,6 +204,197 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
 
         return INTERFACE, MODULE_NAME
+
+#####################################################################
+
+def generate_std_logic_signal(sig_name, value_opcode_table):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global INPUT_SIGNALS, INSTR_SECTIONS
+
+    # Declare control port
+    INTERFACE["ports"] += [
+        {
+            "name" : sig_name,
+            "type" : "std_logic",
+            "direction" : "out"
+        }
+    ]
+
+    # Buffer port
+    interface, reg = register.generate_HDL(
+        {
+            "async_forces"  : 0,
+            "sync_forces"   : 0,
+            "has_enable"    : CONFIG["program_flow"]["stallable"]
+        },
+        OUTPUT_PATH,
+        "register",
+        True,
+        False
+    )
+
+    ARCH_HEAD += "signal pre_%s : std_logic;\n"%(sig_name, )
+
+    ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(sig_name, reg, )
+
+    ARCH_BODY += "generic map (data_width => 1)\n"
+
+    ARCH_BODY += "port map (\n\>"
+
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_BODY += "enable => not stall,\n"
+
+    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "data_in(0)  => pre_%s,\n"%(sig_name, )
+    ARCH_BODY += "data_out(0) => %s\n"%(sig_name, )
+
+    ARCH_BODY += "\<);\n\<\n"
+
+    # Buffer assementment logic
+    ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse\>"%(sig_name, INPUT_SIGNALS["enable"])
+    for value, opcodes in value_opcode_table.items():
+        ARCH_BODY += "'%s' when\>%s\<\n\<else\>"%(
+            value,
+            "\nor ".join(
+                [
+                    "%s(%s) = \"%s\""%(
+                        INPUT_SIGNALS["instr"],
+                        INSTR_SECTIONS["opcode"]["range"],
+                        tc_utils.unsigned.encode(opcode, CONFIG["instr_decoder"]["opcode_width"])
+                    )
+                    for opcode in opcodes
+                ]
+            )
+        )
+    ARCH_BODY += "'U';\<\<\n\n"
+
+def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global INPUT_SIGNALS, INSTR_SECTIONS
+
+    assert(vec_len >= 0)
+
+    # Declare control port
+    INTERFACE["ports"] += [
+        {
+            "name" : sig_name,
+            "type" : "std_logic_vector(%i downto 0)"%(vec_len - 1, ),
+            "direction" : "out"
+        }
+    ]
+
+    # Buffer port
+    interface, reg = register.generate_HDL(
+        {
+            "async_forces"  : 0,
+            "sync_forces"   : 0,
+            "has_enable"    : CONFIG["program_flow"]["stallable"]
+        },
+        OUTPUT_PATH,
+        "register",
+        True,
+        False
+    )
+
+    ARCH_HEAD += "signal pre_%s : std_logic_vector(%i downto 0);\n"%(sig_name, vec_len - 1)
+
+    ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(sig_name, reg, )
+
+    ARCH_BODY += "generic map (data_width => %i)\n"%(vec_len, )
+
+    ARCH_BODY += "port map (\n\>"
+
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_BODY += "enable => not stall,\n"
+
+    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "data_in  => pre_%s,\n"%(sig_name, )
+    ARCH_BODY += "data_out => %s\n"%(sig_name, )
+
+    ARCH_BODY += "\<);\n\<\n"
+
+    # Buffer assementment logic
+    ARCH_BODY += "pre_%s <=\> (others => 'U') when %s /= '1'\nelse\>"%(sig_name, INPUT_SIGNALS["enable"])
+    for value, opcodes in value_opcode_table.items():
+        ARCH_BODY += "\"%s\" when\>%s\<\n\<else\>"%(
+            value,
+            "\nor ".join(
+                [
+                    "%s(%s) = \"%s\""%(
+                        INPUT_SIGNALS["instr"],
+                        INSTR_SECTIONS["opcode"]["range"],
+                        tc_utils.unsigned.encode(opcode, CONFIG["instr_decoder"]["opcode_width"])
+                    )
+                    for opcode in opcodes
+                ]
+            )
+        )
+    ARCH_BODY += "(others => 'U');\<\<\n\n"
+
+def generate_input_signals_delay(stage):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global INPUT_SIGNALS, INSTR_SECTIONS
+
+    ARCH_HEAD += "signal %s_instr_delay_out : std_logic_vector(%i downto 0);\n"%(stage, CONFIG["instr_decoder"]["instr_width"]  - 1, )
+
+    interface, name = delay.generate_HDL(
+        {
+            "width" : CONFIG["instr_decoder"]["instr_width"],
+            "depth" : 1,
+            "stallable" : CONFIG["program_flow"]["stallable"],
+        },
+        OUTPUT_PATH,
+        "delay",
+        True,
+        False
+    )
+
+    ARCH_BODY += "%s_instr_delay : entity work.%s(arch)\>\n"%(stage, name)
+
+    ARCH_BODY += "port map (\n\>"
+
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_BODY += "stall => stall,\n"
+
+    ARCH_BODY += "clock => clock,\n"
+    ARCH_BODY += "data_in  => %s,\n"%(INPUT_SIGNALS["instr"], )
+    ARCH_BODY += "data_out => %s_instr_delay_out\n"%(stage, )
+
+    ARCH_BODY += "\<);\<\n\n"
+
+    INPUT_SIGNALS["instr"] = "%s_instr_delay_out"%(stage, )
+
+    ARCH_HEAD += "signal %s_enable_delay_out : std_logic;\n"%(stage, )
+
+    interface, name = delay.generate_HDL(
+        {
+            "width" : 1,
+            "depth" : 1,
+            "stallable" : CONFIG["program_flow"]["stallable"],
+        },
+        OUTPUT_PATH,
+        "delay",
+        True,
+        False
+    )
+
+    ARCH_BODY += "%s_enable_delay : entity work.%s(arch)\>\n"%(stage, name)
+
+    ARCH_BODY += "port map (\n\>"
+
+    if CONFIG["program_flow"]["stallable"]:
+        ARCH_BODY += "stall => stall,\n"
+
+    ARCH_BODY += "clock => clock,\n"
+    ARCH_BODY += "data_in(0) => %s,\n"%(INPUT_SIGNALS["enable"], )
+    ARCH_BODY += "data_out(0) => %s_enable_delay_out\n"%(stage, )
+
+    ARCH_BODY += "\<);\<\n\n"
+
+    INPUT_SIGNALS["enable"] = "%s_enable_delay_out"%(stage, )
 
 #####################################################################
 
@@ -306,58 +467,14 @@ def generate_fetch_signals():
     # Compute then buffer controls based on opcode
     ####################################################################
 
-    # Split off opcode
-    opcode = "%s(%s)"%(INPUT_SIGNALS["instr"], INSTR_SECTIONS["opcode"]["range"])
-
     # Handle COMM GET's adv signal
     if "GET" in CONFIG["data_memories"]:
         mem = "GET"
         config = CONFIG["data_memories"][mem]
-
         for read in range(len(config["reads"])):
-            port_name = "GET_read_%i_adv"%(read,)
+            sig_name = "GET_read_%i_adv"%(read,)
 
-            # Declare control port
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
-
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            advancing_instr_vals = []
+            value_opcode_table = { "1" : [], "0" : []}
             for instr_id, instr_val in CONFIG["instr_set"].items():
                 fetches = asm_utils.instr_fetches(instr_id)
                 fetch_mems = [asm_utils.access_mem(fetch) for fetch in fetches]
@@ -365,67 +482,28 @@ def generate_fetch_signals():
                 indexes = [i for i, fetch_mem in enumerate(fetch_mems) if fetch_mem == mem]
 
                 if len(indexes) > read and "ADV" in fetch_mods[indexes[read]]:
-                    advancing_instr_vals.append(instr_val)
+                    value_opcode_table["1"].append(instr_val)
+                else:
+                    value_opcode_table["0"].append(instr_val)
 
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in advancing_instr_vals
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                generate_std_logic_signal(sig_name, value_opcode_table)
 
     # Handle COMM GET's enable signal, only needed when stalling is possible
     if CONFIG["program_flow"]["stallable"]:
         if "GET" in CONFIG["data_memories"]:
             mem = "GET"
             config = CONFIG["data_memories"][mem]
-
             for read in range(len(config["reads"])):
-                port_name = "%s_read_%i_enable"%(mem, read,)
+                sig_name = "GET_read_%i_adv"%(read,)
 
-                # Declare control port
-                INTERFACE["ports"] += [
-                    {
-                        "name" : port_name,
-                        "type" : "std_logic",
-                        "direction" : "out"
-                    }
-                ]
-
-                # Buffer port
-                interface, reg = register.generate_HDL(
-                    {
-                        "async_forces"  : 0,
-                        "sync_forces"   : 0,
-                        "has_enable"    : CONFIG["program_flow"]["stallable"]
-                    },
-                    OUTPUT_PATH,
-                    "register",
-                    True,
-                    False
-                )
-
-                ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-                ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-                ARCH_BODY += "generic map (data_width => 1)\n"
-
-                ARCH_BODY += "port map (\n\>"
-
-                if CONFIG["program_flow"]["stallable"]:
-                    ARCH_BODY += "enable => not stall,\n"
-
-                ARCH_BODY += "trigger => clock,\n"
-                ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-                ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-                ARCH_BODY += "\<);\n\<\n"
-
-                # Buffer assementment logic
-                advancing_instr_vals = []
+                value_opcode_table = { "1" : [], "0" : []}
                 for instr_id, instr_val in CONFIG["instr_set"].items():
                     fetches = asm_utils.instr_fetches(instr_id)
                     fetch_mems = [asm_utils.access_mem(fetch) for fetch in fetches]
@@ -433,28 +511,64 @@ def generate_fetch_signals():
                     indexes = [i for i, fetch_mem in enumerate(fetch_mems) if fetch_mem == mem]
 
                     if len(indexes) > read:
-                        advancing_instr_vals.append(instr_val)
+                        value_opcode_table["1"].append(instr_val)
+                    else:
+                        value_opcode_table["0"].append(instr_val)
 
-                ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-                ARCH_BODY += "\nor ".join(
-                    [
-                        "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                        for instr_val in advancing_instr_vals
-                    ]
-                )
-                ARCH_BODY += "\<\nelse '0';\<\n\n"
+                # Check the signal varies
+                value_opcode_table = {
+                    k : v
+                    for k, v in value_opcode_table.items()
+                    if len(v) > 0
+                }
+                if len(value_opcode_table) > 1:
+                    generate_std_logic_signal(sig_name, value_opcode_table)
 
     # Handle fetch addr muxes
     for mem, config in CONFIG["data_memories"].items():
-        for read in config["reads"]:
-            # Handle muxed addr
-            if len(read["addr"]) > 1:
-                raise NotImplementedError()
+        for read, read_details in enumerate(config["reads"]):
+            sel_sig = "%s_read_%i_addr_sel"%(mem, read)
+            sel_width = tc_utils.unsigned.width(len(read_details["addr"]) - 1)
 
-    # Handle bam signals
+            value_opcode_table = {}
+            for mux_index, signal_details in enumerate(read_details["addr"]):
+                sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
+                for instr_id, instr_val in CONFIG["instr_set"].items():
+                    fetches = asm_utils.instr_fetches(instr_id)
+                    fetch_mems = [asm_utils.access_mem(fetch) for fetch in fetches]
+                    fetch_addr_coms = [asm_utils.addr_com(asm_utils.access_addr(fetch)) for fetch in fetches]
+                    fetch_addr_ports = [asm_utils.addr_port(asm_utils.access_addr(fetch)) for fetch in fetches]
+
+                    read_indexes = [
+                        index
+                        for index, fetch_mem in enumerate(fetch_mems)
+                        if fetch_mem == mem
+                    ]
+
+                    if (
+                        len(read_indexes) > read
+                        and fetch_addr_coms[read_indexes[read]] == signal_details["com"]
+                        and str(fetch_addr_ports[read_indexes[read]]) == str(signal_details["port"])
+                    ):
+                        try:
+                            value_opcode_table[sel_val].append(instr_val)
+                        except KeyError:
+                            value_opcode_table[sel_val] = [instr_val, ]
+
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                generate_std_logic_vector_signal(sel_sig, sel_width, value_opcode_table)
+
+    # Handle bam step generic forward signal
     for bam, config in CONFIG["address_sources"].items():
-        # Handle bam step forward signal
-        step_forward_instr_vals = []
+        sig_name = "%s_step_generic_forward"%(bam, )
+
+        value_opcode_table = { "1" : [], "0" : []}
         for instr_id, instr_val in CONFIG["instr_set"].items():
             # Collect all accesses of instr
             accesses = asm_utils.instr_fetches(instr_id) + asm_utils.instr_stores(instr_id)
@@ -467,63 +581,31 @@ def generate_fetch_signals():
             # Filter access to only one that used the bam under consideration
             indexes = [ i for i, addr_com in enumerate(addr_coms) if addr_com == bam ]
 
-            # Check mods of filtered accesses
-            for mods in [ addr_mods[i] for i in indexes ]:
-                if "FORWARD" in mods:
-                    step_forward_instr_vals.append(instr_val)
-        if len(step_forward_instr_vals) != 0:
-            # Declare port
-            port_name = "%s_step_generic_forward"%(bam, )
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
-
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-            ARCH_BODY += "\nor ".join(
+            # Check in forward mod in any of the access that us this bam
+            if any(
                 [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in step_forward_instr_vals
+                    "FORWARD" in addr_mods[index].keys()
+                    for index in indexes
                 ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
 
-        # Handle bam step BACKWARD signal
-        step_backward_instr_vals = []
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
+
+    # Handle bam step generic forward signal
+    for bam, config in CONFIG["address_sources"].items():
+        sig_name = "%s_step_generic_backward"%(bam, )
+
+        value_opcode_table = { "1" : [], "0" : []}
         for instr_id, instr_val in CONFIG["instr_set"].items():
             # Collect all accesses of instr
             accesses = asm_utils.instr_fetches(instr_id) + asm_utils.instr_stores(instr_id)
@@ -536,123 +618,31 @@ def generate_fetch_signals():
             # Filter access to only one that used the bam under consideration
             indexes = [ i for i, addr_com in enumerate(addr_coms) if addr_com == bam ]
 
-            # Check mods of filtered accesses
-            for mods in [ addr_mods[i] for i in indexes ]:
-                if "BACKWARD" in mods:
-                    step_backward_instr_vals.append(instr_val)
-        if len(step_backward_instr_vals) != 0:
-            # Declare port
-            port_name = "%s_step_generic_backward"%(bam, )
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
-
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-            ARCH_BODY += "\nor ".join(
+            # Check in backward mod in any of the access that us this bam
+            if any(
                 [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in step_backward_instr_vals
+                    "BACKWARD" in addr_mods[index].keys()
+                    for index in indexes
                 ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
+
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
+
 
     ####################################################################
     # Buffer INPUT_SIGNALS for next stage
     ####################################################################
-    delay_name = "fetch"
-
-    ARCH_HEAD += "signal %s_instr_delay_out : std_logic_vector(%i downto 0);\n"%(delay_name, CONFIG["instr_decoder"]["instr_width"]  - 1, )
-
-    interface, name = delay.generate_HDL(
-        {
-            "width" : CONFIG["instr_decoder"]["instr_width"],
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_BODY += "%s_instr_delay : entity work.%s(arch)\>\n"%(delay_name, name)
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => %s,\n"%(INPUT_SIGNALS["instr"], )
-    ARCH_BODY += "data_out => %s_instr_delay_out\n"%(delay_name, )
-
-    ARCH_BODY += "\<);\<\n\n"
-
-    INPUT_SIGNALS["instr"] = "%s_instr_delay_out"%(delay_name, )
-
-    ARCH_HEAD += "signal %s_enable_delay_out : std_logic;\n"%(delay_name, )
-
-    interface, name = delay.generate_HDL(
-        {
-            "width" : 1,
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_BODY += "%s_enable_delay : entity work.%s(arch)\>\n"%(delay_name, name)
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in(0) => %s,\n"%(INPUT_SIGNALS["enable"], )
-    ARCH_BODY += "data_out(0) => %s_enable_delay_out\n"%(delay_name, )
-
-    ARCH_BODY += "\<);\<\n\n"
-
-    INPUT_SIGNALS["enable"] = "%s_enable_delay_out"%(delay_name, )
+    generate_input_signals_delay("fetch")
 
     ####################################################################
     # Output controls that are directly part of instr
@@ -693,567 +683,199 @@ def generate_exe_signals():
     # Compute then buffer controls based on opcode
     ####################################################################
 
-    # Split off opcode
-    opcode = "%s(%s)"%(INPUT_SIGNALS["instr"], INSTR_SECTIONS["opcode"]["range"])
-
     # Handle exe enables
     for exe in CONFIG["execute_units"]:
-        # Declare control port
-        port_name = "%s_enable"%(exe, )
-        INTERFACE["ports"] += [
-            {
-                "name" : port_name,
-                "type" : "std_logic",
-                "direction" : "out"
-            }
-        ]
+        sig_name = "%s_enable"%(exe, )
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
+            if asm_utils.instr_exe_unit(instr_id) == exe:
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
 
-        # Buffer port
-        interface, reg = register.generate_HDL(
-            {
-                "async_forces"  : 0,
-                "sync_forces"   : 0,
-                "has_enable"    : CONFIG["program_flow"]["stallable"]
-            },
-            OUTPUT_PATH,
-            "register",
-            True,
-            False
-        )
-
-        ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-        ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-        ARCH_BODY += "generic map (data_width => 1)\n"
-
-        ARCH_BODY += "port map (\n\>"
-
-        if CONFIG["program_flow"]["stallable"]:
-            ARCH_BODY += "enable => not stall,\n"
-
-        ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-        ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-        ARCH_BODY += "\<);\n\<\n"
-
-        # Buffer assementment logic
-        ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-        ARCH_BODY += "\nor ".join(
-            [
-                "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                for instr_id, instr_val in CONFIG["instr_set"].items()
-                if asm_utils.instr_exe_unit(instr_id) == exe
-            ]
-        )
-        ARCH_BODY += "\<\nelse '0';\<\n\n"
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
 
     # Handle exe controls
     for exe in CONFIG["execute_units"]:
         for control, config in CONFIG["execute_units"][exe]["controls"].items():
-            # Declare control port
-            port_name = "%s_%s"%(exe, control)
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic_vector(%i downto 0)"%(config["width"] - 1),
-                    "direction" : "out"
-                }
-            ]
+            sig_name = "_".join([exe, control])
+            value_opcode_table = {
+                v : []
+                for v in config["values"].values()
+            }
 
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
+            for instr_id, instr_val in CONFIG["instr_set"].items():
+                if asm_utils.instr_exe_unit(instr_id) == exe:
+                    oper = exe_lib_lookup[exe].instr_to_oper(instr_id)
+                    if oper in config["values"]:
+                        value_opcode_table[config["values"][oper]].append(instr_val)
 
-            ARCH_HEAD += "signal pre_%s  : std_logic_vector(%i downto 0);\n"%(port_name, config["width"] - 1, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => %i)\n"%(config["width"])
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> (others => 'U') when %s /= '1'\n"%(port_name, INPUT_SIGNALS["enable"])
-            for oper, value in config["values"].items():
-                ARCH_BODY +=  "else \"%s\" when\> "%(value)
-                ARCH_BODY += "\nor ".join(
-                    [
-                        "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                        for instr_id, instr_val in CONFIG["instr_set"].items()
-                        if (
-                            asm_utils.instr_exe_unit(instr_id) == exe
-                            and exe_lib_lookup[exe].instr_to_oper(instr_id) == oper
-                        )
-                    ]
-                )
-                ARCH_BODY += "\<\n"
-
-            ARCH_BODY += "else (others => 'U');\<\n\n"
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                generate_std_logic_vector_signal(sig_name, config["width"], value_opcode_table)
 
     # Handle exe input muxes
     for exe, config in CONFIG["execute_units"].items():
-        for input, signals in enumerate(config["inputs"]):
-            # Handle muxed addr
-            if len(signals["data"]) > 1:
-                # Determine mux sel port width
-                # - 1 to go from number of inputs to largest sel value
-                sel_val_width = tc_utils.unsigned.width(len(signals["data"]) - 1)
+        for input, channals in enumerate(config["inputs"]):
+            for word, srcs in enumerate(channals["data"]):
+                sel_sig = "%s_in_%i_word_%i_sel"%(exe, input, word,)
+                sel_width = tc_utils.unsigned.width(len(srcs) - 1)
 
-                # Declare control port
-                port_name = "%s_in_%i_sel"%(exe, input)
-                INTERFACE["ports"] += [
-                    {
-                        "name" : port_name,
-                        "type" : "std_logic_vector(%i downto 0)"%(sel_val_width - 1),
-                        "direction" : "out"
-                    }
-                ]
-
-                # Buffer port
-                interface, reg = register.generate_HDL(
-                    {
-                        "async_forces"  : 0,
-                        "sync_forces"   : 0,
-                        "has_enable"    : CONFIG["program_flow"]["stallable"]
-                    },
-                    OUTPUT_PATH,
-                    "register",
-                    True,
-                    False
-                )
-
-                ARCH_HEAD += "signal pre_%s  : std_logic_vector(%i downto 0);\n"%(port_name, sel_val_width - 1, )
-
-                ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-                ARCH_BODY += "generic map (data_width => %i)\n"%(sel_val_width, )
-
-                ARCH_BODY += "port map (\n\>"
-
-                if CONFIG["program_flow"]["stallable"]:
-                    ARCH_BODY += "enable => not stall,\n"
-
-                ARCH_BODY += "trigger => clock,\n"
-                ARCH_BODY += "data_in  => pre_%s,\n"%(port_name, )
-                ARCH_BODY += "data_out => %s\n"%(port_name, )
-
-                ARCH_BODY += "\<);\n\<\n"
-
-                # Buffer assementment logic
-                ARCH_BODY += "pre_%s <=\> (others => 'U') when %s /= '1'\n"%(port_name, INPUT_SIGNALS["enable"])
-                for sel_val, src in enumerate( sorted( signals["data"], key=lambda x : x["signal"] ) ):
-                    instr_values = []
+                value_opcode_table = {}
+                for mux_index, src in enumerate(srcs):
+                    sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
                     for instr_id, instr_val in CONFIG["instr_set"].items():
-                        exe_unit = asm_utils.instr_exe_unit(instr_id)
-
+                        exe_unit =  asm_utils.instr_exe_unit(instr_id)
                         fetches = asm_utils.instr_fetches(instr_id)
                         fetch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
 
                         if (
-                            # exe is in used
                             exe_unit == exe
-
-                            # recieving input from src["com"]
                             and len(fetch_mems) > input
                             and fetch_mems[input] == src["com"]
-
-                            # recieving input from src["port"]
-                            and fetch_mems[:input + 1].count(src["com"]) > src["port"]
                         ):
-                            instr_values.append(instr_val)
+                            try:
+                                value_opcode_table[sel_val].append(instr_val)
+                            except KeyError:
+                                value_opcode_table[sel_val] = [instr_val, ]
+                # Check the signal varies
+                value_opcode_table = {
+                    k : v
+                    for k, v in value_opcode_table.items()
+                    if len(v) > 0
+                }
+                if len(value_opcode_table) > 1:
+                    generate_std_logic_vector_signal(sel_sig, sel_width, value_opcode_table)
 
-                    ARCH_BODY +=  "else \"%s\" when\> "%(sel_val)
-                    ARCH_BODY += "\nor ".join(
-                        [
-                            "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                            for instr_val in instr_values
-                        ]
-                    )
-                    ARCH_BODY += "\<\n"
-                ARCH_BODY += "else (others => 'U');\<\n\n"
-
-    # Handle jumping signals
+    # Handle uncondional jumping signal
     if CONFIG["program_flow"]["uncondional_jump"]:
-        # Declare port
-        port_name = "jump_uncondional"
-        INTERFACE["ports"] += [
-            {
-                "name" : port_name,
-                "type" : "std_logic",
-                "direction" : "out"
-            }
-        ]
+        sig_name = "jump_uncondional"
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
+            if asm_utils.instr_mnemonic(instr_id) == "JMP":
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
 
-        # Buffer port
-        interface, reg = register.generate_HDL(
-            {
-                "async_forces"  : 0,
-                "sync_forces"   : 0,
-                "has_enable"    : CONFIG["program_flow"]["stallable"]
-            },
-            OUTPUT_PATH,
-            "register",
-            True,
-            False
-        )
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
 
-        ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-        ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-        ARCH_BODY += "generic map (data_width => 1)\n"
-
-        ARCH_BODY += "port map (\n\>"
-
-        if CONFIG["program_flow"]["stallable"]:
-            ARCH_BODY += "enable => not stall,\n"
-
-        ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-        ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-        ARCH_BODY += "\<);\n\<\n"
-
-        # Buffer assementment logic
-        ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-        ARCH_BODY += "\nor ".join(
-            [
-                "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                for instr_id, instr_val in CONFIG["instr_set"].items()
-                if asm_utils.instr_mnemonic(instr_id) == "JMP"
-            ]
-        )
-        ARCH_BODY += "\<\nelse '0';\<\n\n"
+    # Handle condional jumping signals
     for exe, statuses in CONFIG["program_flow"]["statuses"].items():
         for status in statuses:
-            # Declare port
-            port_name = "jump_%s_%s"%(exe, status)
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
-
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Find opcodes
-            instr_vals = []
+            sig_name = "jump_%s_%s"%(exe, status)
+            value_opcode_table = { "1" : [], "0" : []}
             for instr_id, instr_val in CONFIG["instr_set"].items():
-                jump = asm_utils.instr_mnemonic(instr_id)
+                mnemonic = asm_utils.instr_mnemonic(instr_id)
+
                 if (
-                    jump in jump_mnemonic_jump_statuses_map
-                    and jump_mnemonic_jump_statuses_map[jump]["exe"] == exe
-                    and status in jump_mnemonic_jump_statuses_map[jump]["statuses"]
+                    mnemonic in jump_mnemonic_jump_statuses_map # instr in a jump
+                    and jump_mnemonic_jump_statuses_map[mnemonic]["exe"] == exe # jump uses status(es) from curr exe unit
+                    and status in jump_mnemonic_jump_statuses_map[mnemonic]["statuses"] # jump uses current status
                 ):
-                    instr_vals.append(instr_val)
+                    value_opcode_table["1"].append(instr_val)
+                else:
+                    value_opcode_table["0"].append(instr_val)
 
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                generate_std_logic_signal(sig_name, value_opcode_table)
 
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in instr_vals
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
-
-    # Handle bam signals
+    # Handle bam reset signals
     for bam, config in CONFIG["address_sources"].items():
-        # Handle bam reset signal
-        reset_instr_vals = [
-            instr_val
-            for instr_id, instr_val in CONFIG["instr_set"].items()
-            if(
+        sig_name = "%s_reset"%(bam, )
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
+            if (
                 asm_utils.instr_exe_unit(instr_id) == bam
                 and asm_utils.instr_mnemonic(instr_id) == "BAM_RESET"
-            )
-        ]
-        if len(reset_instr_vals) != 0:
-            # Declare port
-            port_name = "%s_reset"%(bam, )
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
 
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
 
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in reset_instr_vals
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
-
-        # Handle bam seek forward signal
-        seek_forward_instr_vals = [
-            instr_val
-            for instr_id, instr_val in CONFIG["instr_set"].items()
+    # Handle bam seek forward signals
+    for bam, config in CONFIG["address_sources"].items():
+        sig_name = "%s_step_fetched_forward"%(bam, )
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
             if(
                 asm_utils.instr_exe_unit(instr_id) == bam
                 and asm_utils.instr_mnemonic(instr_id) == "BAM_SEEK"
                 and "FORWARD" in asm_utils.instr_mods(instr_id)
-            )
-        ]
-        if len(seek_forward_instr_vals) != 0:
-            # Declare port
-            port_name = "%s_step_fetched_forward"%(bam, )
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
 
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
 
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in seek_forward_instr_vals
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
-
-        # Handle bam seek forward signal
-        seek_backward_instr_vals = [
-            instr_val
-            for instr_id, instr_val in CONFIG["instr_set"].items()
+    # Handle bam seek backward signald
+    for bam, config in CONFIG["address_sources"].items():
+        sig_name = "%s_step_fetched_backward"%(bam, )
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
             if(
                 asm_utils.instr_exe_unit(instr_id) == bam
                 and asm_utils.instr_mnemonic(instr_id) == "BAM_SEEK"
                 and "BACKWARD" in asm_utils.instr_mods(instr_id)
-            )
-        ]
-        if len(seek_backward_instr_vals) != 0:
-            # Declare port
-            port_name = "%s_step_fetched_backward"%(bam, )
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
 
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in seek_backward_instr_vals
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
 
     ####################################################################
     # Buffer INPUT_SIGNALS for next stage
     ####################################################################
-    delay_name = "exe"
-
-    ARCH_HEAD += "signal %s_instr_delay_out : std_logic_vector(%i downto 0);\n"%(delay_name, CONFIG["instr_decoder"]["instr_width"]  - 1, )
-
-    interface, name = delay.generate_HDL(
-        {
-            "width" : CONFIG["instr_decoder"]["instr_width"],
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_BODY += "%s_instr_delay : entity work.%s(arch)\>\n"%(delay_name, name)
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => %s,\n"%(INPUT_SIGNALS["instr"], )
-    ARCH_BODY += "data_out => %s_instr_delay_out\n"%(delay_name, )
-
-    ARCH_BODY += "\<);\<\n\n"
-
-    INPUT_SIGNALS["instr"] = "%s_instr_delay_out"%(delay_name, )
-
-    ARCH_HEAD += "signal %s_enable_delay_out : std_logic;\n"%(delay_name, )
-
-    interface, name = delay.generate_HDL(
-        {
-            "width" : 1,
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_BODY += "%s_enable_delay : entity work.%s(arch)\>\n"%(delay_name, name)
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in(0) => %s,\n"%(INPUT_SIGNALS["enable"], )
-    ARCH_BODY += "data_out(0) => %s_enable_delay_out\n"%(delay_name, )
-
-    ARCH_BODY += "\<);\<\n\n"
-
-    INPUT_SIGNALS["enable"] = "%s_enable_delay_out"%(delay_name, )
+    generate_input_signals_delay("exe")
 
     ####################################################################
     # Output controls that are directly part of instr
@@ -1272,286 +894,112 @@ def generate_store_signals():
     # Compute then buffer controls based on opcode
     ####################################################################
 
-    # Split off opcode
-    opcode = "%s(%s)"%(INPUT_SIGNALS["instr"], INSTR_SECTIONS["opcode"]["range"])
-
+    import json
     # Handle store enables
     for mem, config in CONFIG["data_memories"].items():
         for write in range(len(config["writes"])):
-            # Create port
-            port_name = "%s_write_%i_enable"%(mem, write)
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
+            sig_name = "%s_write_%i_enable"%(mem, write)
 
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-
-            ARCH_HEAD += "signal pre_%s  : std_logic;\n"%(port_name, )
-
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            enable_instr_values = []
+            value_opcode_table = { "1" : [], "0" : []}
             for instr_id, instr_val in CONFIG["instr_set"].items():
                 stores = asm_utils.instr_stores(instr_id)
-                store_mems = [ asm_utils.access_mem(store) for store in stores ]
+                store_mems = [asm_utils.access_mem(store) for store in stores]
 
                 if store_mems.count(mem) >= write + 1:
-                    enable_instr_values.append(instr_val)
+                    value_opcode_table["1"].append(instr_val)
+                else:
+                    value_opcode_table["0"].append(instr_val)
 
-
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"], )
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_val in enable_instr_values
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                generate_std_logic_signal(sig_name, value_opcode_table)
 
     # Handle store addr muxes
     for mem, config in CONFIG["data_memories"].items():
-        for write, signals in enumerate(config["writes"]):
-            # Handle muxed addr
-            if len(signals["addr"]) > 1:
-                # Determine mux sel port width
-                # - 1 to go from number of inputs to largest sel value
-                sel_val_width = tc_utils.unsigned.width(len(signals["addr"]) - 1)
+        for write, write_details in enumerate(config["writes"]):
+            sel_sig = "%s_write_%i_addr_sel"%(mem, write)
+            sel_width = tc_utils.unsigned.width(len(write_details["addr"]) - 1)
 
-                # Declare control port
-                port_name = "%s_write_%i_addr_sel"%(mem, write)
-                INTERFACE["ports"] += [
-                    {
-                        "name" : port_name,
-                        "type" : "std_logic_vector(%i downto 0)"%(sel_val_width - 1),
-                        "direction" : "out"
-                    }
-                ]
+            value_opcode_table = {}
+            for mux_index, signal_details in enumerate(sorted(write_details["addr"], key=lambda d : d["signal"])):
+                sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
+                for instr_id, instr_val in CONFIG["instr_set"].items():
+                    stores = asm_utils.instr_stores(instr_id)
+                    store_mems = [asm_utils.access_mem(store) for store in stores]
+                    store_addr_coms = [asm_utils.addr_com(asm_utils.access_addr(store)) for store in stores]
+                    store_addr_ports = [asm_utils.addr_port(asm_utils.access_addr(store)) for store in stores]
 
-                # Buffer port
-                interface, reg = register.generate_HDL(
-                    {
-                        "async_forces"  : 0,
-                        "sync_forces"   : 0,
-                        "has_enable"    : CONFIG["program_flow"]["stallable"]
-                    },
-                    OUTPUT_PATH,
-                    "register",
-                    True,
-                    False
-                )
+                    write_indexes = [
+                        index
+                        for index, store_mem in enumerate(store_mems)
+                        if store_mem == mem
+                    ]
 
-                ARCH_HEAD += "signal pre_%s  : std_logic_vector(%i downto 0);\n"%(port_name, sel_val_width - 1, )
+                    if (
+                        len(write_indexes) > write
+                        and store_addr_coms[write_indexes[write]] == signal_details["com"]
+                        and str(store_addr_ports[write_indexes[write]]) == str(signal_details["port"])
+                    ):
+                        try:
+                            value_opcode_table[sel_val].append(instr_val)
+                        except KeyError:
+                            value_opcode_table[sel_val] = [instr_val, ]
 
-                ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
 
-                ARCH_BODY += "generic map (data_width => %i)\n"%(sel_val_width, )
-
-                ARCH_BODY += "port map (\n\>"
-
-                if CONFIG["program_flow"]["stallable"]:
-                    ARCH_BODY += "enable => not stall,\n"
-
-                ARCH_BODY += "trigger => clock,\n"
-                ARCH_BODY += "data_in  => pre_%s,\n"%(port_name, )
-                ARCH_BODY += "data_out => %s\n"%(port_name, )
-
-                ARCH_BODY += "\<);\n\<\n"
-
-                # Buffer assementment logic
-                ARCH_BODY += "pre_%s <=\> (others => 'U') when %s /= '1'\n"%(port_name, INPUT_SIGNALS["enable"])
-                for sel_val, src in enumerate( sorted( signals["addr"], key=lambda x : x["signal"] ) ):
-                    instr_values = []
-                    for instr_id, instr_val in CONFIG["instr_set"].items():
-                        stores = asm_utils.instr_stores(instr_id)
-                        store_mems = [ asm_utils.access_mem(store) for store in stores ]
-                        store_addrs = [ asm_utils.access_addr(store) for store in stores ]
-                        store_addr_coms = [ asm_utils.addr_com(addr) for addr in store_addrs ]
-                        store_addr_ports = [ asm_utils.addr_port(addr) for addr in store_addrs ]
-
-                        write_indexes = [
-                            store
-                            for store, store_mem in enumerate(store_mems)
-                            if mem == store_mem
-                        ]
-
-                        if (
-                            # mem write is in use
-                            len(write_indexes) > write
-
-                            # recieving input from src["com"]
-                            and store_addr_coms[write_indexes[write]] == src["com"]
-
-                            # recieving input from src["com"]
-                            and store_addr_ports[write_indexes[write]] == str(src["port"])
-                        ):
-                            instr_values.append(instr_val)
-
-                    ARCH_BODY +=  "else \"%s\" when\> "%(sel_val)
-                    ARCH_BODY += "\nor ".join(
-                        [
-                            "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                            for instr_val in instr_values
-                        ]
-                    )
-                    ARCH_BODY += "\<\n"
-                ARCH_BODY += "else (others => 'U');\<\n\n"
+            if len(value_opcode_table) > 1:
+                generate_std_logic_vector_signal(sel_sig, sel_width, value_opcode_table)
 
     # Handle store data muxes
     for mem, config in CONFIG["data_memories"].items():
-        for write in config["writes"]:
-                # Handle muxed data
-                if len(write["data"]) > 1:
+        for write, write_details in enumerate(config["writes"]):
+            for word, srcs in enumerate(write_details["data"]):
+                if len(srcs) > 1:
                     raise NotImplementedError()
 
-    # Handle statuser update signals
+    # Handle statuses update signals
     for exe in CONFIG["program_flow"]["statuses"].keys():
         if len(CONFIG["program_flow"]["statuses"][exe]) > 0:
-            # Declare port
-            port_name = "update_%s_statuses"%(exe, )
-            INTERFACE["ports"] += [
-                {
-                    "name" : port_name,
-                    "type" : "std_logic",
-                    "direction" : "out"
-                }
-            ]
+            sig_name = "update_%s_statuses"%(exe, )
 
-            # Buffer port
-            interface, reg = register.generate_HDL(
-                {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
-                    "has_enable"    : CONFIG["program_flow"]["stallable"]
-                },
-                OUTPUT_PATH,
-                "register",
-                True,
-                False
-            )
-            ARCH_HEAD += "signal pre_%s : std_logic;\n"%(port_name, )
+            value_opcode_table = { "1" : [], "0" : []}
+            for instr_id, instr_val in CONFIG["instr_set"].items():
+                fetches = asm_utils.instr_fetches(instr_id)
+                fetch_mems = [asm_utils.access_mem(fetch) for fetch in fetches]
+                fetch_mods = [asm_utils.access_mods(fetch) for fetch in fetches]
+                indexes = [i for i, fetch_mem in enumerate(fetch_mems) if fetch_mem == mem]
 
+                if (
+                    asm_utils.instr_exe_unit(instr_id) == exe
+                    and asm_utils.instr_mnemonic(instr_id) in exe_update_mnemonics_map[exe]
+                ):
+                    value_opcode_table["1"].append(instr_val)
+                else:
+                    value_opcode_table["0"].append(instr_val)
 
-            ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(port_name, reg, )
-
-            ARCH_BODY += "generic map (data_width => 1)\n"
-
-            ARCH_BODY += "port map (\n\>"
-
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "enable => not stall,\n"
-
-            ARCH_BODY += "trigger => clock,\n"
-            ARCH_BODY += "data_in(0)  => pre_%s,\n"%(port_name, )
-            ARCH_BODY += "data_out(0) => %s\n"%(port_name, )
-
-            ARCH_BODY += "\<);\n\<\n"
-
-            # Buffer assementment logic
-            ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse '1' when\> "%(port_name, INPUT_SIGNALS["enable"])
-
-            ARCH_BODY += "\nor ".join(
-                [
-                    "%s = \"%s\""%(opcode, tc_utils.unsigned.encode(instr_val, CONFIG["instr_decoder"]["opcode_width"]))
-                    for instr_id, instr_val in CONFIG["instr_set"].items()
-                    if (
-                        asm_utils.instr_exe_unit(instr_id) == exe
-                        and asm_utils.instr_mnemonic(instr_id) in exe_update_mnemonics_map[exe]
-                    )
-                ]
-            )
-            ARCH_BODY += "\<\nelse '0';\<\n\n"
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                generate_std_logic_signal(sig_name, value_opcode_table)
 
     ####################################################################
     # Buffer INPUT_SIGNALS for next stage
     ####################################################################
-    delay_name = "store"
-
-    ARCH_HEAD += "signal %s_instr_delay_out : std_logic_vector(%i downto 0);\n"%(delay_name, CONFIG["instr_decoder"]["instr_width"]  - 1, )
-
-    interface, name = delay.generate_HDL(
-        {
-            "width" : CONFIG["instr_decoder"]["instr_width"],
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_BODY += "%s_instr_delay : entity work.%s(arch)\>\n"%(delay_name, name)
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => %s,\n"%(INPUT_SIGNALS["instr"], )
-    ARCH_BODY += "data_out => %s_instr_delay_out\n"%(delay_name, )
-
-    ARCH_BODY += "\<);\<\n\n"
-
-    INPUT_SIGNALS["instr"] = "%s_instr_delay_out"%(delay_name, )
-
-    ARCH_HEAD += "signal %s_enable_delay_out : std_logic;\n"%(delay_name, )
-
-    interface, name = delay.generate_HDL(
-        {
-            "width" : 1,
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_BODY += "%s_enable_delay : entity work.%s(arch)\>\n"%(delay_name, name)
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in(0) => %s,\n"%(INPUT_SIGNALS["enable"], )
-    ARCH_BODY += "data_out(0) => %s_enable_delay_out\n"%(delay_name, )
-
-    ARCH_BODY += "\<);\<\n\n"
-
-    INPUT_SIGNALS["enable"] = "%s_enable_delay_out"%(delay_name, )
+    generate_input_signals_delay("store")
 
     ####################################################################
     # Output controls that are directly part of instr

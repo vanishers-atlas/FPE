@@ -27,7 +27,18 @@ def instr_dests(instr):
         return []
 
 def instr_mods(instr):
-    return instr.split("#")[4]
+    mods = {}
+    mod_strs = instr.split("#")[4]
+    if mod_strs != "":
+        for mod_str in mod_strs.split("~"):
+            mod = mod_str.split("'")
+            if   len(mod) == 1:
+                mods[mod[0]] = None
+            elif len(mod) == 2:
+                mods[mod[0]] = mod[1]
+            else:
+                raise NotImplenentedError()
+    return mods
 
 exe_internals = {
     "ALU" : ["ACC"],
@@ -70,10 +81,19 @@ def access_addr(access):
     return access.split("'")[1]
 
 def access_mods(access):
-    if access.split("'")[2] != "":
-        return access.split("'")[2].split("@")
-    else:
-        return []
+    mods = {}
+    mod_strs = access.split("'")[2]
+    if mod_strs != "":
+        for mod_str in mod_strs.split("@"):
+            mod = mod_str.split(";")
+            if   len(mod) == 1:
+                mods[mod[0]] = None
+            elif len(mod) == 2:
+                mods[mod[0]] = mod[1]
+            else:
+                raise NotImplenentedError()
+    return mods
+
 
 ###############################################################
 # Addr decomposing
@@ -90,7 +110,15 @@ def addr_port(addr):
     return addr.split(";")[1]
 
 def addr_mods(addr):
-    if addr.split(";")[2] != "":
-        return addr.split(";")[2].split(":")
-    else:
-        return []
+    mods = {}
+    mod_strs = addr.split(";")[2]
+    if mod_strs != "":
+        for mod_str in mod_strs.split(":"):
+            mod = mod_str.split("?")
+            if   len(mod) == 1:
+                mods[mod[0]] = None
+            elif len(mod) == 2:
+                mods[mod[0]] = mod[1]
+            else:
+                raise NotImplenentedError()
+    return mods

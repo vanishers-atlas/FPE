@@ -1,7 +1,6 @@
 {
   TEST_0:
-    MOV(GET[0]<ADV>, ACC);
-    CMP(ACC, GET[0]<ADV>);
+    CMP(1, 1);
     NOP;
     JLT(TEST_0_TRUE);
     NOP;
@@ -19,8 +18,7 @@
   TEST_0_END:
 
   TEST_1:
-    MOV(GET[0]<ADV>, ACC);
-    CMP(ACC, GET[0]<ADV>);
+    CMP(0, 1);
     NOP;
     JLT(TEST_1_TRUE);
     NOP;
@@ -38,8 +36,7 @@
   TEST_1_END:
 
   TEST_2:
-    MOV(GET[0]<ADV>, ACC);
-    CMP(ACC, GET[0]<ADV>);
+    CMP(1, 0);
     NOP;
     JLT(TEST_2_TRUE);
     NOP;
