@@ -9,6 +9,7 @@ variables:
 
 test:
   script:
+    - ls
     - hugo
   except:
     - master
