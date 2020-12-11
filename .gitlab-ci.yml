@@ -7,10 +7,6 @@ image: registry.gitlab.com/pages/hugo:latest
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-workflow:
-  rules:
-    - if: '$CI_COMMIT_BRANCH'
-
 test:
   script:
     - hugo
@@ -25,5 +21,3 @@ pages:
       - public
   only:
     - master
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "neurons"'
