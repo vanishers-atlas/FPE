@@ -2,7 +2,7 @@
 
 This repo for the development and testing of the FPE (FPGE processing element) and related tools.
 
-After cloning/ forking the repo rename the root directory from *spfe* to *FPE*.
+After cloning/ forking the repo rename the root directory from *sfpe* to *FPE*.
 
 ## Tools
 
