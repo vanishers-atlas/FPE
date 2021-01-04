@@ -2,6 +2,7 @@
 from antlr4 import ParseTreeListener
 
 from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.FPE_assembly import utils as err_utils
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 import math
@@ -41,8 +42,8 @@ class extractor(ParseTreeListener):
                     "ERROR: An access' block size must evaluate to a positive number, not %i, at %s and %s\n"%
                     (
                         block_size,
-                        asm_utils.ctx_start(this.declared_consts[const]),
-                        asm_utils.ctx_start(ctx),
+                        err_utils.ctx_start(this.declared_consts[const]),
+                        err_utils.ctx_start(ctx),
                     )
                 )
 
@@ -55,8 +56,8 @@ class extractor(ParseTreeListener):
                         raise SyntaxError(
                             "ERROR: A block size must be a power of two, at %s and %s\n"%
                             (
-                                asm_utils.ctx_start(this.declared_consts[const]),
-                                asm_utils.ctx_start(ctx),
+                                err_utils.ctx_start(this.declared_consts[const]),
+                                err_utils.ctx_start(ctx),
                             )
                         )
 
@@ -67,7 +68,7 @@ class extractor(ParseTreeListener):
                         raise SyntaxError(
                             "ERROR: Only a signal non-one block size value can be used per operatation, at %s and %s\n"%
                             (
-                                asm_utils.ctx_start(this.declared_consts[const]),
-                                asm_utils.ctx_start(ctx),
+                                err_utils.ctx_start(this.declared_consts[const]),
+                                err_utils.ctx_start(ctx),
                             )
                         )

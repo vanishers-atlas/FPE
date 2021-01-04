@@ -1,0 +1,69 @@
+{
+	"SIMD": {
+		"lanes": 1
+	},
+	"address_sources": {
+		"BAM_0": {
+			"addr_max": 8191,
+			"offset_max": 8191,
+			"step_max": 1
+		},
+		"BAM_1": {
+			"addr_max": 8191,
+			"offset_max": 8191,
+			"step_max": 768
+		},
+		"BAM_2": {
+			"addr_max": 8191,
+			"offset_max": 8191,
+			"step_max": 768
+		},
+		"BAM_3": {
+			"addr_max": 8191,
+			"offset_max": 8191,
+			"step_max": 768
+		},
+		"BAM_4": {
+			"addr_max": 589823,
+			"offset_max": 589823,
+			"step_max": 1
+		},
+		"BAM_5": {
+			"addr_max": 606207,
+			"offset_max": 16383,
+			"step_max": 1
+		}
+	},
+	"data_memories": {
+		"GET": {
+			"FIFOs": 1,
+			"can_stall": false,
+			"data_width": 1
+		},
+		"IMM": {},
+		"PUT": {
+			"FIFOs": 1,
+			"can_stall": false,
+			"data_width": 1
+		},
+		"RAM": {
+			"data_width": 1,
+			"depth": 8192
+		},
+		"REG": {
+			"data_width": 12,
+			"depth": 2
+		},
+		"ROM": {
+			"data_width": 12,
+			"depth": 606208
+		}
+	},
+	"execute_units": {
+		"ALU": {
+			"data_width": 13
+		}
+	},
+	"instr_decoder": {},
+	"program_flow": {}
+}

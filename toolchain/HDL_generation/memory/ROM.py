@@ -159,53 +159,67 @@ def gen_value_array():
         }
     ]
 
-    # Declare internal data types
-    ARCH_HEAD += "type data_array is array (%i downto 0) of std_logic_vector(%i downto 0);\n"%(
-        CONFIG["depth"] / CONFIG["block_size"] - 1,
-        CONFIG["block_size"] * CONFIG["data_width"] - 1,
-    )
+    if False: # TEMP
+        # Declare internal data types
 
-    # Define function for loading values into data_array
-    ARCH_HEAD += "impure function init_mem(mem_file_name : in string) return data_array is\n\>"
+        assert(CONFIG["block_size"] == 1)
+        # split reading mem file into lots of 1024 (2^10), to prevert vivado loop limit licking in
+        loop_counts = []
+        acc = CONFIG["depth"]
+        while acc > 0:
+            loop_counts.append(acc% 1024)
+            acc = int(acc / 1024)
 
-    ARCH_HEAD += "-- Declare file handle\n"
-    ARCH_HEAD += "file mem_file : text;\n"
-
-    ARCH_HEAD += "-- Declare variables to decode input mem file\n"
-    ARCH_HEAD += "variable data_line : line;\n"
-    ARCH_HEAD += "variable word_value : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1.)
-
-    ARCH_HEAD += "-- Declare variable to build output in\n"
-    ARCH_HEAD += "variable block_value : std_logic_vector(%i downto 0);\n"%(
-        CONFIG["block_size"] * CONFIG["data_width"] - 1
-    )
-    ARCH_HEAD += "variable temp_mem : data_array;\n\<"
-
-    ARCH_HEAD += "begin\n\>"
-
-    ARCH_HEAD += "-- open passed file\n"
-    ARCH_HEAD += "file_open(mem_file, mem_file_name,  read_mode);\n"
-
-    ARCH_HEAD += "for b in data_array'reverse_range loop\n\>"
-
-    for word in range(CONFIG["block_size"]):
-        ARCH_HEAD += "readline(mem_file, data_line);\n"
-        ARCH_HEAD += "read(data_line, word_value);\n"
-        ARCH_HEAD += "block_value(%i downto %i) := word_value;\n"%(
-            (CONFIG["block_size"] - word) * CONFIG["data_width"] - 1,
-            (CONFIG["block_size"] - (word + 1) ) * CONFIG["data_width"],
+        ARCH_HEAD += "type data_array is array (0 to %i) of std_logic_vector(%i downto 0);\n"%(
+            CONFIG["depth"] - 1,
+            CONFIG["data_width"] - 1,
         )
 
-    ARCH_HEAD += "temp_mem(b) := block_value;\n"
+        # Define function for loading values into data_array
+        ARCH_HEAD += "impure function init_mem(mem_file_name : in string) return data_array is\n\>"
 
-    ARCH_HEAD += "\<end loop;\n"
+        ARCH_HEAD += "-- Declare file handle\n"
+        ARCH_HEAD += "file mem_file : text;\n"
 
-    ARCH_HEAD += "return temp_mem;\n"
+        ARCH_HEAD += "-- Declare variables to decode input mem file\n"
+        ARCH_HEAD += "variable addr : integer := 0;\n"
+        ARCH_HEAD += "variable data_line : line;\n"
+        ARCH_HEAD += "variable word_value : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1.)
 
-    ARCH_HEAD += "\<end function;\n"
+        ARCH_HEAD += "-- Declare variables loop variables\n"
+        for counter in range(len(loop_counts) + 1):
+            ARCH_HEAD += "variable counter_%i : integer;\n"%(counter, )
 
-    # Create internal data array
-    ARCH_HEAD += "signal data : data_array := init_mem(mem_file);\n"
+        ARCH_HEAD += "variable temp_mem : data_array;\n\<"
+
+        ARCH_HEAD += "begin\n\>"
+
+        ARCH_HEAD += "-- open passed file\n"
+        ARCH_HEAD += "file_open(mem_file, mem_file_name,  read_mode);\n"
+
+        for power, count in enumerate(loop_counts):
+            if count != 0:
+                for counter in range(power):
+                    ARCH_HEAD += "counter_%i  := 0;\n"%(counter + 1, )
+                    ARCH_HEAD += "for counter_%i in 0 to 1023 loop\n\>"%(counter + 1, )
+
+                ARCH_HEAD += "counter_0  := 0;\n"
+                ARCH_HEAD += "for counter_0 in 0 to %i loop\n\>"%(count - 1, )
+                ARCH_HEAD += "readline(mem_file, data_line);\n"
+                ARCH_HEAD += "read(data_line, word_value);\n"
+                ARCH_HEAD += "temp_mem(addr) := word_value;\n"
+                ARCH_HEAD += "addr := addr + 1;\n"
+                ARCH_HEAD += "\<end loop;\n"
+
+                for counter in range(power):
+                    ARCH_HEAD += "\<end loop;\n"
+
+        ARCH_HEAD += "return temp_mem;\n"
+
+        ARCH_HEAD += "\<end function;\n"
+
+        # Create internal data array
+        ARCH_HEAD += "signal data : data_array := init_mem(mem_file);\n"
 
 def gen_reads():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -241,7 +255,7 @@ def gen_reads():
             ],
         ]
 
-
+    if False: # TEMP
         # Handle read addr
         ARCH_HEAD += "signal read_%i_addr_int : integer;\n"%(read)
         ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n"%(read, read)

@@ -2,6 +2,7 @@
 from antlr4 import ParseTreeListener
 
 from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.FPE_assembly import utils as err_utils
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
 class extractor(ParseTreeListener):
@@ -24,8 +25,8 @@ class extractor(ParseTreeListener):
                 "ERROR: Multiple declarations of const, %s, at %s and %s\n"%
                 (
                     const,
-                    asm_utils.ctx_start(this.declared_consts[const]),
-                    asm_utils.ctx_start(ctx),
+                    err_utils.ctx_start(this.declared_consts[const]),
+                    err_utils.ctx_start(ctx),
                 )
             )
         else:
@@ -40,6 +41,6 @@ class extractor(ParseTreeListener):
                     "ERROR: Referancing undeclared const, %s, at %s\n"%
                     (
                         const,
-                        asm_utils.ctx_start(ctx),
+                        err_utils.ctx_start(ctx),
                     )
                 )

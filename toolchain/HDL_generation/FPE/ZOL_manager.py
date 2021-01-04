@@ -22,6 +22,7 @@ def preprocess_config(config_in):
     assert(type(config_in["ZOLs"]) == type([]) )
     config_out["ZOLs"] = []
     for ZOL in config_in["ZOLs"]:
+
         assert(ZOL > 0)
         config_out["ZOLs"].append(ZOL)
 
@@ -29,6 +30,8 @@ def preprocess_config(config_in):
     config_out["stallable"] = config_in["stallable"]
 
     return config_out
+
+import zlib
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
@@ -40,7 +43,8 @@ def handle_module_name(module_name, config, generate_name):
             generated_name += "_nonstallable"
 
         generated_name += "_%iw"%(config["PC_width"], )
-        generated_name += "_%iz"%(len(config["ZOLs"]), )
+
+        generated_name += "_%s"%str( hex( zlib.adler32(str(config["ZOLs"]).encode('utf-8')) )).lstrip("0x").zfill(8)
 
         return generated_name
     else:

@@ -50,7 +50,7 @@ def run_toolchain(
         output_dir
     )
 
-def run_simulation(files, simulate_dir, part):
+def run_simulation(files, simulate_dir, part, time="100 us"):
     if not os.path.exists(simulate_dir):
         os.mkdir(simulate_dir)
 
@@ -74,7 +74,7 @@ def run_simulation(files, simulate_dir, part):
 
         # Run simulation
         f.write("launch_simulation -simset [current_fileset -simset];\n")
-        f.write("run 100 us;\n")
+        f.write("run %s;\n"%(time,))
         f.write("close_sim -force;\n")
 
     print("Running Vivado")

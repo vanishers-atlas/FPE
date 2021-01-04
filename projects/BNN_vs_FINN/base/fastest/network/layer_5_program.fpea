@@ -1,0 +1,202 @@
+{
+	DEF input_r  16 ;
+	DEF input_c  16 ;
+	DEF input_d  128 ;
+	DEF number_kernals 128 ;
+
+	// Define meaningfully names for Block access managers
+	DEF inputs_writes   0 ;
+	DEF inputs_read_r0  1 ;
+	DEF inputs_read_r1  2 ;
+	DEF inputs_read_r2  3 ;
+	DEF kenrals         4 ;
+	DEF threasholds     5 ;
+	
+	// Reset all BAMs
+	RESET BAM[inputs_writes];
+	RESET BAM[inputs_read_r0];
+	RESET BAM[inputs_read_r1];
+	RESET BAM[inputs_read_r2];
+	RESET BAM[threasholds];
+	
+	// Write packing for first row of input
+	ZOL ((input_c + 2) * input_d)
+	{
+		MOV( 0, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+	}
+	
+	// Read first line of data
+	ZOL (input_d)
+	{
+		MOV( 0, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+	}
+	ZOL (input_c * input_d)
+	{
+		MOV( GET[0]<ADV>, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+	}
+	ZOL (input_d)
+	{
+		MOV( 0, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+	}
+	
+	// Process body of sliding window
+	ZOL (input_r - 1)
+	{
+		// Read next line of data
+		ZOL (input_d)
+		{
+			MOV( 0, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+		}
+		ZOL (input_c * input_d)
+		{
+			MOV( GET[0]<ADV>, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+		}
+		ZOL (input_d)
+		{
+			MOV( 0, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+		}
+		
+		// Handle each col of sliding window
+		ZOL (input_c)
+		{
+			// Reset kenral BAM to start at first kernal
+			RESET BAM[kenrals];
+			NOP;
+			NOP;
+			
+			// Process each kernal
+			ZOL (number_kernals)
+			{
+				// Handle kernal row 0
+				XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], REG[0] ) ; // Overwrite popcountA
+				XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], REG[1] ) ; // Overwrite popcountA
+				ZOL ((3 * input_d - 2) / 2)
+				{
+					XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+					ADD ( REG[0], ACC, REG[0]) ;
+					XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+					ADD ( REG[1], ACC, REG[1]) ;
+				}
+				
+				// Push row's BAM back to cols worth
+				SEEK BAM[inputs_read_r0] (3*input_d)<BACKWARD>;
+				
+				// Handle kernal row 1
+				ZOL (3 * input_d / 2)
+				{
+					XOR ( RAM[BAM[inputs_read_r1]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+					ADD ( REG[0], ACC, REG[0]) ;
+					XOR ( RAM[BAM[inputs_read_r1]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+					ADD ( REG[1], ACC, REG[1]) ;
+				}
+				
+				// Push row's BAM back to cols worth
+				SEEK BAM[inputs_read_r1] (3*input_d)<BACKWARD>;
+				
+				// Handle kernal row 2
+				ZOL (3 * input_d / 2)
+				{
+					XOR ( RAM[BAM[inputs_read_r2]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+					ADD ( REG[0], ACC, REG[0]) ;
+					XOR ( RAM[BAM[inputs_read_r2]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+					ADD ( REG[1], ACC, REG[1]) ;
+				}
+				
+				// Push row's BAM back to cols worth
+				SEEK BAM[inputs_read_r2] (3*input_d)<BACKWARD>;
+				
+				// Add popcountA and popcountB to get full popcount
+				// At this point popcountB (REG[1]) isn't fetchable, but is still in ACC
+				ADD ( REG[0], ACC, ACC) ;
+				
+				// output the most significent bit of the difference between the popcount and the threashold
+				// Evalation to a sign function on the difference
+				SUB(ROM[BAM[threasholds]<FORWARD>], ACC, ACC);
+				RSH(ACC, 11, PUT[0]); // Shift by lg(3 * 3 * input_d + 1) - 1 bits to get the MSB
+				}
+				
+				// Advance input bams to next col
+				SEEK BAM[inputs_read_r0] (input_d) <FORWARD> ;
+				SEEK BAM[inputs_read_r1] (input_d) <FORWARD> ;
+				SEEK BAM[inputs_read_r2] (input_d) <FORWARD> ;
+			}
+		// Advance input bams to nect row
+		SEEK BAM[inputs_read_r0] (2*input_d) <FORWARD> ;
+		SEEK BAM[inputs_read_r1] (2*input_d) <FORWARD> ;
+		SEEK BAM[inputs_read_r2] (2*input_d) <FORWARD> ;
+	}
+	NOP;
+	
+	// Process last of sliding window
+	// Write packing for first row of input
+	ZOL ((input_c + 2) * input_d)
+	{
+		MOV( 0, RAM[BAM[inputs_writes]<FORWARD>] ) ;
+	}
+	
+	// Handle each col of sliding window
+	ZOL (input_c)
+	{
+		// Reset kenral BAM to start at first kernal
+		RESET BAM[kenrals];
+		NOP;
+		NOP;
+		
+		// Process each kernal
+		ZOL (number_kernals)
+		{
+			// Handle kernal row 0
+			XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], REG[0] ) ; // Overwrite popcountA
+			XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], REG[1] ) ; // Overwrite popcountA
+			ZOL ((3 * input_d - 2) / 2)
+			{
+				XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+				ADD ( REG[0], ACC, REG[0]) ;
+				XOR ( RAM[BAM[inputs_read_r0]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+				ADD ( REG[1], ACC, REG[1]) ;
+			}
+			
+			// Push row's BAM back to cols worth
+			SEEK BAM[inputs_read_r0] (3*input_d)<BACKWARD>;
+			
+			// Handle kernal row 1
+			ZOL (3 * input_d / 2)
+			{
+				XOR ( RAM[BAM[inputs_read_r1]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+				ADD ( REG[0], ACC, REG[0]) ;
+				XOR ( RAM[BAM[inputs_read_r1]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+				ADD ( REG[1], ACC, REG[1]) ;
+			}
+			
+			// Push row's BAM back to cols worth
+			SEEK BAM[inputs_read_r1] (3*input_d)<BACKWARD>;
+			
+			// Handle kernal row 2
+			ZOL (3 * input_d / 2)
+			{
+				XOR ( RAM[BAM[inputs_read_r2]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+				ADD ( REG[0], ACC, REG[0]) ;
+				XOR ( RAM[BAM[inputs_read_r2]<FORWARD>], ROM[BAM[kenrals]<FORWARD>], ACC ) ;
+				ADD ( REG[1], ACC, REG[1]) ;
+			}
+			
+			// Push row's BAM back to cols worth
+			SEEK BAM[inputs_read_r2] (3*input_d)<BACKWARD>;
+			
+			// Add popcountA and popcountB to get full popcount
+			// At this point popcountB (REG[1]) isn't fetchable, but is still in ACC
+			ADD ( REG[0], ACC, ACC) ;
+			
+			// output the most significent bit of the difference between the popcount and the threashold
+			// Evalation to a sign function on the difference
+			SUB(ROM[BAM[threasholds]<FORWARD>], ACC, ACC);
+			RSH(ACC, 11, PUT[0]); // Shift by lg(3 * 3 * input_d + 1) - 1 bits to get the MSB
+		}
+		
+		// Advance input bams to nect col
+		SEEK BAM[inputs_read_r0] (input_d) <FORWARD> ;
+		SEEK BAM[inputs_read_r1] (input_d) <FORWARD> ;
+		SEEK BAM[inputs_read_r2] (input_d) <FORWARD> ;
+	}
+	NOP;
+}

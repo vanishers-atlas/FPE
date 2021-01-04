@@ -1,0 +1,40 @@
+{
+	"SIMD": {
+		"lanes": 1
+	},
+	"address_sources": {
+		"BAM_0": {
+			"addr_max": 1023,
+			"offset_max": 1023,
+			"step_max": 256
+		},
+		"BAM_1": {
+			"addr_max": 1023,
+			"offset_max": 1023,
+			"step_max": 256
+		}
+	},
+	"data_memories": {
+		"GET": {
+			"FIFOs": 1,
+			"can_stall": false,
+			"data_width": 1
+		},
+		"PUT": {
+			"FIFOs": 1,
+			"can_stall": false,
+			"data_width": 1
+		},
+		"RAM": {
+			"data_width": 1,
+			"depth": 1024
+		}
+	},
+	"execute_units": {
+		"ALU": {
+			"data_width": 1
+		}
+	},
+	"instr_decoder": {},
+	"program_flow": {}
+}

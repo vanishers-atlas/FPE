@@ -1,0 +1,41 @@
+{
+    "VHD_hash": 2176136304,
+    "generics": [],
+    "ports": [
+        {
+            "direction": "in",
+            "name": "clock",
+            "type": "std_logic"
+        },
+        {
+            "direction": "in",
+            "name": "input_data",
+            "type": "std_logic_vector(0 downto 0)"
+        },
+        {
+            "direction": "in",
+            "name": "input_write",
+            "type": "std_logic"
+        },
+        {
+            "direction": "out",
+            "name": "input_ready",
+            "type": "std_logic"
+        },
+        {
+            "direction": "out",
+            "name": "output_data",
+            "type": "std_logic_vector(9 downto 0)"
+        },
+        {
+            "direction": "in",
+            "name": "output_read",
+            "type": "std_logic"
+        },
+        {
+            "direction": "out",
+            "name": "output_ready",
+            "type": "std_logic"
+        }
+    ]
+}

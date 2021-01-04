@@ -11,15 +11,6 @@ from FPE.toolchain.HDL_generation import utils as gen_utils
 
 import math
 
-
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
-        generated_name = "FIFO_%iw_%id"%(config["width"], config["depth"])
-
-        return generated_name
-    else:
-        return module_name
-
 #####################################################################
 
 def preprocess_config(config_in):
@@ -28,7 +19,11 @@ def preprocess_config(config_in):
     #import json
     #print(json.dumps(config_in, indent=2, sort_keys=True))
 
-    raise NotImplementedError()
+    assert(config_in["depth"] >= 1)
+    config_out["depth"] = config_in["depth"]
+
+    assert(config_in["width"] >= 1)
+    config_out["width"] = config_in["width"]
 
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
@@ -37,9 +32,10 @@ def preprocess_config(config_in):
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-        generated_name = ""
+        generated_name = "FIFO"
 
-        raise NotImplementedError()
+        generated_name += "_%iw"%(config["width"], )
+        generated_name += "_%id"%(config["depth"], )
 
         return generated_name
     else:

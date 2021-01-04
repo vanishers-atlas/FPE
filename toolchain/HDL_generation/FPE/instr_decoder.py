@@ -531,7 +531,7 @@ def generate_fetch_signals():
             sel_width = tc_utils.unsigned.width(len(read_details["addr"]) - 1)
 
             value_opcode_table = {}
-            for mux_index, signal_details in enumerate(read_details["addr"]):
+            for mux_index, signal_details in enumerate(sorted(read_details["addr"], key=lambda x : x["signal"])):
                 sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
                 for instr_id, instr_val in CONFIG["instr_set"].items():
                     fetches = asm_utils.instr_fetches(instr_id)
@@ -734,7 +734,7 @@ def generate_exe_signals():
                 sel_width = tc_utils.unsigned.width(len(srcs) - 1)
 
                 value_opcode_table = {}
-                for mux_index, src in enumerate(srcs):
+                for mux_index, src in enumerate(sorted(srcs, key=lambda d : d["signal"] )):
                     sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
                     for instr_id, instr_val in CONFIG["instr_set"].items():
                         exe_unit =  asm_utils.instr_exe_unit(instr_id)

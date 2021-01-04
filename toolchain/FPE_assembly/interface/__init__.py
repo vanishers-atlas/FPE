@@ -1,6 +1,5 @@
 from .load_file import load_file
 from .evaluate_expr import evaluate_expr
-from .token_handling import *
 
 from .get_component import get_component_addr
 from .get_component import get_component_access

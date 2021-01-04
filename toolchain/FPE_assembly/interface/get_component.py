@@ -1,7 +1,7 @@
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
-from FPE.toolchain.FPE_assembly.interface.error_reporting import ctx_start
-from FPE.toolchain.FPE_assembly.interface.evaluate_expr import evaluate_expr
+from FPE.toolchain.FPE_assembly import utils as asm_utils
+from FPE.toolchain.FPE_assembly import interface as asm_inter
 
 def get_component_addr(ctx, program_context):
     if   type(ctx) == parser.Addr_literalContext:
@@ -25,13 +25,13 @@ def get_component_addr_literal(ctx, program_context):
 
 def get_component_addr_bam(ctx, program_context):
     if ctx.expr():
-        return "BAM_%i"%(evaluate_expr(ctx.expr(), program_context) )
+        return "BAM_%i"%(asm_inter.evaluate_expr(ctx.expr(), program_context) )
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -71,7 +71,7 @@ def get_component_access_fetch(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -87,7 +87,7 @@ def get_component_access_store(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -143,14 +143,14 @@ def get_component_op_bam(ctx, program_context):
         child_ctx = ctx.children[0]
         if child_ctx.expr():
             return "BAM_%i"%(
-                evaluate_expr(child_ctx.expr(), program_context)
+                asm_inter.evaluate_expr(child_ctx.expr(), program_context)
             )
         else:
             raise NotImplementedError(
                 "%s without a supported subrule at %s"%
                 (
                     type(child_ctx),
-                    ctx_start(child_ctx),
+                    asm_utils.ctx_start(child_ctx),
                 )
             )
     else:
@@ -158,7 +158,7 @@ def get_component_op_bam(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -177,7 +177,7 @@ def get_component_op_alu(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                ctx_start(ctx)),
+                asm_utils.ctx_start(ctx)),
             )
 
 def get_component_op_void(ctx, program_context):
@@ -195,5 +195,5 @@ def get_component_op_pc(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                ctx_start(ctx)),
+                asm_utils.ctx_start(ctx)),
             )

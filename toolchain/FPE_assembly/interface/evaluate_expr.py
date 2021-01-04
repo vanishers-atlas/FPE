@@ -1,6 +1,6 @@
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser
 
-from FPE.toolchain.FPE_assembly.interface import token_handling
+from FPE.toolchain.FPE_assembly import utils as asm_utils
 
 def evaluate_expr(ctx, program_context):
     if type(ctx) != FPE_assemblyParser.ExprContext:
@@ -16,7 +16,7 @@ def evaluate_expr(ctx, program_context):
         rhs = evaluate_expr(ctx.expr()[1], program_context)
 
         # Lookup operation and carry it out
-        operation = token_handling.token_to_text(ctx.additive)
+        operation = asm_utils.token_to_text(ctx.additive)
         if   operation == "+": return lhs + rhs
         elif operation == "-": return lhs - rhs
         else:
@@ -28,7 +28,7 @@ def evaluate_expr(ctx, program_context):
         rhs = evaluate_expr(ctx.expr()[1], program_context)
 
         # Lookup operation and carry it out
-        operation = token_handling.token_to_text(ctx.multiplicative)
+        operation = asm_utils.token_to_text(ctx.multiplicative)
         if   operation == "*": return lhs * rhs
         elif operation == "/": return int(lhs / rhs)
         elif operation == "%": return lhs % rhs

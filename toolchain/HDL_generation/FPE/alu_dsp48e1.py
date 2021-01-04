@@ -527,7 +527,7 @@ def get_DSP_OP_MODE(oper):
         elif inputs[0] == "acc" and inputs[1] == "fetch":
             return "".join(
                 [
-                    "100",  # Z => P
+                    "010",  # Z => P
                     "11",   # Y => C
                     "00",   # X => 0
                 ]
@@ -683,7 +683,7 @@ def get_DSP_ALU_MODE(oper):
         if   inputs[0] == "fetch":
             return "1101" # P => X OR (NOT Z)
         elif inputs[0] == "acc":
-            return "1101", # P => X OR (NOT Z)
+            return "1101" # P => X OR (NOT Z)
         else:
             raise NotImplementedError(oper)
     elif gen_utils.oper_mnemonic(oper) == "OR":
@@ -1314,7 +1314,7 @@ def handle_shifter():
                 ARCH_BODY += "shifter_out <= (%s, others => '0');\n"%(
                     ", ".join(
                         [
-                            "(%i) => in_0(%i)"%(i, i - bits)
+                            "(%i) => shifter_in(%i)"%(i, i - bits)
                             for i in range(bits, CONFIG["data_width"], 1)
                         ]
                     ),
@@ -1324,7 +1324,7 @@ def handle_shifter():
                 ARCH_BODY += "shifter_out <= (%s, others => '0');\n"%(
                     ", ".join(
                         [
-                            "(%i) => in_0(%i)"%(i - bits, i)
+                            "(%i) => shifter_in(%i)"%(i - bits, i)
                             for i in range(bits, CONFIG["data_width"], 1)
                         ]
                     ),
@@ -1354,7 +1354,7 @@ def handle_shifter():
                     ARCH_BODY += "(%s, others => '0') when shift_sel = \"%s\"\nelse "%(
                         ", ".join(
                             [
-                                "(%i) => in_0(%i)"%(i, i - bits)
+                                "(%i) => shifter_in(%i)"%(i, i - bits)
                                 for i in range(bits, CONFIG["data_width"], 1)
                             ]
                         ),
@@ -1365,7 +1365,7 @@ def handle_shifter():
                     ARCH_BODY += "(%s, others => '0') when shift_sel = \"%s\"\nelse "%(
                         ", ".join(
                             [
-                                "(%i) => in_0(%i)"%(i - bits, i)
+                                "(%i) => shifter_in(%i)"%(i - bits, i)
                                 for i in range(bits, CONFIG["data_width"], 1)
                             ]
                         ),

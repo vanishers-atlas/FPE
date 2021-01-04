@@ -2,10 +2,8 @@ import antlr4
 
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
-from FPE.toolchain.FPE_assembly.interface import error_reporting
-from FPE.toolchain.FPE_assembly.interface import evaluate_expr
-from FPE.toolchain.FPE_assembly.interface import get_component
-from FPE.toolchain.FPE_assembly.interface import token_handling
+from FPE.toolchain.FPE_assembly import utils as asm_utils
+from FPE.toolchain.FPE_assembly import interface as asm_inter
 
 def generate_instr(ctx, program_context):
     if type(ctx) == parser.OperationContext:
@@ -30,7 +28,7 @@ def generate_instr_op(ctx, program_context):
             "%s without a supported subrule at %s"%
                 (
                     type(ctx),
-                    error_reporting.ctx_start(ctx)
+                    asm_utils.ctx_start(ctx)
                 )
             )
 
@@ -46,7 +44,7 @@ def generate_instr_op_void(ctx, program_context):
                 # Sources
                 "~".join([]),
                 # Exe
-                get_component.get_component_op(ctx, program_context),
+                asm_inter.get_component_op(ctx, program_context),
                 # Dests
                 "~".join([]),
                 # Mods
@@ -58,7 +56,7 @@ def generate_instr_op_void(ctx, program_context):
             "%s without a supported subrule at %s"%
                 (
                     type(ctx),
-                    error_reporting.ctx_start(ctx)
+                    asm_utils.ctx_start(ctx)
                 )
             )
 
@@ -70,7 +68,7 @@ def generate_instr_op_pc(ctx, program_context):
         return "#".join(
             [
                 # Mnemonic
-                token_handling.token_to_text(ctx.op_pc_jump().mnemonic),
+                asm_utils.token_to_text(ctx.op_pc_jump().mnemonic),
                 # Sources
                 "~".join(
                     [
@@ -78,7 +76,7 @@ def generate_instr_op_pc(ctx, program_context):
                     ]
                 ),
                 # Exe
-                get_component.get_component_op(ctx, program_context),
+                asm_inter.get_component_op(ctx, program_context),
                 # Dests
                 "~".join([]),
                 # Mods
@@ -90,7 +88,7 @@ def generate_instr_op_pc(ctx, program_context):
             "%s without a supported subrule at %s"%
                 (
                     type(ctx),
-                    error_reporting.ctx_start(ctx)
+                    asm_utils.ctx_start(ctx)
                 )
             )
 
@@ -106,7 +104,7 @@ def generate_instr_op_bam(ctx, program_context):
             "%s without a supported subrule at %s"%
                 (
                     type(ctx),
-                    error_reporting.ctx_start(ctx)
+                    asm_utils.ctx_start(ctx)
                 )
             )
 
@@ -119,7 +117,7 @@ def generate_instr_op_bam_reset(ctx, program_context):
             # Sources
             "~".join([]),
             # Exe
-            get_component.get_component_op(ctx, program_context),
+            asm_inter.get_component_op(ctx, program_context),
             # Dests
             "~".join([]),
             # Mods
@@ -144,7 +142,7 @@ def generate_instr_op_bam_seek(ctx, program_context):
             # Sources
             generate_instr_access(ctx.access_fetch(), program_context),
             # Exe
-            get_component.get_component_op(ctx, program_context),
+            asm_inter.get_component_op(ctx, program_context),
             # Dests
             "~".join([]),
             # Mods
@@ -168,7 +166,7 @@ def generate_instr_op_alu(ctx, program_context):
             "%s without a supported subrule at %s"%
                 (
                     type(ctx),
-                    error_reporting.ctx_start(ctx)
+                    asm_utils.ctx_start(ctx)
                 )
             )
 
@@ -177,7 +175,7 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
     return "#".join(
         [
             # Mnemonic
-            token_handling.token_to_text(ctx.mnemonic),
+            asm_utils.token_to_text(ctx.mnemonic),
             # Sources
             "~".join(
                 [
@@ -185,7 +183,7 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
                 ]
             ),
             # Exe
-            get_component.get_component_op(ctx, program_context),
+            asm_inter.get_component_op(ctx, program_context),
             # Dests
             "~".join(
                 [
@@ -203,8 +201,8 @@ def generate_instr_op_alu_shifts(ctx, program_context):
         [
             # Mnemonic
             "%s_%s"%(
-                token_handling.token_to_text(ctx.mnemonic),
-                evaluate_expr(ctx.expr(), program_context)
+                asm_utils.token_to_text(ctx.mnemonic),
+                asm_inter.evaluate_expr(ctx.expr(), program_context)
             ),
             # Sources
             "~".join(
@@ -213,7 +211,7 @@ def generate_instr_op_alu_shifts(ctx, program_context):
                 ]
             ),
             # Exe
-            get_component.get_component_op(ctx, program_context),
+            asm_inter.get_component_op(ctx, program_context),
             # Dests
             "~".join(
                 [
@@ -230,7 +228,7 @@ def generate_instr_op_alu_2f_0s(ctx, program_context):
     return "#".join(
         [
             # Mnemonic
-            token_handling.token_to_text(ctx.mnemonic),
+            asm_utils.token_to_text(ctx.mnemonic),
             # Sources
             "~".join(
                 [
@@ -239,7 +237,7 @@ def generate_instr_op_alu_2f_0s(ctx, program_context):
                 ]
             ),
             # Exe
-            get_component.get_component_op(ctx, program_context),
+            asm_inter.get_component_op(ctx, program_context),
             # Dests
             "~".join([]),
             # Mods
@@ -252,7 +250,7 @@ def generate_instr_op_alu_2f_1s(ctx, program_context):
     return "#".join(
         [
             # Mnemonic
-            token_handling.token_to_text(ctx.mnemonic),
+            asm_utils.token_to_text(ctx.mnemonic),
             # Sources
             "~".join(
                 [
@@ -261,7 +259,7 @@ def generate_instr_op_alu_2f_1s(ctx, program_context):
                 ]
             ),
             # Exe
-            get_component.get_component_op(ctx, program_context),
+            asm_inter.get_component_op(ctx, program_context),
             # Dests
             "~".join(
                 [
@@ -287,7 +285,7 @@ def generate_instr_access_alu(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                error_reporting.ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -312,7 +310,7 @@ def generate_instr_access(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                error_reporting.ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -371,7 +369,7 @@ def generate_instr_access_reg(ctx, program_context):
     # Handle speacil syntax for block access mod
     block_size = 1
     if ctx.expr() != None:
-        block_size = evaluate_expr(ctx.expr(), program_context)
+        block_size = asm_inter.evaluate_expr(ctx.expr(), program_context)
     mods.append("block_size;%i"%(block_size,))
 
     return "'".join(
@@ -392,7 +390,7 @@ def generate_instr_access_ram(ctx, program_context):
     # Handle speacil syntax for block access mod
     block_size = 1
     if ctx.expr() != None:
-        block_size = evaluate_expr(ctx.expr(), program_context)
+        block_size = asm_inter.evaluate_expr(ctx.expr(), program_context)
     mods.append("block_size;%i"%(block_size,))
 
     return "'".join(
@@ -413,7 +411,7 @@ def generate_instr_access_rom(ctx, program_context):
     # Handle speacil syntax for block access mod
     block_size = 1
     if ctx.expr() != None:
-        block_size = evaluate_expr(ctx.expr(), program_context)
+        block_size = asm_inter.evaluate_expr(ctx.expr(), program_context)
     mods.append("block_size;%i"%(block_size,))
 
     return "'".join(
@@ -440,7 +438,7 @@ def generate_instr_addr(ctx, program_context):
             "%s without a supported subrule at %s"%
             (
                 type(ctx),
-                error_reporting.ctx_start(ctx),
+                asm_utils.ctx_start(ctx),
             )
         )
 
@@ -462,7 +460,7 @@ def generate_instr_addr_bam(ctx, program_context):
     return ";".join(
         [
             # Com
-            get_component.get_component_addr(ctx, program_context),
+            asm_inter.get_component_addr(ctx, program_context),
             # Port
             "0",
             # Mods
