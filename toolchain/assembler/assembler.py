@@ -119,6 +119,9 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
         handler = IMM_handling.handler(program_context)
         walker.walk(handler, program_context["program_tree"])
         imm_data, program_context["IMM_addr_map"]  = handler.get_output()
+        # TEMP, pad imm_data to correct depth, should only trigger when a jump label and an imm operand share the same value
+        for i in range(len(imm_data), config["data_memories"]["IMM"]["depth"]):
+            imm_data[i] = 0
         write_mif_file(output_path + "\\" + imm_file, config["data_memories"]["IMM"]["depth"], config["data_memories"]["IMM"]["data_width"], imm_data)
         generics["IMM_mem_file"] = imm_file
     else:

@@ -31,7 +31,12 @@ import copy
 
 jump_exe_status_map = {
     "ALU" : {
-        "JLT" : ["lesser"]
+        "JEQ" : ["equal"],
+        "JNE" : ["lesser", "greater"],
+        "JLT" : ["lesser"],
+        "JLE" : ["equal", "lesser"],
+        "JGT" : ["greater"],
+        "JGE" : ["equal", "greater"],
     },
 }
 

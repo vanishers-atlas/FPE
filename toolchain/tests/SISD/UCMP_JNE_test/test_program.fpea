@@ -1,0 +1,90 @@
+{
+  ucmp_0_0:
+    UCMP(0x0, 0x0);
+    NOP;
+
+    JNE(ucmp_0_0_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_0_0_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_0_0_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_0_0_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_0_0_collect:
+      NOP;
+
+  ucmp_0_f:
+    UCMP(0x0, 0xf);
+    NOP;
+
+    JNE(ucmp_0_f_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_0_f_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_0_f_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_0_f_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_0_f_collect:
+      NOP;
+
+  ucmp_f_0:
+    UCMP(0xf, 0x0);
+    NOP;
+
+    JNE(ucmp_f_0_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_f_0_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_f_0_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_f_0_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_f_0_collect:
+      NOP;
+
+  ucmp_f_f:
+    UCMP(0xf, 0xf);
+    NOP;
+
+    JNE(ucmp_f_f_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_f_f_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_f_f_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_f_f_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_f_f_collect:
+      NOP;
+
+}

@@ -165,10 +165,10 @@ def get_component_op_bam(ctx, program_context):
 def get_component_op_alu(ctx, program_context):
     if any(
         [
-            ctx.op_alu_1f_1s(),
-            ctx.op_alu_shifts(),
-            ctx.op_alu_2f_0s(),
-            ctx.op_alu_2f_1s(),
+            ctx.op_alu_1o_1r(),
+            ctx.op_alu_1o_1e_1r(),
+            ctx.op_alu_2o_0r(),
+            ctx.op_alu_2o_1r(),
         ]
     ):
         return "ALU"

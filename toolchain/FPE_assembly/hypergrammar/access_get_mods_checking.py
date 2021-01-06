@@ -22,7 +22,7 @@ class extractor(ParseTreeListener):
     def enterAccess_get_mod(this, ctx):
         mod = ctx.getText()
         # Handle signel use flag mods
-        if mod in ["ADV"]:
+        if mod in ["ADV", "NO_ADV"]:
             # Check for repeats
             if mod in this.mods:
                 raise SyntaxError(
@@ -38,3 +38,15 @@ class extractor(ParseTreeListener):
             this.mods.append(mod)
         else:
             raise NotImplementedError("Unknown mod encountered, %s"%(mod))
+
+        # Ensure "ADV" and "NO_ADV" for exclusives
+        if "ADV" in this.mods and "NO_ADV" in this.mods:
+            raise SyntaxError(
+                "ERROR: Mutually exclusives mods included together (%s, and %s), in access from %s to %s"%
+                (
+                    "ADV",
+                    "NO_ADV",
+                    err_utils.ctx_start(this.enclosing_ctx),
+                    err_utils.ctx_end  (this.enclosing_ctx),
+                )
+            )

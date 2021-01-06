@@ -9,6 +9,10 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
+from FPE.toolchain.HDL_generation.memory import register
+
+import warnings
+
 #####################################################################
 
 from FPE.toolchain import FPE_assembly as asm_utils
@@ -41,6 +45,9 @@ def instr_to_oper(instr):
 def preprocess_config(config_in):
     config_out = {}
 
+    #import json
+    #print(json.dumps(config_in, indent=2, sort_keys=True))
+
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
 
@@ -67,7 +74,36 @@ def preprocess_config(config_in):
         if num_stores > config_out["outputs"]:
             raise ValueError("Operation, %s, requires outputs >= %i"%(oper, num_stores))
 
-    config_out["statuses"] = config_in["statuses"]
+    config_out["statuses"] = set()
+    config_out["delayed_statuses"] = set()
+    config_out["internal_statuses"] = set()
+    for status in config_in["statuses"]:
+        if   status == "equal":
+            config_out["statuses"].add("equal")
+
+            config_out["internal_statuses"].add("equal")
+        elif status == "lesser":
+            config_out["statuses"].add("lesser")
+
+            config_out["internal_statuses"].add("lesser")
+        elif status == "greater":
+            config_out["statuses"].add("greater")
+
+            config_out["internal_statuses"].add("greater")
+            config_out["internal_statuses"].add("lesser")
+            config_out["internal_statuses"].add("equal")
+        else:
+            raise ValueError("Unknown Status, %s, eqsuired from ALU"%(status, ))
+
+    if ( any([gen_utils.oper_mnemonic(oper) == "SCMP" for oper in config_out["oper_set"]])
+        and "lesser" in config_out["internal_statuses"]
+    ):
+        config_out["delayed_statuses"].add("operand_0_sign")
+        config_out["delayed_statuses"].add("operand_1_sign")
+
+
+    #print(json.dumps(config_out, indent=2, sort_keys=True))
+    #exit()
 
     return config_out
 
@@ -75,6 +111,9 @@ import zlib
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
+
+        #import json
+        #print(json.dumps(config, indent=2, sort_keys=True))
 
         generated_name = "ALU_48E1"
 
@@ -88,6 +127,9 @@ def handle_module_name(module_name, config, generate_name):
 
         # Append data width
         generated_name += "_%sw"%config["data_width"]
+
+        #print(generated_name)
+        #exit()
 
         return generated_name
     else:
@@ -105,7 +147,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
     GENERATE_NAME = generate_name
     FORCE_GENERATION = force_generation
 
-    # Load return variables from pre-existing file if allowed and can
+    # Load return variables from pre-exiting file if allowed and can
     try:
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
@@ -139,6 +181,9 @@ def populate_interface():
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["controls"] = {}
+
+    # Flag number of clock cycles needed
+    INTERFACE["cycles required"] = 1
 
 def generate_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -179,90 +224,103 @@ def generate_ports():
 
     # Generate data inputs
     for read in range(CONFIG["inputs"]):
-        for word in range(1): #TEMP
-            INTERFACE["ports"] += [
-                {
-                    "name" : "in_%i_word_%i"%(read, word,),
-                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                    "direction" : "in"
-                }
-            ]
+        INTERFACE["ports"] += [
+            {
+                "name" : "in_%i_word_0"%(read, ),
+                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
+                "direction" : "in"
+            }
+        ]
+
+        ARCH_HEAD += "signal in_%i : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1, )
+        ARCH_BODY += "in_%i <= in_%i_word_0;\n"%(read, read, )
 
     # Generate data outputs
     for write in range(CONFIG["outputs"]):
-        for word in range(1): #TEMP
-            INTERFACE["ports"] += [
-                {
-                    "name" : "out_%i_word_%i"%(write, word,),
-                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                    "direction" : "out"
-                }
-            ]
-
-    # Generate status outputs
-    for status in sorted(CONFIG["statuses"]):
         INTERFACE["ports"] += [
             {
-                "name" : "status_%s"%(status, ),
-                "type" : "std_logic",
+                "name" : "out_%i_word_0"%(write, ),
+                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "out"
             }
         ]
 
+        ARCH_HEAD += "signal out_%i : std_logic_vector(%i downto 0);\n"%(write, CONFIG["data_width"] - 1, )
+        ARCH_BODY += "out_%i_word_0 <= out_%i;\n"%(write, write, )
+
+    # Generate status outputs
+    INTERFACE["ports"] += [
+        {
+            "name" : "status_%s"%(port, ),
+            "type" : "std_logic",
+            "direction" : "out"
+        }
+        for port in sorted(CONFIG["statuses"])
+    ]
 
 #####################################################################
 
-def get_DSP_mappings(oper):
-    # Pass though slice
+def get_oper_details_DSP_slice(oper):
+    # Pass through slice opers
     if   gen_utils.oper_mnemonic(oper) == "MOV":
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => 0
+                        "00",   # X => 0
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
             }
         elif inputs[0] == "acc":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : None,
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "00",   # Y => 0
+                        "00",   # X => 0
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
             }
         else:
             raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
+    elif gen_utils.oper_mnemonic(oper).split("@")[0] in ["LSH", "RSH", "LRL", "RRL", ]:
         inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
+        if   inputs[0] in ["fetch", "acc"]:
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "shifter_out",
-                "D" : None,
-                "A:B" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return {
-                "A" : None,
-                "B" : None,
-                "C" : "shifter_out",
-                "D" : None,
-                "A:B" : None,
-            }
-        elif inputs[0] == "acc":
-            return {
-                "A" : None,
-                "B" : None,
-                "C" : "shifter_out",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "shifter_out",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => 0
+                        "00",   # X => 0
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
             }
         else:
             raise NotImplementedError(oper)
@@ -272,11 +330,75 @@ def get_DSP_mappings(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return {
-                "A" : "in_0",
-                "B" : "in_1",
-                "C" : None,
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : "in_0",
+                    "B" : "in_1",
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "000",  # Z => 0
+                        "01",   # Y => M
+                        "01",   # X => M
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
+            }
+        elif inputs[0] == "fetch" and inputs[1] == "acc":
+            return {
+                "mappings" : {
+                    "A" : "in_0",
+                    "B" : "acc",
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "000",  # Z => 0
+                        "01",   # Y => M
+                        "01",   # X => M
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
+            }
+        elif inputs[0] == "acc" and inputs[1] == "fetch":
+            return {
+                "mappings" : {
+                    "A" : "acc",
+                    "B" : "in_0",
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "000",  # Z => 0
+                        "01",   # Y => M
+                        "01",   # X => M
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
+            }
+        elif inputs[0] == "acc" and inputs[1] == "acc":
+            return {
+                "mappings" : {
+                    "A" : "acc",
+                    "B" : "acc",
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "000",  # Z => 0
+                        "01",   # Y => M
+                        "01",   # X => M
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
             }
         else:
             raise NotImplementedError(oper)
@@ -284,67 +406,133 @@ def get_DSP_mappings(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : "in_1",
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : "in_1",
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "000",  # Z => 0
+                        "11",   # Y => C
+                        "11",   # X => A:B
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
             }
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
+        elif inputs[0] in ["fetch", "acc",] and inputs[1] in ["fetch", "acc",] and inputs[0] != inputs[1]:
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "000",  # Z => 0
+                        "11",   # Y => C
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
+            }
+        elif inputs[0] == "acc" and inputs[1] == "acc":
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "00",   # Y => 0
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "0000" # P => Z + Y + X + CarryIn
             }
         else:
             raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "SUB":
+    elif gen_utils.oper_mnemonic(oper) in ["SUB", "UCMP", "SCMP", ]:
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : "in_1",
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : "in_1",
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => 0
+                        "11",   # X => A:B
+                    ]
+                ),
+                "ALU_MODE" : "0011" # P => Z - (Y + X + CarryIn)
             }
         elif inputs[0] == "fetch" and inputs[1] == "acc":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => 0
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "0011" # P => Z - (Y + X + CarryIn)
             }
         elif inputs[0] == "acc" and inputs[1] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "11",   # Y => C
+                        "00",   # X => 0
+                    ]
+                ),
+                "ALU_MODE" : "0011" # P => Z - (Y + X + CarryIn)
             }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "CMP":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
+        elif inputs[0] == "acc" and inputs[1] == "acc":
             return {
-                "A" : "in_0",
-                "B" : None,
-                "C" : None,
-                "D" : None,
-                "A:B" : "in_1",
-            }
-        elif inputs[0] == "acc"   and inputs[1] == "fetch":
-            return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "00",   # Y => 0
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "0011" # P => Z - (Y + X + CarryIn)
             }
         else:
             raise NotImplementedError(oper)
@@ -354,19 +542,39 @@ def get_DSP_mappings(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "10",   # Y => all 1s
+                        "00",   # X => 0
+                    ]
+                ),
+                "ALU_MODE" : "1101" # P => X OR (NOT Z)
             }
         elif inputs[0] == "acc":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : None,
-                "D" : None,
-                "A:B" : None,
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "10",   # Y => all 1s
+                        "00",   # X => 0
+                    ]
+                ),
+                "ALU_MODE" : "1101" # P => X OR (NOT Z)
             }
         else:
             raise NotImplementedError(oper)
@@ -374,11 +582,57 @@ def get_DSP_mappings(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : "in_1",
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : "in_1",
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "10",   # Y => used with ALU to select or
+                        "11",   # X => A:B
+                    ]
+                ),
+                "ALU_MODE" : "1100" # P => X and/or Z depening on Y op mod
+            }
+        elif inputs[0] in ["fetch", "acc",] and inputs[1] in ["fetch", "acc",] and inputs[0] != inputs[1]:
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "10",   # Y => used with ALU to select or
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "1100" # P => X and/or Z depening on Y op mod
+            }
+        elif inputs[0] == "acc" and inputs[1] == "acc":
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "10",   # Y => used with ALU to select or
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "1100" # P => X and/or Z depening on Y op mod
             }
         else:
             raise NotImplementedError(oper)
@@ -386,11 +640,57 @@ def get_DSP_mappings(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : "in_1",
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : "in_1",
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => used with ALU to select and
+                        "11",   # X => A:B
+                    ]
+                ),
+                "ALU_MODE" : "1100" # P => X and/or Z depening on Y op mod
+            }
+        elif inputs[0] in ["fetch", "acc",] and inputs[1] in ["fetch", "acc",] and inputs[0] != inputs[1]:
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => used with ALU to select and
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "1100" # P => X and/or Z depening on Y op mod
+            }
+        elif inputs[0] == "acc" and inputs[1] == "acc":
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "00",   # Y => used with ALU to select and
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "1100" # P => X and/or Z depening on Y op mod
             }
         else:
             raise NotImplementedError(oper)
@@ -398,310 +698,58 @@ def get_DSP_mappings(oper):
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch" and inputs[1] == "fetch":
             return {
-                "A" : None,
-                "B" : None,
-                "C" : "in_0",
-                "D" : None,
-                "A:B" : "in_1",
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : "in_1",
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => 0
+                        "11",   # X => A:B
+                    ]
+                ),
+                "ALU_MODE" : "0100" # P => X XOR Z
             }
-        else:
-            raise NotImplementedError(oper)
-
-    else:
-        raise NotImplementedError(oper)
-
-def get_DSP_OP_MODE(oper):
-    # Passthrough Operations
-    if   gen_utils.oper_mnemonic(oper) == "MOV":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "00",   # X => 0
-                ]
-            )
-        elif inputs[0] == "acc":
-            return "".join(
-                [
-                    "010",  # Z => P
-                    "00",   # Y => 0
-                    "00",   # X => 0
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "00",   # X => 0
-                ]
-            )
-        elif inputs[0] == "acc":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "00",   # X => 0
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "00",   # X => 0
-                ]
-            )
-        elif inputs[0] == "acc":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "00",   # X => 0
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-
-    # Arithmetic Operations
-    elif gen_utils.oper_mnemonic(oper) == "MUL":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "000",  # Z => 0
-                    "01",   # Y => M
-                    "01",   # X => M
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "ADD":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "000",  # Z => 0
-                    "11",   # Y => C
-                    "11",   # X => A:B
-                ]
-            )
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return "".join(
-                [
-                    "000",  # Z => 0
-                    "11",   # Y => C
-                    "10",   # X => P
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "SUB":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "11",   # X => A:B
-                ]
-            )
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "10",   # X => P
-                ]
-            )
-        elif inputs[0] == "acc" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "010",  # Z => P
-                    "11",   # Y => C
-                    "00",   # X => 0
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "CMP":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "11",   # X => A:B
-                ]
-            )
-        elif inputs[0] == "acc"   and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "010",  # Z => P
-                    "11",   # Y => C
-                    "00",   # X => 0
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-
-    # Logical Operations
-    elif gen_utils.oper_mnemonic(oper) == "NOT":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "10",   # Y => all 1s
-                    "00",   # X => 0
-                ]
-            )
-        elif inputs[0] == "acc":
-            return "".join(
-                [
-                    "010",  # Z => P
-                    "10",   # Y => all 1s
-                    "00",   # X => 0
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "OR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "10",   # Y => -1
-                    "11",   # X => A:B
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "AND":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "11",   # X => A:B
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "XOR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "".join(
-                [
-                    "011",  # Z => C
-                    "00",   # Y => 0
-                    "11",   # X => A:B
-                ]
-            )
-        else:
-            raise NotImplementedError(oper)
-
-    else:
-        raise NotImplementedError(oper)
-
-def get_DSP_ALU_MODE(oper):
-    # Passthrough Operations
-    if   gen_utils.oper_mnemonic(oper) == "MOV":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "0000" # P => Z + Y + X + CarryIn
-        elif inputs[0] == "acc":
-            return "0000" # P => Z + Y + X + CarryIn
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "0000" # P => Z + Y + X + CarryIn
-        elif inputs[0] == "acc":
-            return "0000" # P => Z + Y + X + CarryIn
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "0000" # P => Z + Y + X + CarryIn
-        elif inputs[0] == "acc":
-            return "0000" # P => Z + Y + X + CarryIn
-        else:
-            raise NotImplementedError(oper)
-
-    # Arithmetic Operations
-    elif gen_utils.oper_mnemonic(oper) == "MUL":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "0000" # P => Z + Y + X + CarryIn
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "ADD":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "0000" # P => Z + Y + X + CarryIn
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return "0000" # P => Z + Y + X + CarryIn
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "SUB":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "0011" # P => Z - (Y + X + CarryIn)
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return "0011" # P => Z - (Y + X + CarryIn)
-        elif inputs[0] == "acc" and inputs[1] == "fetch":
-            return "0011" # P => Z - (Y + X + CarryIn)
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "CMP":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "0011" # P => Z - (Y + X + CarryIn)
-        elif inputs[0] == "acc"   and inputs[1] == "fetch":
-            return "0011" # P => Z - (Y + X + CarryIn)
-        else:
-            raise NotImplementedError(oper)
-
-    # Logical Operations
-    elif gen_utils.oper_mnemonic(oper) == "NOT":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return "1101" # P => X OR (NOT Z)
-        elif inputs[0] == "acc":
-            return "1101" # P => X OR (NOT Z)
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "OR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "1100" # P => X and/or Z
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "AND":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "1100" # P => X and/or Z
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "XOR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return "0111" # P => X XOR Z
+        elif inputs[0] in ["fetch", "acc",] and inputs[1] in ["fetch", "acc",] and inputs[0] != inputs[1]:
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : "in_0",
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "011",  # Z => C
+                        "00",   # Y => 0
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "0100" # P => X XOR Z
+            }
+        elif inputs[0] == "acc" and inputs[1] == "acc":
+            return {
+                "mappings" : {
+                    "A" : None,
+                    "B" : None,
+                    "C" : None,
+                    "D" : None,
+                    "AB" : None,
+                },
+                "OP_MODE" : "".join(
+                    [
+                        "010",  # Z => P
+                        "00",   # Y => 0
+                        "10",   # X => P
+                    ]
+                ),
+                "ALU_MODE" : "0100" # P => X XOR Z
+            }
         else:
             raise NotImplementedError(oper)
 
@@ -721,14 +769,6 @@ def handle_DSP():
         }
     ]
 
-    for input in range(CONFIG["inputs"]):     #TEMP
-        ARCH_HEAD += "signal in_%i : std_logic_vector(%i downto 0);\n"%(input, CONFIG["data_width"] - 1, )
-        ARCH_BODY += "in_%i <= in_%i_word_0;\n"%(input, input, )
-    for output in range(CONFIG["outputs"]):    #TEMP
-        ARCH_HEAD += "signal out_%i : std_logic_vector(%i downto 0);\n"%(output, CONFIG["data_width"] - 1, )
-        ARCH_BODY += "out_%i_word_0 <= out_%i;\n"%(output, output, )
-
-
     ARCH_BODY += "DSP48E1_inst : DSP48E1\>\n"
 
     ARCH_BODY += "generic map (\>\n"
@@ -742,7 +782,7 @@ def handle_DSP():
     ARCH_BODY += "-- Disable pre_adder \n"
     ARCH_BODY += "USE_DPORT => FALSE,\n"
 
-    # Enable/ disable multiplier as needed
+    # Enable / Disable multiplier as needed
     ARCH_BODY += "-- Multiplier setting \n"
     multiplier_used = any(
         [
@@ -752,28 +792,41 @@ def handle_DSP():
     )
     AB_used = any(
         [
-            get_DSP_mappings(oper)["A:B"]
+            get_oper_details_DSP_slice(oper)["mappings"]["AB"] != None
             for oper in CONFIG["oper_set"]
         ]
     )
 
-    if multiplier_used == False:
+    if not multiplier_used:
         ARCH_BODY += "USE_MULT => \"NONE\",\n"
-    elif multiplier_used == True and AB_used == False:
+    elif multiplier_used and AB_used:
         ARCH_BODY += "USE_MULT => \"MULTIPLY\",\n"
-    elif multiplier_used == True and AB_used == True:
+    elif multiplier_used and AB_used:
         ARCH_BODY += "USE_MULT => \"DYNAMIC\",\n"
     else:
         raise ValueError("Unknown case for multiplier_used (%s) and AB_used (%s)"%(str(multiplier_used), str(AB_used)))
 
-    # Disable pattern Detector
-    ARCH_BODY += "-- Disable Pattern Detector \n"
-    ARCH_BODY += "USE_PATTERN_DETECT => \"NO_PATDET\",\n"
-    ARCH_BODY += "AUTORESET_PATDET   => \"NO_RESET\",\n"
-    ARCH_BODY += "MASK    => X\"3fffffffffff\",\n"
-    ARCH_BODY += "PATTERN => X\"000000000000\",\n"
-    ARCH_BODY += "SEL_MASK    => \"MASK\",\n"
-    ARCH_BODY += "SEL_PATTERN => \"PATTERN\",\n"
+    # Enable / Disable pattern Detector based on presentance of equal statuses
+    if "equal" in CONFIG["internal_statuses"]:
+        ARCH_BODY += "-- Disable Pattern Detector \n"
+        ARCH_BODY += "USE_PATTERN_DETECT => \"PATDET\",\n"
+        ARCH_BODY += "AUTORESET_PATDET   => \"NO_RESET\",\n"
+
+        # Set to only look at bits data_width -1 downto 0
+        bin_mask = "1" * (48 - CONFIG["data_width"]) + "0" * CONFIG["data_width"]
+        hex_mask = hex(int(bin_mask, 2))[2:]
+        ARCH_BODY += "MASK    => X\"%s\",\n"%(hex_mask, )
+        ARCH_BODY += "PATTERN => X\"000000000000\",\n"
+        ARCH_BODY += "SEL_MASK    => \"MASK\",\n"
+        ARCH_BODY += "SEL_PATTERN => \"PATTERN\",\n"
+    else:
+        ARCH_BODY += "-- Disable Pattern Detector \n"
+        ARCH_BODY += "USE_PATTERN_DETECT => \"NO_PATDET\",\n"
+        ARCH_BODY += "AUTORESET_PATDET   => \"NO_RESET\",\n"
+        ARCH_BODY += "MASK    => X\"3fffffffffff\",\n"
+        ARCH_BODY += "PATTERN => X\"000000000000\",\n"
+        ARCH_BODY += "SEL_MASK    => \"MASK\",\n"
+        ARCH_BODY += "SEL_PATTERN => \"PATTERN\",\n"
 
     # Handle SIMD
     ARCH_BODY += "-- Disable SIMD \n"
@@ -815,12 +868,20 @@ def handle_DSP():
     ARCH_BODY += "CARRYCASCOUT => open,\n"
     ARCH_BODY += "MULTSIGNOUT  => open,\n"
 
-    # Disable Pattern Detector
-    ARCH_BODY += "-- Disable Pattern Detector\n"
-    ARCH_BODY += "OVERFLOW  => open,\n"
-    ARCH_BODY += "UNDERFLOW => open,\n"
-    ARCH_BODY += "PATTERNDETECT  => open,\n"
-    ARCH_BODY += "PATTERNBDETECT => open,\n"
+    # Enable / Disable pattern Detector based on presentance of equal statuses
+    if "equal" in CONFIG["internal_statuses"]:
+        ARCH_BODY += "-- Disable Pattern Detector\n"
+        ARCH_BODY += "OVERFLOW  => open,\n"
+        ARCH_BODY += "UNDERFLOW => open,\n"
+        ARCH_HEAD += "signal pattern_found : std_logic;\n"
+        ARCH_BODY += "PATTERNDETECT  => pattern_found,\n"
+        ARCH_BODY += "PATTERNBDETECT => open,\n"
+    else:
+        ARCH_BODY += "-- Disable Pattern Detector\n"
+        ARCH_BODY += "OVERFLOW  => open,\n"
+        ARCH_BODY += "UNDERFLOW => open,\n"
+        ARCH_BODY += "PATTERNDETECT  => open,\n"
+        ARCH_BODY += "PATTERNBDETECT => open,\n"
 
     # Handle normal data output
     ARCH_BODY += "-- Handle normal data output\n"
@@ -833,45 +894,31 @@ def handle_DSP():
     ARCH_BODY += "-- Handle Control ports\n"
     ARCH_BODY += "CLK => clock,\n"
 
+    # Generate required DSP control signals for each oper
+    ALU_MODE = {}
+    OP_MODE = {}
 
-    # Generate DSP_ALU_MODE
-    DSP_ALU_MODE = {
-        "width" : 4,
-        "values" : {
-            oper : get_DSP_ALU_MODE(oper)
-            for oper in CONFIG["oper_set"]
-        }
-    }
+    for oper in CONFIG["oper_set"]:
+        oper_details = get_oper_details_DSP_slice(oper)
+        OP_MODE[oper]  = oper_details["OP_MODE"]
+        ALU_MODE[oper] = oper_details["ALU_MODE"]
 
-    # If only only 1 value tie to post
-    if len(set(DSP_ALU_MODE["values"].values())) == 1:
-        ARCH_BODY += "ALUMODE  => \"%s\",\n"%(
-            list(DSP_ALU_MODE["values"].values())[0]
-        )
-    # else create control port
+    if len(set(ALU_MODE.values())) != 1:
+        INTERFACE["controls"]["DSP_ALU_MODE"] = {}
+        INTERFACE["controls"]["DSP_ALU_MODE"]["width"] = 4
+        INTERFACE["controls"]["DSP_ALU_MODE"]["values"] = ALU_MODE
     else:
-        INTERFACE["controls"]["DSP_ALU_MODE"] = DSP_ALU_MODE
-        ARCH_BODY += "ALUMODE  => DSP_ALU_MODE,\n"
+        ARCH_HEAD += "constant DSP_ALU_MODE : std+logic_vector(3 downto 0) := \"%s\";\n"%(list(ALU_MODE.values())[0], )
 
-    # Generate DSP_OP_MODE
-    DSP_OP_MODE = {
-        "width" : 7,
-        "values" : {
-            oper : get_DSP_OP_MODE(oper)
-            for oper in CONFIG["oper_set"]
-        }
-    }
-
-    # If only only 1 value tie to post
-    if len(set(DSP_OP_MODE["values"].values())) == 1:
-        ARCH_BODY += "OPMODE  => \"%s\",\n"%(
-            list(DSP_OP_MODE["values"].values())[0]
-        )
-    # else create control port
+    if len(set(OP_MODE.values())) != 1:
+        INTERFACE["controls"]["DSP_OP_MODE"] = {}
+        INTERFACE["controls"]["DSP_OP_MODE"]["width"] = 7
+        INTERFACE["controls"]["DSP_OP_MODE"]["values"] = OP_MODE
     else:
-        INTERFACE["controls"]["DSP_OP_MODE"] = DSP_OP_MODE
-        ARCH_BODY += "OPMODE  => DSP_OP_MODE,\n"
+        ARCH_HEAD += "constant DSP_OP_MODE : std+logic_vector(6 downto 0) := \"%s\";\n"%(list(OP_MODE.values())[0], )
 
+    ARCH_BODY += "ALUMODE => DSP_ALU_MODE,\n"
+    ARCH_BODY += "OPMODE  => DSP_OP_MODE,\n"
     ARCH_BODY += "INMODE  => (others => '0'),\n"
     ARCH_BODY += "CARRYINSEL => (others => '0'),\n"
 
@@ -921,457 +968,506 @@ def handle_DSP():
 
     ARCH_BODY += "\<\n"
 
+    ####################################################################
+    #  Handle Data inputs
+    ####################################################################
+
     # Compute how slice input and AlU inputs connect
     data_mapping = {
         "A" : set(),
         "B" : set(),
         "C" : set(),
         "D" : set(),
-        "A:B" : set(),
+        "AB" : set(),
     }
     for oper in CONFIG["oper_set"]:
-        for port, input in get_DSP_mappings(oper).items():
+        for port, input in get_oper_details_DSP_slice(oper)["mappings"].items():
             if input != None:
                 data_mapping[port].add(input)
 
-    # Handle slice A
-    # Not used
-    if (    ( CONFIG["data_width"] <= 18 and len(data_mapping["A"]) == 0)
-        or  ( CONFIG["data_width"] >  18 and len(data_mapping["A"]) + len(data_mapping["A:B"]) == 0 )
-    ):
-        ARCH_BODY += "slice_A <= (others => '1');\n"
-    # Single source
-    elif(   ( CONFIG["data_width"] <= 18 and len(data_mapping["A"]) == 1)
-        or  ( CONFIG["data_width"] >  18 and len(data_mapping["A"]) + len(data_mapping["A:B"]) == 1 )
-    ):
-        # Acting as sole A input
-        if len(data_mapping["A"]) == 1:
-            if CONFIG["data_width"] > 30:
-                raise ValueError("slice_A can't handle data_widths larger than 30 bits")
 
-            ARCH_BODY += "slice_A(%i downto 0) <= %s;\n"%(CONFIG["data_width"] - 1, list(data_mapping["A"])[0])
-            if CONFIG["data_width"] < 30:
-                ARCH_BODY += "slice_A(29 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
-        # Acting as A:B input
+    # Handle slice_AB
+    if len(data_mapping["AB"]) != 0:
+        # Check data width
+        if CONFIG["data_width"] > 48:
+            raise ValueError("slice_AB can't handle data_widths larger than 48 bits")
+
+        # Declare signal and handle mapping signal to DSP ports
+        ARCH_HEAD += "signal slice_AB  : std_logic_vector (47 downto 0);\n"
+        data_mapping["B"].add("AB")
+        if CONFIG["data_width"] > 18:
+            data_mapping["A"].add("AB")
+
+        # Single source
+        if len(data_mapping["AB"]) == 1:
+            ARCH_BODY += "slice_AB <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["AB"])[0], CONFIG["data_width"], 48), )
+
+        # Multiple sources
         else:
-            if CONFIG["data_width"] > 48:
-                raise ValueError("A:B can't handle data_widths larger than 48 bits")
+            raise NotImplementedError()
 
-            ARCH_BODY += "slice_A(%i downto 0) <= %s(%s'left downto 18);\n"%(CONFIG["data_width"] - 18 - 1, list(data_mapping["A"])[0], list(data_mapping["A"])[0])
-            if CONFIG["data_width"] < 48:
-                ARCH_BODY += "slice_A(29 downto %i) <= (others => '0');\n"%(CONFIG["data_width"]  - 18, )
-    # Multiple sources
+
+    # slice_A not used
+    if len(data_mapping["A"]) == 0:
+        ARCH_BODY += "slice_A <= (others => '1');\n\n"
+    # slice_A only used by slice_AB
+    elif len(data_mapping["A"]) == 1 and list(data_mapping["A"])[0] == "AB":
+        ARCH_BODY += "slice_A <= slice_AB(47 downto 18);\n\n"
+    # slice_A used
     else:
-        raise NotImplementedError()
+        # Check data width
+        if CONFIG["data_width"] > 25:
+            warnings.warn("slice_A can only handle data_widths to up 25 bits, any bits outside 24 downto 0 will be ignored")
+        # Single src
+        if len(data_mapping["A"]) == 1:
+            ARCH_BODY += "slice_A <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["A"])[0], CONFIG["data_width"], 30), )
+        # Multiple sources,
+        else:
+            # Generate required control signals for each oper
+            INTERFACE["controls"]["DSP_A_SEL"] = {}
+            INTERFACE["controls"]["DSP_A_SEL"]["width"] = tc_utils.unsigned.width(len(data_mapping["A"]) - 1)
+            INTERFACE["controls"]["DSP_A_SEL"]["values"] = {}
 
-    # Handle slice B
-    # Not used
-    if ( len(data_mapping["B"] | data_mapping["A:B"]) == 0 ):
-        ARCH_BODY += "slice_B <= (others => '1');\n"
-    # Single source
-    elif( len(data_mapping["B"] | data_mapping["A:B"]) == 1 ):
-        # Acting as sole B width check
-        if len(data_mapping["A"]) == 1 and CONFIG["data_width"] > 18:
-            raise ValueError("slice_B can't handle data_widths larger than 18 bits")
+            sel_map = {
+                v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["DSP_A_SEL"]["width"] )
+                for i, v in enumerate(sorted(list(data_mapping["A"])))
+            }
 
-        ARCH_BODY += "slice_B(%i downto 0) <= %s;\n"%(CONFIG["data_width"] - 1, list(data_mapping["B"] | data_mapping["A:B"])[0])
-        if CONFIG["data_width"] < 18:
-            ARCH_BODY += "slice_B(17 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
-    # Multiple sources
+            # Concider AB concat as well as direct port A inputs
+            if "AB" in sel_map.keys():
+                for oper in CONFIG["oper_set"]:
+                    mapping = get_oper_details_DSP_slice(oper)["mappings"]
+
+                    if   mapping["AB"] == None and mapping["A"] == None:
+                        pass
+                    elif mapping["AB"] == None and mapping["A"] != None:
+                        INTERFACE["controls"]["DSP_A_SEL"]["values"][oper] = sel_map[mapping["A"]]
+                    elif mapping["AB"] != None and mapping["A"] == None:
+                        INTERFACE["controls"]["DSP_A_SEL"]["values"][oper] = sel_map["AB"]
+                    elif mapping["AB"] != None and mapping["A"] != None:
+                        raise VAlueError("slice_B can't be used as both port A and part of AB concat in the same oper")
+
+            # Concider Only direct port A inputs
+            else:
+                for oper in CONFIG["oper_set"]:
+                    mapping = get_oper_details_DSP_slice(oper)["mappings"]
+                    if mapping["A"] != None:
+                        INTERFACE["controls"]["DSP_A_SEL"]["values"][oper] = sel_map[mapping["A"]]
+
+            ARCH_BODY += "slice_A <=\>"
+            for src, control_code in sel_map.items():
+                # Handle A:B
+                if src == "AB":
+                    ARCH_BODY += "slice_AB(47 downto 18) when DSP_A_SEL = \"%s\"\nelse "%( control_code, )
+                # Handle direct src
+                else:
+                    ARCH_BODY += "%s when DSP_A_SEL = \"%s\"\nelse "%(
+                            gen_utils.connect_signals(src, CONFIG["data_width"], 30),
+                            control_code,
+                        )
+            ARCH_BODY += "(others => 'U');\<\n\n"
+
+
+    # slice_B not used
+    if len(data_mapping["B"]) == 0:
+        ARCH_BODY += "slice_B <= (others => '1');\n\n"
+    # slice_B only used by slice_AB
+    elif len(data_mapping["B"]) == 1 and list(data_mapping["B"])[0] == "AB":
+        ARCH_BODY += "slice_B <= slice_AB(17 downto 0);\n\n"
+    # slice_B used
     else:
-        raise NotImplementedError()
+        # Check data width
+        if CONFIG["data_width"] > 18:
+            warnings.warn("slice_B can only handle data_widths to up 18 bits, any bits outside 17 downto 0 will be ignored")
 
-    # Handle slice C
-    # Not used
+        # Single src
+        if len(data_mapping["B"]) == 1:
+            ARCH_BODY += "slice_B <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["B"])[0], CONFIG["data_width"], 30), )
+
+        # Multiple sources
+        else:
+            # Generate required control signals for each oper
+            INTERFACE["controls"]["DSP_B_SEL"] = {}
+            INTERFACE["controls"]["DSP_B_SEL"]["width"] = tc_utils.unsigned.width(len(data_mapping["B"]) - 1)
+            INTERFACE["controls"]["DSP_B_SEL"]["values"] = {}
+
+            sel_map = {
+                v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["DSP_B_SEL"]["width"] )
+                for i, v in enumerate(sorted(list(data_mapping["B"])))
+            }
+
+            # Concider AB concat as well as direct port B inputs
+            if "AB" in sel_map.keys():
+                for oper in CONFIG["oper_set"]:
+                    mapping = get_oper_details_DSP_slice(oper)["mappings"]
+
+                    if   mapping["AB"] == None and mapping["B"] == None:
+                        pass
+                    elif mapping["AB"] == None and mapping["B"] != None:
+                        INTERFACE["controls"]["DSP_B_SEL"]["values"][oper] = sel_map[mapping["B"]]
+                    elif mapping["AB"] != None and mapping["B"] == None:
+                        INTERFACE["controls"]["DSP_B_SEL"]["values"][oper] = sel_map["AB"]
+                    elif mapping["AB"] != None and mapping["B"] != None:
+                        raise VAlueError("slice_B can't be used as both port B and part of AB concat in the same oper")
+
+            # Concider Only direct port B inputs
+            else:
+                for oper in CONFIG["oper_set"]:
+                    mapping = get_oper_details_DSP_slice(oper)["mappings"]
+                    if mapping["B"] != None:
+                        INTERFACE["controls"]["DSP_B_SEL"]["values"][oper] = sel_map[mapping["B"]]
+
+            ARCH_BODY += "slice_B <=\>"
+            for src, control_code in sel_map.items():
+                # Handle A:B
+                if src == "AB":
+                    ARCH_BODY += "slice_AB(17 downto 0) when DSP_B_SEL = \"%s\"\nelse "%( control_code, )
+                # Handle direct src
+                else:
+                    ARCH_BODY += "%s when DSP_B_SEL = \"%s\"\nelse "%(
+                            gen_utils.connect_signals(src, CONFIG["data_width"], 18),
+                            control_code,
+                        )
+            ARCH_BODY += "(others => 'U');\<\n\n"
+
+
+    # slice_C not used
     if len(data_mapping["C"]) == 0:
-        ARCH_BODY += "slice_C <= (others => '1');\n"
-    # Single source
-    elif len(data_mapping["C"]) == 1:
+        ARCH_BODY += "slice_C <= (others => '1');\n\n"
+    # slice_C used
+    else:
+        # Check data width
         if CONFIG["data_width"] > 48:
             raise ValueError("slice_C can't handle data_widths larger than 48 bits")
 
-        ARCH_BODY += "slice_C <= %s;\n"%(gen_utils.connect_signals(list(data_mapping["C"])[0], CONFIG["data_width"], 48), )
-    # Multiple sources
-    else:
-        # Generate required control signals for each oper
-        INTERFACE["controls"]["DSP_C_SEL"] = {}
-        INTERFACE["controls"]["DSP_C_SEL"]["width"] = tc_utils.unsigned.width(len(data_mapping["C"]) - 1)
-        INTERFACE["controls"]["DSP_C_SEL"]["values"] = {}
+        # Single source
+        if len(data_mapping["C"]) == 1:
+            ARCH_BODY += "slice_C <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["C"])[0], CONFIG["data_width"], 48), )
+        # Multiple sources
+        else:
+            # Generate required control signals for each oper
+            INTERFACE["controls"]["DSP_C_SEL"] = {}
+            INTERFACE["controls"]["DSP_C_SEL"]["width"] = tc_utils.unsigned.width(len(data_mapping["C"]) - 1)
+            INTERFACE["controls"]["DSP_C_SEL"]["values"] = {}
 
-        sel_map = {
-            v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["DSP_C_SEL"]["width"] )
-            for i, v in enumerate(data_mapping["C"])
-        }
-        for oper in CONFIG["oper_set"]:
-            src = get_DSP_mappings(oper)["C"]
-            if src in sel_map.keys():
-                INTERFACE["controls"]["DSP_C_SEL"]["values"][oper] = sel_map[src]
+            sel_map = {
+                v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["DSP_C_SEL"]["width"] )
+                for i, v in enumerate(sorted(list(data_mapping["C"])))
+            }
 
-        ARCH_BODY += "slice_C <=\>"
-        for src, control_code in sel_map.items():
-            ARCH_BODY += "%s when DSP_C_SEL = \"%s\"\nelse "%(
-                    gen_utils.connect_signals(src, CONFIG["data_width"], 48),
-                    control_code,
-                )
-        ARCH_BODY += "(others => 'U')\<\n;"
+            for oper in CONFIG["oper_set"]:
+                mapping = get_oper_details_DSP_slice(oper)["mappings"]
+                if mapping["C"] != None:
+                    INTERFACE["controls"]["DSP_C_SEL"]["values"][oper] = sel_map[mapping["C"]]
 
-    # Handle slice D
-    # Not used
+            ARCH_BODY += "slice_C <=\>"
+            for src, control_code in sel_map.items():
+                ARCH_BODY += "%s when DSP_C_SEL = \"%s\"\nelse "%(
+                        gen_utils.connect_signals(src, CONFIG["data_width"], 48),
+                        control_code,
+                    )
+            ARCH_BODY += "(others => 'U');\<\n\n"
+
+
+    # slice_D not used
     if len(data_mapping["D"]) == 0:
-        ARCH_BODY += "slice_D <= (others => '1');\n"
-    # Single source
-    elif len(data_mapping["D"]) == 1:
+        ARCH_BODY += "slice_D <= (others => '1');\n\n"
+    # slice_D used
+    else:
         if CONFIG["data_width"] < 25:
             raise ValueError("slice_D can't handle data_widths larger than 25 bits")
 
-        ARCH_BODY += "slice_D(%i downto 0) <= %s;\n"%(CONFIG["data_width"] - 1, list(data_mapping["D"])[0])
-        if CONFIG["data_width"] < 25:
-            ARCH_BODY += "slice_D(25 downto %i) <= (others => '0');\n"%(CONFIG["data_width"], )
-    # Multiple sources
-    else:
         raise NotImplementedError()
 
 
-    # Connect data outputs
-    ARCH_HEAD += "signal ACC : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
-    ARCH_BODY += "ACC <= slice_p(ACC'left downto 0);\n"
+    ####################################################################
+    #  Handle Outputs
+    ####################################################################
 
-    ARCH_BODY += "out_0 <= ACC;\n"
-    if "lesser" in CONFIG["statuses"]:
-        ARCH_BODY += "status_lesser <= slice_p(out_0'left);\n"
+    # Connect data outputs
+    ARCH_HEAD += "signal acc : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
+    ARCH_BODY += "acc <= slice_p(out_0'left downto 0);\n\n"
+    ARCH_BODY += "out_0 <= acc;\n\n"
+
+    # Handle internal statuses
+    SCMP_used = any([gen_utils.oper_mnemonic(oper) == "SCMP" for oper in CONFIG["oper_set"]])
+    UCMP_used = any([gen_utils.oper_mnemonic(oper) == "UCMP" for oper in CONFIG["oper_set"]])
+
+    if "operand_0_sign" in CONFIG["delayed_statuses"]:
+        ARCH_HEAD += "signal operand_0_sign_in, operand_0_sign_out : std_logic;\n"
+        ARCH_BODY += "operand_0_sign_in <=\>in_0(in_0'left) when DSP_OP_MODE(5) = '1'\n"
+        ARCH_BODY += "else acc(acc'left) when DSP_OP_MODE(5) = '0'\n"
+        ARCH_BODY += "else 'U';\<\n\n"
+
+    if "operand_1_sign" in CONFIG["delayed_statuses"]:
+        ARCH_HEAD += "signal operand_1_sign_in, operand_1_sign_out : std_logic;\n"
+        ARCH_BODY += "operand_1_sign_in <=\>in_1(in_1'left) when DSP_OP_MODE(0) = '1'\n"
+        ARCH_BODY += "else acc(acc'left) when DSP_OP_MODE(0) = '0'\n"
+        ARCH_BODY += "else 'U';\<\n\n"
+
+    if len(CONFIG["delayed_statuses"]) != 0:
+        reg_interface, reg_name = register.generate_HDL(
+            {
+                "async_forces"  : 0,
+                "sync_forces"   : 0,
+                "has_enable"    : True
+            },
+            OUTPUT_PATH,
+            "register",
+            True,
+            False
+        )
+
+
+        # Buffer all delayed_statuses together
+        ARCH_HEAD += "signal delayed_statuses_in, delayed_statuses_out : std_logic_vector(%i downto 0);\n"%(len(CONFIG["delayed_statuses"]) - 1, )
+
+        ARCH_BODY += "delayed_statuses_reg : entity work.%s(arch)\>\n"%(reg_name, )
+
+        ARCH_BODY += "generic map ( data_width => %i )\n"%(len(CONFIG["delayed_statuses"]))
+
+        ARCH_BODY += "port map (\n\>"
+
+        if CONFIG["stallable"]:
+            ARCH_BODY += "enable  => enable and not stall,\n"
+        else:
+            ARCH_BODY += "enable  => enable,\n"
+
+        ARCH_BODY += "trigger => clock,\n"
+        ARCH_BODY += "data_in  => delayed_statuses_in,\n"
+        ARCH_BODY += "data_out => delayed_statuses_out\n"
+        ARCH_BODY += "\<);\<\n\n"
+
+        # Pack and unpack statuses into buffer
+        for i, status in enumerate(CONFIG["delayed_statuses"]):
+            ARCH_BODY += "delayed_statuses_in(%i) <= %s_in;\n"%(i, status, )
+            ARCH_BODY += "%s_out <= delayed_statuses_out(%i);\n"%(status, i, )
+
+    if "equal" in CONFIG["internal_statuses"]:
+        ARCH_HEAD += "signal internal_equal : std_logic;\n"
+        ARCH_BODY += "internal_equal <= pattern_found;\n\n"
+
+    if "lesser" in CONFIG["internal_statuses"]:
+        ARCH_HEAD += "signal internal_lesser : std_logic;\n"
+
+        if   SCMP_used and UCMP_used:
+            raise Error()
+        elif SCMP_used and not UCMP_used:
+            assert("operand_0_sign" in CONFIG["delayed_statuses"])
+            assert("operand_1_sign" in CONFIG["delayed_statuses"])
+            ARCH_BODY += "internal_lesser <=\>(operand_0_sign_out and not operand_1_sign_out) -- -ve - +ve; -ve < +ve\n"
+            ARCH_BODY += "or (operand_0_sign_out and acc(acc'left)) -- +ve - X => -ve, X either -ve (-ve < +ve) or X larger +ve (therefore <)\n"
+            ARCH_BODY += "or (not operand_1_sign_out and acc(acc'left));-- X - +ve => -ve, X either -ve (-ve < +ve) or X smaller +ve (therefore <)\<\n\n"
+        elif not SCMP_used and UCMP_used:
+            ARCH_BODY += "internal_lesser <= slice_p(acc'left + 1);\n\n"
+        else:
+            raise ValueError("Lesser internal status requires SCMP and/ot UCMP to be used")
+
+    if "greater" in CONFIG["internal_statuses"]:
+        ARCH_HEAD += "signal internal_greater : std_logic;\n"
+
+        assert("equal" in CONFIG["internal_statuses"])
+        assert("lesser" in CONFIG["internal_statuses"])
+
+        ARCH_BODY += "internal_greater <= internal_lesser nor internal_equal;\n\n"
+
+    # Connect output statuses
+    for status in sorted(CONFIG["statuses"]):
+        ARCH_BODY += "status_%s <= internal_%s;\n\n"%(status, status)
+
+
 
 #####################################################################
 
-def get_shifter_mappings(oper):
-    # Pass though slice
-    if   gen_utils.oper_mnemonic(oper) == "MOV":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return {
-                "in" : None,
-            }
-        elif inputs[0] == "acc":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return {
-                "in" : "in_0",
-            }
-        elif inputs[0] == "acc":
-            return {
-                "in" : "ACC",
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return {
-                "in" : "in_0",
-            }
-        elif inputs[0] == "acc":
-            return {
-                "in" : "ACC",
-            }
-        else:
-            raise NotImplementedError(oper)
+def get_oper_details_shifter(oper):
+    # Non shift operations
+    if   gen_utils.oper_mnemonic(oper) in [
+        "MOV",
+        "MUL", "ADD", "SUB", "UCMP", "SCMP",
+        "NOT", "OR", "AND", "XOR",
 
-    # Arithmetic Operations
-    elif gen_utils.oper_mnemonic(oper) == "MUL":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "ADD":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "SUB":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return {
-                "in" : None,
-            }
-        elif inputs[0] == "acc" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "CMP":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        elif inputs[0] == "acc"   and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-
-    # Logical Operations
-    elif gen_utils.oper_mnemonic(oper) == "NOT":
+    ]:
+        return {
+            "input" : None,
+            "bits"  : None,
+            "type"  : None,
+        }
+    elif gen_utils.oper_mnemonic(oper).split("@")[0] in ["LSH", "RSH", "LRL", "RRL", ]:
         inputs = gen_utils.oper_srcs(oper)
         if   inputs[0] == "fetch":
             return {
-                "in" : None,
+                "input" : "in_0",
+                "bits"  : int(gen_utils.oper_mnemonic(oper).split("@")[1]),
+                "type"  : gen_utils.oper_mnemonic(oper).split("@")[0],
             }
         elif inputs[0] == "acc":
             return {
-                "in" : None,
+                "input" : "acc",
+                "bits"  : int(gen_utils.oper_mnemonic(oper).split("@")[1]),
+                "type"  : gen_utils.oper_mnemonic(oper).split("@")[0],
             }
         else:
             raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "OR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "AND":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "XOR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return {
-                "in" : None,
-            }
-        else:
-            raise NotImplementedError(oper)
-
     else:
         raise NotImplementedError(oper)
 
-def get_shifter_modes(oper):
-    # Passthrough Operations
-    if   gen_utils.oper_mnemonic(oper) == "MOV":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return None
-        elif inputs[0] == "acc":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("LSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return gen_utils.oper_mnemonic(oper)
-        elif inputs[0] == "acc":
-            return gen_utils.oper_mnemonic(oper)
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper).startswith("RSH_"):
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return gen_utils.oper_mnemonic(oper)
-        elif inputs[0] == "acc":
-            return gen_utils.oper_mnemonic(oper)
-        else:
-            raise NotImplementedError(oper)
+def connect_LSH(bits):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Arithmetic Operations
-    elif gen_utils.oper_mnemonic(oper) == "MUL":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "ADD":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "SUB":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        elif inputs[0] == "fetch" and inputs[1] == "acc":
-            return None
-        elif inputs[0] == "acc" and inputs[1] == "fetch":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "CMP":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        elif inputs[0] == "acc"   and inputs[1] == "fetch":
-            return None
-        else:
-            raise NotImplementedError(oper)
+    return "(%s, others => '0')"%(
+        ", ".join(
+            [
+                "(%i) => shifter_in(%i)"%(i, i - bits)
+                for i in range(bits, CONFIG["data_width"], 1)
+            ]
+        )
+    )
 
-    # Logical Operations
-    elif gen_utils.oper_mnemonic(oper) == "NOT":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch":
-            return None
-        elif inputs[0] == "acc":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "OR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "AND":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        else:
-            raise NotImplementedError(oper)
-    elif gen_utils.oper_mnemonic(oper) == "XOR":
-        inputs = gen_utils.oper_srcs(oper)
-        if   inputs[0] == "fetch" and inputs[1] == "fetch":
-            return None
-        else:
-            raise NotImplementedError(oper)
+def connect_LRL(bits):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    else:
-        raise NotImplementedError(oper)
+    return "(%s)"%(
+        ", ".join(
+            [
+                "(%i) => shifter_in(%i)"%(i, (i - bits)%CONFIG["data_width"])
+                for i in range(CONFIG["data_width"])
+            ]
+        )
+    )
+
+def connect_RSH(bits):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    return "(%s, others => '0')"%(
+        ", ".join(
+            [
+                "(%i) => shifter_in(%i)"%(i - bits, i)
+                for i in range(bits, CONFIG["data_width"], 1)
+            ]
+        )
+    )
+
+def connect_RRL(bits):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    return "(%s)"%(
+        ", ".join(
+            [
+                "(%i) => shifter_in(%i)"%(i, (i + bits)%CONFIG["data_width"])
+                for i in range(CONFIG["data_width"])
+            ]
+        )
+    )
+
+shift_type_connect_map= {
+    "LSH" : connect_LSH,
+    "RSH" : connect_RSH,
+    "LRL" : connect_LRL,
+    "RRL" : connect_RRL,
+}
 
 def handle_shifter():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Compute how shift input and AlU inputs connect
-    data_mapping = {
-        "in" : set(),
-    }
+    # Collect all shifts from oper_set
+    shifts = []
     for oper in CONFIG["oper_set"]:
-        for port, input in get_shifter_mappings(oper).items():
-            if input != None:
-                data_mapping[port].add(input)
-    for k, v in data_mapping.items():
-        data_mapping[k] = list(sorted(v))
-
-    # Compute control signals for shifter
-    shifter_modes = set ()
-    for oper in CONFIG["oper_set"]:
-        mode = get_shifter_modes(oper)
-        if mode != None:
-            shifter_modes.add(mode)
-    shifter_modes = list(sorted(shifter_modes))
-
-    # Check both data_mapping and shifter_modes say the same thing
-    # Either there are are shifts, both return False
-    # or there are no shifts. both return True
-    assert((len(data_mapping["in"]) == 0) == (len(shifter_modes) == 0))
-
-    # Check it there are shifts
-    if len(shifter_modes) != 0:
-        # Declare shift output
-        ARCH_HEAD += "signal shifter_out : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"])
-
-        # Handle input muxing
-        if len(data_mapping["in"]) == 1:
-            ARCH_HEAD += "signal shifter_in : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] -1, )
-            ARCH_BODY += "shifter_in <= %s;\n"%(data_mapping["in"][0], )
-        else:
-            raise ImplementedError()
-
-        # Handle shifting logic
-        if len(shifter_modes) == 1:
-            dir, bits = shifter_modes[0].split("_")
-            bits = int(bits)
-
-            # Handle left shift
-            if dir == "LSH":
-                ARCH_BODY += "shifter_out <= (%s, others => '0');\n"%(
-                    ", ".join(
-                        [
-                            "(%i) => shifter_in(%i)"%(i, i - bits)
-                            for i in range(bits, CONFIG["data_width"], 1)
-                        ]
-                    ),
-                )
-            # Handle right shift
-            elif dir == "RSH":
-                ARCH_BODY += "shifter_out <= (%s, others => '0');\n"%(
-                    ", ".join(
-                        [
-                            "(%i) => shifter_in(%i)"%(i - bits, i)
-                            for i in range(bits, CONFIG["data_width"], 1)
-                        ]
-                    ),
-                )
-            else:
-                raise NotImplementedError(shifter_modes[0])
-        else:
-            # Create shift_sel control signal
-            sel_width = tc_utils.unsigned.width(len(shifter_modes) - 1, )
-            INTERFACE["controls"]["shift_sel"] = {
-                "width" : sel_width,
-                "values" : {
-                    oper : tc_utils.unsigned.encode(sorted(shifter_modes).index(get_shifter_modes(oper)), sel_width)
-                    for oper in CONFIG["oper_set"]
-                    if get_shifter_modes(oper) in shifter_modes
-                }
+        details = get_oper_details_shifter(oper)
+        if   details["type"] == None and details["bits"] == None:
+            pass
+        elif details["type"] != None and details["bits"] != None:
+            d = {
+                "type" : details["type"],
+                "bits" : details["bits"],
             }
 
-            # Build shift
+            if d not in shifts:
+                shifts.append(d)
+        else:
+            raise ValueError("A shift's type and bits must wither both be set or both None")
+    shifts = sorted(shifts, key=lambda d : str(d))
+
+    # Check shift is used
+    if len(shifts) != 0:
+        # Handle shifter_in
+        input_map = set()
+        for oper in CONFIG["oper_set"]:
+            input = get_oper_details_shifter(oper)["input"]
+            if input != None:
+                input_map.add(input)
+
+        if len(input_map) == 0:
+            raise ValueError("shifter requires at least 1 input")
+        else:
+            # Declare signal
+            ARCH_HEAD += "signal shifter_in : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
+
+            # Single source
+            if len(input_map) == 1:
+                ARCH_BODY += "shifter_in <= %s;\n\n"%(list(input_map)[0], )
+
+            # Multiple sources
+            else:
+                # Generate required control signals for each oper
+                INTERFACE["controls"]["SHIFT_IN_SEL"] = {}
+                INTERFACE["controls"]["SHIFT_IN_SEL"]["width"] = tc_utils.unsigned.width(len(input_map) - 1)
+                INTERFACE["controls"]["SHIFT_IN_SEL"]["values"] = {}
+
+                sel_map = {
+                    v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["SHIFT_IN_SEL"]["width"] )
+                    for i, v in enumerate(sorted(list(input_map)))
+                }
+
+                for oper in CONFIG["oper_set"]:
+                    input = get_oper_details_shifter(oper)["input"]
+                    if input != None:
+                        INTERFACE["controls"]["SHIFT_IN_SEL"]["values"][oper] = sel_map[input]
+                        input_map.add(input)
+
+                ARCH_BODY += "shifter_in <=\>"
+                for src, control_code in sel_map.items():
+                    ARCH_BODY += "%s when SHIFT_IN_SEL = \"%s\"\nelse "%(
+                            src,
+                            control_code,
+                        )
+                ARCH_BODY += "(others => 'U');\<\n\n"
+
+        # Generate shifter logic
+        ARCH_HEAD += "signal shifter_out : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1)
+        if len(shifts) == 1:
+                ARCH_BODY += "shifter_out <= %s;\n"%(
+                    shift_type_connect_map[shifts[0]["type"]](shifts[0]["bits"])
+                )
+        else:
+            # Generate required control signals for each oper
+            INTERFACE["controls"]["SHIFT_SEL"] = {}
+            INTERFACE["controls"]["SHIFT_SEL"]["width"] = tc_utils.unsigned.width(len(shifts) - 1)
+            INTERFACE["controls"]["SHIFT_SEL"]["values"] = {}
+
+            shift_map = {
+                v : tc_utils.unsigned.encode(i, INTERFACE["controls"]["SHIFT_SEL"]["width"] )
+                for i, v in enumerate([
+                    "%s@%i"%(shift["type"], shift["bits"], )
+                    for shift in shifts
+                ])
+            }
+
+            for oper in CONFIG["oper_set"]:
+                try:
+                    INTERFACE["controls"]["SHIFT_SEL"]["values"][oper] = shift_map[gen_utils.oper_mnemonic(oper)]
+                except KeyError:
+                    pass
+
+            # Generate shifter VHDL
             ARCH_BODY += "shifter_out <=\>"
-            for mode_sel, shifter_mode in enumerate(sorted(shifter_modes)):
-                dir, bits = shifter_mode.split("_")
-                bits = int(bits)
-
-                # Handle left shift
-                if dir == "LSH":
-                    ARCH_BODY += "(%s, others => '0') when shift_sel = \"%s\"\nelse "%(
-                        ", ".join(
-                            [
-                                "(%i) => shifter_in(%i)"%(i, i - bits)
-                                for i in range(bits, CONFIG["data_width"], 1)
-                            ]
-                        ),
-                        tc_utils.unsigned.encode(mode_sel, sel_width),
-                    )
-                # Handle right shift
-                elif dir == "RSH":
-                    ARCH_BODY += "(%s, others => '0') when shift_sel = \"%s\"\nelse "%(
-                        ", ".join(
-                            [
-                                "(%i) => shifter_in(%i)"%(i - bits, i)
-                                for i in range(bits, CONFIG["data_width"], 1)
-                            ]
-                        ),
-                        tc_utils.unsigned.encode(mode_sel, sel_width),
-                    )
-                else:
-                    raise NotImplementedError(shifter_mode)
-
-            ARCH_BODY += "(others => 'U');\<\n"
+            for shift, control_code in shift_map.items():
+                ARCH_BODY += "%s when SHIFT_SEL = \"%s\"\nelse "%(
+                    shift_type_connect_map[shift.split("@")[0]](int(shift.split("@")[1]) ),
+                    control_code,
+                )
+            ARCH_BODY += "(others => 'U');\<\n\n"

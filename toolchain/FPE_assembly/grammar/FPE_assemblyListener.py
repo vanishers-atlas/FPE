@@ -287,57 +287,57 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#op_alu_1f_1s.
-    def enterOp_alu_1f_1s(self, ctx:FPE_assemblyParser.Op_alu_1f_1sContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_alu_1o_1r.
+    def enterOp_alu_1o_1r(self, ctx:FPE_assemblyParser.Op_alu_1o_1rContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#op_alu_1f_1s.
-    def exitOp_alu_1f_1s(self, ctx:FPE_assemblyParser.Op_alu_1f_1sContext):
-        pass
-
-
-    # Enter a parse tree produced by FPE_assemblyParser#op_alu_shifts.
-    def enterOp_alu_shifts(self, ctx:FPE_assemblyParser.Op_alu_shiftsContext):
-        pass
-
-    # Exit a parse tree produced by FPE_assemblyParser#op_alu_shifts.
-    def exitOp_alu_shifts(self, ctx:FPE_assemblyParser.Op_alu_shiftsContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_alu_1o_1r.
+    def exitOp_alu_1o_1r(self, ctx:FPE_assemblyParser.Op_alu_1o_1rContext):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#op_alu_2f_0s.
-    def enterOp_alu_2f_0s(self, ctx:FPE_assemblyParser.Op_alu_2f_0sContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_alu_1o_1e_1r.
+    def enterOp_alu_1o_1e_1r(self, ctx:FPE_assemblyParser.Op_alu_1o_1e_1rContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#op_alu_2f_0s.
-    def exitOp_alu_2f_0s(self, ctx:FPE_assemblyParser.Op_alu_2f_0sContext):
-        pass
-
-
-    # Enter a parse tree produced by FPE_assemblyParser#op_alu_2f_1s.
-    def enterOp_alu_2f_1s(self, ctx:FPE_assemblyParser.Op_alu_2f_1sContext):
-        pass
-
-    # Exit a parse tree produced by FPE_assemblyParser#op_alu_2f_1s.
-    def exitOp_alu_2f_1s(self, ctx:FPE_assemblyParser.Op_alu_2f_1sContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_alu_1o_1e_1r.
+    def exitOp_alu_1o_1e_1r(self, ctx:FPE_assemblyParser.Op_alu_1o_1e_1rContext):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#access_fetch_alu.
-    def enterAccess_fetch_alu(self, ctx:FPE_assemblyParser.Access_fetch_aluContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_alu_2o_0r.
+    def enterOp_alu_2o_0r(self, ctx:FPE_assemblyParser.Op_alu_2o_0rContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#access_fetch_alu.
-    def exitAccess_fetch_alu(self, ctx:FPE_assemblyParser.Access_fetch_aluContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_alu_2o_0r.
+    def exitOp_alu_2o_0r(self, ctx:FPE_assemblyParser.Op_alu_2o_0rContext):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#access_store_alu.
-    def enterAccess_store_alu(self, ctx:FPE_assemblyParser.Access_store_aluContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_alu_2o_1r.
+    def enterOp_alu_2o_1r(self, ctx:FPE_assemblyParser.Op_alu_2o_1rContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#access_store_alu.
-    def exitAccess_store_alu(self, ctx:FPE_assemblyParser.Access_store_aluContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_alu_2o_1r.
+    def exitOp_alu_2o_1r(self, ctx:FPE_assemblyParser.Op_alu_2o_1rContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#alu_operand.
+    def enterAlu_operand(self, ctx:FPE_assemblyParser.Alu_operandContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#alu_operand.
+    def exitAlu_operand(self, ctx:FPE_assemblyParser.Alu_operandContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#alu_result.
+    def enterAlu_result(self, ctx:FPE_assemblyParser.Alu_resultContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#alu_result.
+    def exitAlu_result(self, ctx:FPE_assemblyParser.Alu_resultContext):
         pass
 
 

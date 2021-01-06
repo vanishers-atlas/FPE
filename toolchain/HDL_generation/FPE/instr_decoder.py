@@ -664,9 +664,29 @@ def generate_fetch_signals():
         ARCH_BODY += "addr_%i_fetch <= %s(%s);\n"%(addr, INPUT_SIGNALS["instr"], section)
 
 jump_mnemonic_jump_statuses_map = {
+    "JEQ" : {
+        "exe" : "ALU",
+        "statuses" : ["equal"],
+    },
+    "JNE" : {
+        "exe" : "ALU",
+        "statuses" : ["lesser", "greater"],
+    },
     "JLT" : {
         "exe" : "ALU",
-        "statuses" : ["lesser",]
+        "statuses" : ["lesser"],
+    },
+    "JLE" : {
+        "exe" : "ALU",
+        "statuses" : ["equal", "lesser"],
+    },
+    "JGT" : {
+        "exe" : "ALU",
+        "statuses" : ["greater"],
+    },
+    "JGE" : {
+        "exe" : "ALU",
+        "statuses" : ["equal", "greater"],
     }
 }
 
@@ -882,7 +902,7 @@ def generate_exe_signals():
     ####################################################################
 
 exe_update_mnemonics_map = {
-    "ALU" :  ["CMP", ],
+    "ALU" :  ["UCMP", "SCMP", ],
 }
 
 def generate_store_signals():

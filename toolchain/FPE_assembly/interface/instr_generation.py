@@ -140,7 +140,7 @@ def generate_instr_op_bam_seek(ctx, program_context):
             # Mnemonic
             "BAM_SEEK",
             # Sources
-            generate_instr_access(ctx.access_fetch(), program_context),
+            generate_instr_access_fetch(ctx.access_fetch(), program_context),
             # Exe
             asm_inter.get_component_op(ctx, program_context),
             # Dests
@@ -153,14 +153,14 @@ def generate_instr_op_bam_seek(ctx, program_context):
 ####################################################################
 
 def generate_instr_op_alu(ctx, program_context):
-    if   ctx.op_alu_1f_1s() != None:
-        return generate_instr_op_alu_1f_1s(ctx.op_alu_1f_1s(), program_context)
-    elif ctx.op_alu_shifts() != None:
-        return generate_instr_op_alu_shifts(ctx.op_alu_shifts(), program_context)
-    elif ctx.op_alu_2f_0s() != None:
-        return generate_instr_op_alu_2f_0s(ctx.op_alu_2f_0s(), program_context)
-    elif ctx.op_alu_2f_1s() != None:
-        return generate_instr_op_alu_2f_1s(ctx.op_alu_2f_1s(), program_context)
+    if   ctx.op_alu_1o_1r() != None:
+        return generate_instr_op_alu_1o_1r(ctx.op_alu_1o_1r(), program_context)
+    elif ctx.op_alu_1o_1e_1r() != None:
+        return generate_instr_op_alu_1o_1e_1r(ctx.op_alu_1o_1e_1r(), program_context)
+    elif ctx.op_alu_2o_0r() != None:
+        return generate_instr_op_alu_2o_0r(ctx.op_alu_2o_0r(), program_context)
+    elif ctx.op_alu_2o_1r() != None:
+        return generate_instr_op_alu_2o_1r(ctx.op_alu_2o_1r(), program_context)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -170,7 +170,7 @@ def generate_instr_op_alu(ctx, program_context):
                 )
             )
 
-def generate_instr_op_alu_1f_1s(ctx, program_context):
+def generate_instr_op_alu_1o_1r(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
@@ -179,7 +179,7 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
             # Sources
             "~".join(
                 [
-                    generate_instr_access_alu(ctx.access_fetch_alu(), program_context)
+                    generate_instr_access_alu_operand(ctx.alu_operand(), program_context)
                 ]
             ),
             # Exe
@@ -187,7 +187,7 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
             # Dests
             "~".join(
                 [
-                    generate_instr_access_alu(ctx.access_store_alu(), program_context)
+                    generate_instr_access_alu_result(ctx.alu_result(), program_context)
                 ]
             ),
             # Mods
@@ -195,19 +195,23 @@ def generate_instr_op_alu_1f_1s(ctx, program_context):
         ]
     )
 
-def generate_instr_op_alu_shifts(ctx, program_context):
+def generate_instr_op_alu_1o_1e_1r(ctx, program_context):
+    mods = []
+
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
             # Mnemonic
-            "%s_%s"%(
-                asm_utils.token_to_text(ctx.mnemonic),
-                asm_inter.evaluate_expr(ctx.expr(), program_context)
+            "@".join(
+                [
+                    asm_utils.token_to_text(ctx.mnemonic),
+                    str(asm_inter.evaluate_expr(ctx.expr(), program_context))
+                ]
             ),
             # Sources
             "~".join(
                 [
-                    generate_instr_access_alu(ctx.access_fetch_alu(), program_context)
+                    generate_instr_access_alu_operand(ctx.alu_operand(), program_context)
                 ]
             ),
             # Exe
@@ -215,15 +219,15 @@ def generate_instr_op_alu_shifts(ctx, program_context):
             # Dests
             "~".join(
                 [
-                    generate_instr_access_alu(ctx.access_store_alu(), program_context)
+                    generate_instr_access_alu_result(ctx.alu_result(), program_context)
                 ]
             ),
             # Mods
-            "~".join(sorted([]))
+            "~".join(sorted(mods))
         ]
     )
 
-def generate_instr_op_alu_2f_0s(ctx, program_context):
+def generate_instr_op_alu_2o_0r(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
@@ -232,8 +236,8 @@ def generate_instr_op_alu_2f_0s(ctx, program_context):
             # Sources
             "~".join(
                 [
-                    generate_instr_access_alu(access_ctx, program_context)
-                    for access_ctx in ctx.access_fetch_alu()
+                    generate_instr_access_alu_operand(access_ctx, program_context)
+                    for access_ctx in ctx.alu_operand()
                 ]
             ),
             # Exe
@@ -245,7 +249,7 @@ def generate_instr_op_alu_2f_0s(ctx, program_context):
         ]
     )
 
-def generate_instr_op_alu_2f_1s(ctx, program_context):
+def generate_instr_op_alu_2o_1r(ctx, program_context):
     generate_instr_addr_literal.port = 0
     return "#".join(
         [
@@ -254,8 +258,8 @@ def generate_instr_op_alu_2f_1s(ctx, program_context):
             # Sources
             "~".join(
                 [
-                    generate_instr_access_alu(access_ctx, program_context)
-                    for access_ctx in ctx.access_fetch_alu()
+                    generate_instr_access_alu_operand(access_ctx, program_context)
+                    for access_ctx in ctx.alu_operand()
                 ]
             ),
             # Exe
@@ -263,7 +267,7 @@ def generate_instr_op_alu_2f_1s(ctx, program_context):
             # Dests
             "~".join(
                 [
-                    generate_instr_access_alu(ctx.access_store_alu(), program_context)
+                    generate_instr_access_alu_result(ctx.alu_result(), program_context)
                 ]
             ),
             # Mods
@@ -271,14 +275,27 @@ def generate_instr_op_alu_2f_1s(ctx, program_context):
         ]
     )
 
-def generate_instr_access_alu(ctx, program_context):
 
-    if   hasattr(ctx, "access_fetch") and ctx.access_fetch():
-        return generate_instr_access(ctx.access_fetch(), program_context)
-    elif hasattr(ctx, "access_store") and ctx.access_store():
-        return generate_instr_access(ctx.access_store(), program_context)
-    # Check for ACC tegister
-    elif str(ctx.children[0]) == "ACC":
+def generate_instr_access_alu_operand(ctx, program_context):
+
+    if ctx.access_fetch():
+        return generate_instr_access_fetch(ctx.access_fetch(), program_context)
+    elif asm_utils.token_to_text(ctx.internal) == "ACC":
+        return "ACC"
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def generate_instr_access_alu_result(ctx, program_context):
+
+    if ctx.access_store():
+        return generate_instr_access_store(ctx.access_store(), program_context)
+    elif asm_utils.token_to_text(ctx.internal) == "ACC":
         return "ACC"
     else:
         raise NotImplementedError(
@@ -292,19 +309,33 @@ def generate_instr_access_alu(ctx, program_context):
 
 ####################################################################
 
-def generate_instr_access(ctx, program_context):
-    if   hasattr(ctx, "access_imm") and ctx.access_imm():
+def generate_instr_access_fetch(ctx, program_context):
+    if   ctx.access_imm():
         return generate_instr_access_imm()
-    elif hasattr(ctx, "access_get") and ctx.access_get():
+    elif ctx.access_get():
         return generate_instr_access_get(ctx.access_get(), program_context)
-    elif hasattr(ctx, "access_put") and ctx.access_put():
-        return generate_instr_access_put(ctx.access_put(), program_context)
-    elif hasattr(ctx, "access_reg") and ctx.access_reg():
+    elif ctx.access_reg():
         return generate_instr_access_reg(ctx.access_reg(), program_context)
-    elif hasattr(ctx, "access_ram") and ctx.access_ram():
+    elif ctx.access_ram():
         return generate_instr_access_ram(ctx.access_ram(), program_context)
-    elif hasattr(ctx, "access_rom") and ctx.access_rom():
+    elif ctx.access_rom():
         return generate_instr_access_rom(ctx.access_rom(), program_context)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def generate_instr_access_store(ctx, program_context):
+    if   ctx.access_put():
+        return generate_instr_access_put(ctx.access_put(), program_context)
+    elif ctx.access_reg():
+        return generate_instr_access_reg(ctx.access_reg(), program_context)
+    elif ctx.access_ram():
+        return generate_instr_access_ram(ctx.access_ram(), program_context)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -334,9 +365,9 @@ def generate_instr_access_get(ctx, program_context):
         for mod in ctx.access_get_mod()
     ]
 
-    # Add default NO_ADV, if neither NO_ADV nor ADV is given
-    if "NO_ADV" not in mods and "ADV" not in mods:
-        mods.append("NO_ADV")
+    # Remove default NO_ADV, if given
+    if "NO_ADV" in mods:
+        mods.remove("NO_ADV")
 
     return "'".join(
         [
@@ -366,12 +397,6 @@ def generate_instr_access_reg(ctx, program_context):
     # Get all given mods
     mods = [ ]
 
-    # Handle speacil syntax for block access mod
-    block_size = 1
-    if ctx.expr() != None:
-        block_size = asm_inter.evaluate_expr(ctx.expr(), program_context)
-    mods.append("block_size;%i"%(block_size,))
-
     return "'".join(
         [
             # Mem
@@ -387,12 +412,6 @@ def generate_instr_access_ram(ctx, program_context):
     # Get all given mods
     mods = [ ]
 
-    # Handle speacil syntax for block access mod
-    block_size = 1
-    if ctx.expr() != None:
-        block_size = asm_inter.evaluate_expr(ctx.expr(), program_context)
-    mods.append("block_size;%i"%(block_size,))
-
     return "'".join(
         [
             # Mem
@@ -407,12 +426,6 @@ def generate_instr_access_ram(ctx, program_context):
 def generate_instr_access_rom(ctx, program_context):
     # Get all given mods
     mods = [ ]
-
-    # Handle speacil syntax for block access mod
-    block_size = 1
-    if ctx.expr() != None:
-        block_size = asm_inter.evaluate_expr(ctx.expr(), program_context)
-    mods.append("block_size;%i"%(block_size,))
 
     return "'".join(
         [

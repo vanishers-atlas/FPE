@@ -50,13 +50,11 @@ grammar FPE_assembly;
 
 	access_imm : expr ;
 	access_get : 'GET' '[' addr ']' ('<' access_get_mod (',' access_get_mod)* '>')? ;
-		access_get_mod	: 'ADV'				/* Advance fifo to next press of data after read */
-		 								| 'No_ADV' 		/* don't Advance fifo to next press of data after read */
-										;
+		access_get_mod : 'ADV' | 'NO_ADV' ;
 	access_put : 'PUT' '[' addr ']' ;
-	access_reg : 'REG' '[' addr (':' expr )? ']' ;
-	access_ram : 'RAM' '[' addr (':' expr )? ']' ;
-	access_rom : 'ROM' '[' addr (':' expr )? ']' ;
+	access_reg : 'REG' '[' addr ']' ;
+	access_ram : 'RAM' '[' addr ']' ;
+	access_rom : 'ROM' '[' addr ']' ;
 
 	addr 	: addr_literal
 	 			| addr_bam
@@ -65,9 +63,8 @@ grammar FPE_assembly;
 		addr_literal  : expr ;
 		addr_bam : 	'BAM' '[' expr ']'
 								('<' addr_bam_mod (',' addr_bam_mod)* '>')? ;
-			addr_bam_mod 	: 'FORWARD'  	/* seek forward  after read*/
-										| 'BACKWARD' 	/* seek BACKWARD after read */
-										| 'No_ADV'		/* don't seek after read */
+			addr_bam_mod 	: 'FORWARD'  /* seek forward  after read*/
+										| 'BACKWARD' /* seek BACKWARD after read */
 										;
 
 	/* Statements are parts of an FPE program which don't map to program code
@@ -99,7 +96,7 @@ grammar FPE_assembly;
 			op_void_nop : 'NOP' ;
 
 		op_pc 	: op_pc_jump ;
-			op_pc_jump	: mnemonic=('JMP'|'JLT')
+			op_pc_jump	: mnemonic=( 'JMP' | 'JEQ' | 'JNE' | 'JLT'| 'JLE' | 'JGT' | 'JGE' )
 										'(' jump_label ')' ;
 
 		op_bam	:	op_bam_reset | op_bam_seek;
@@ -111,21 +108,19 @@ grammar FPE_assembly;
 					| 'BACKWARD'	/* seek back */
 					;
 
-		op_alu 	: op_alu_1f_1s | op_alu_shifts | op_alu_2f_0s | op_alu_2f_1s ;
-			op_alu_1f_1s :  mnemonic=('MOV'|'NOT')
-											'(' access_fetch_alu ',' access_store_alu ')' ;
-			op_alu_shifts :  mnemonic=('LSH'|'RSH')
-											'(' access_fetch_alu ',' expr ',' access_store_alu ')' ;
-			op_alu_2f_0s :  mnemonic=('CMP'|'CMP')
-											'(' access_fetch_alu ',' access_fetch_alu ')' ;
-			op_alu_2f_1s :  mnemonic=('ADD'|'SUB'|'AND'|'OR' |'XOR'|'MUL')
-											'(' access_fetch_alu ',' access_fetch_alu ',' access_store_alu ')' ;
-				access_fetch_alu 	: access_fetch
-													| internal=('ACC'|'ACC')
-													;
-				access_store_alu 	: access_store
-													| internal=('ACC'|'ACC')
-													;
+		op_alu 	: op_alu_1o_1r | op_alu_1o_1e_1r | op_alu_2o_0r | op_alu_2o_1r ;
+			op_alu_1o_1r 		:  mnemonic=( 'MOV' | 'NOT' )
+												'(' alu_operand ',' alu_result ')' ;
+			op_alu_1o_1e_1r :  mnemonic=( 'LSH' | 'RSH' | 'LRL' | 'RRL' )
+												'(' alu_operand ',' expr ',' alu_result ')' ;
+			op_alu_2o_0r 		:  mnemonic=( 'UCMP' | 'SCMP' )
+												'(' alu_operand ',' alu_operand ')' ;
+			op_alu_2o_1r 		:  mnemonic=( 'ADD' | 'SUB' | 'AND' | 'OR' | 'XOR' | 'MUL' )
+												'(' alu_operand ',' alu_operand ',' alu_result ')' ;
+				alu_operand : access_fetch
+										| internal=('ACC' | 'ACC') ;
+				alu_result 	: access_store
+										| internal=('ACC' | 'ACC') ;
 
 /* lexer Rules */
 	/* Symbol Tokens */
