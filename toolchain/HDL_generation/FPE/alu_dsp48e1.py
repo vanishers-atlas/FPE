@@ -1241,7 +1241,7 @@ def handle_DSP():
         # Pack and unpack statuses into buffer
         for i, status in enumerate(CONFIG["delayed_statuses"]):
             ARCH_BODY += "delayed_statuses_in(%i) <= %s_in;\n"%(i, status, )
-            ARCH_BODY += "%s_out <= delayed_statuses_out(%i);\n"%(status, i, )
+            ARCH_BODY += "%s_out <= delayed_statuses_out(%i);\n\n"%(status, i, )
 
     if "equal" in CONFIG["internal_statuses"]:
         ARCH_HEAD += "signal internal_equal : std_logic;\n"
@@ -1251,13 +1251,74 @@ def handle_DSP():
         ARCH_HEAD += "signal internal_lesser : std_logic;\n"
 
         if   SCMP_used and UCMP_used:
-            raise Error()
+            # Generate required control signals for each oper
+            INTERFACE["controls"]["LESSER_DATATYPE"] = {}
+            INTERFACE["controls"]["LESSER_DATATYPE"]["width"] = 1 # 2 options with 1 bit sel required
+            INTERFACE["controls"]["LESSER_DATATYPE"]["values"] = {}
+
+            sel_map = {
+                "UCMP" : "0",
+                "SCMP" : "1",
+            }
+
+            for oper in CONFIG["oper_set"]:
+                mnemonic = gen_utils.oper_mnemonic(oper)
+                if mnemonic in sel_map.keys():
+                    INTERFACE["controls"]["LESSER_DATATYPE"]["values"][oper] = sel_map[mnemonic]
+
+            # Delay LESSER_DATATYPE until after sub runs
+            reg_interface, reg_name = register.generate_HDL(
+                {
+                    "async_forces"  : 0,
+                    "sync_forces"   : 0,
+                    "has_enable"    : True
+                },
+                OUTPUT_PATH,
+                "register",
+                True,
+                False
+            )
+
+
+            # Buffer all delayed_statuses together
+            ARCH_HEAD += "signal LESSER_DATATYPE_synced : std_logic_vector(%i downto 0);\n"%(INTERFACE["controls"]["LESSER_DATATYPE"]["width"]  - 1, )
+
+            ARCH_BODY += "LESSER_DATATYPE_reg : entity work.%s(arch)\>\n"%(reg_name, )
+
+            ARCH_BODY += "generic map ( data_width => %i )\n"%(INTERFACE["controls"]["LESSER_DATATYPE"]["width"], )
+
+            ARCH_BODY += "port map (\n\>"
+
+            if CONFIG["stallable"]:
+                ARCH_BODY += "enable  => enable and not stall,\n"
+            else:
+                ARCH_BODY += "enable  => enable,\n"
+
+            ARCH_BODY += "trigger => clock,\n"
+            ARCH_BODY += "data_in  => LESSER_DATATYPE,\n"
+            ARCH_BODY += "data_out => LESSER_DATATYPE_synced\n"
+            ARCH_BODY += "\<);\<\n\n"
+
+            assert("operand_0_sign" in CONFIG["delayed_statuses"])
+            assert("operand_1_sign" in CONFIG["delayed_statuses"])
+
+            ARCH_BODY += "internal_lesser <=\>slice_p(acc'left + 1) when LESSER_DATATYPE_synced = \"0\"\n"
+            ARCH_BODY += "else (\>\n"
+            ARCH_BODY += "(operand_0_sign_out and not operand_1_sign_out) -- -ve - +ve; -ve < +ve\n"
+            ARCH_BODY += "or (operand_0_sign_out and acc(acc'left)) -- +ve - X => -ve, X either -ve (-ve < +ve) or X larger +ve (therefore <)\n"
+            ARCH_BODY += "or (not operand_1_sign_out and acc(acc'left))-- X - +ve => -ve, X either -ve (-ve < +ve) or X smaller +ve (therefore <)\n"
+            ARCH_BODY += "\<) when LESSER_DATATYPE_synced = \"1\"\n"
+            ARCH_BODY += "else 'U';\n\<\n"
+
         elif SCMP_used and not UCMP_used:
             assert("operand_0_sign" in CONFIG["delayed_statuses"])
             assert("operand_1_sign" in CONFIG["delayed_statuses"])
-            ARCH_BODY += "internal_lesser <=\>(operand_0_sign_out and not operand_1_sign_out) -- -ve - +ve; -ve < +ve\n"
+            ARCH_BODY += "internal_lesser <=\>(\>\n"
+            ARCH_BODY += "(operand_0_sign_out and not operand_1_sign_out) -- -ve - +ve; -ve < +ve\n"
             ARCH_BODY += "or (operand_0_sign_out and acc(acc'left)) -- +ve - X => -ve, X either -ve (-ve < +ve) or X larger +ve (therefore <)\n"
-            ARCH_BODY += "or (not operand_1_sign_out and acc(acc'left));-- X - +ve => -ve, X either -ve (-ve < +ve) or X smaller +ve (therefore <)\<\n\n"
+            ARCH_BODY += "or (not operand_1_sign_out and acc(acc'left))-- X - +ve => -ve, X either -ve (-ve < +ve) or X smaller +ve (therefore <)\n"
+            ARCH_BODY += "\<);\<\n"
+
         elif not SCMP_used and UCMP_used:
             ARCH_BODY += "internal_lesser <= slice_p(acc'left + 1);\n\n"
         else:

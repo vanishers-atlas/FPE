@@ -1,0 +1,1217 @@
+{
+  ucmp_0_0:
+    UCMP(0x0, 0x0);
+    NOP;
+
+    JLE(ucmp_0_0_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_0_0_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_0_0_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_0_0_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_0_0_collect:
+      NOP;
+
+  ucmp_0_f:
+    UCMP(0x0, 0xf);
+    NOP;
+
+    JLE(ucmp_0_f_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_0_f_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_0_f_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_0_f_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_0_f_collect:
+      NOP;
+
+  ucmp_f_0:
+    UCMP(0xf, 0x0);
+    NOP;
+
+    JLE(ucmp_f_0_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_f_0_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_f_0_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_f_0_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_f_0_collect:
+      NOP;
+
+  ucmp_f_f:
+    UCMP(0xf, 0xf);
+    NOP;
+
+    JLE(ucmp_f_f_jump);
+    NOP;
+    NOP;
+    NOP;
+
+    ucmp_f_f_fallthrough:
+      MOV(0, PUT[0]);
+      JMP(ucmp_f_f_collect);
+      NOP;
+      NOP;
+      NOP;
+
+    ucmp_f_f_jump:
+      MOV(1, PUT[0]);
+
+    ucmp_f_f_collect:
+      NOP;
+
+	scmp_n6_n6:
+		SCMP(0b1010, 0b1010);
+		NOP;
+
+		JLE(scmp_n6_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_n6_collect:
+			NOP;
+
+
+	scmp_n6_n4:
+		SCMP(0b1010, 0b1100);
+		NOP;
+
+		JLE(scmp_n6_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_n4_collect:
+			NOP;
+
+
+	scmp_n6_n2:
+		SCMP(0b1010, 0b1110);
+		NOP;
+
+		JLE(scmp_n6_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_n2_collect:
+			NOP;
+
+
+	scmp_n6_0:
+		SCMP(0b1010, 0b0000);
+		NOP;
+
+		JLE(scmp_n6_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_0_collect:
+			NOP;
+
+
+	scmp_n6_2:
+		SCMP(0b1010, 0b0010);
+		NOP;
+
+		JLE(scmp_n6_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_2_collect:
+			NOP;
+
+
+	scmp_n6_4:
+		SCMP(0b1010, 0b0100);
+		NOP;
+
+		JLE(scmp_n6_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_4_collect:
+			NOP;
+
+
+	scmp_n6_6:
+		SCMP(0b1010, 0b0110);
+		NOP;
+
+		JLE(scmp_n6_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n6_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n6_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n6_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n6_6_collect:
+			NOP;
+
+
+	scmp_n4_n6:
+		SCMP(0b1100, 0b1010);
+		NOP;
+
+		JLE(scmp_n4_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_n6_collect:
+			NOP;
+
+
+	scmp_n4_n4:
+		SCMP(0b1100, 0b1100);
+		NOP;
+
+		JLE(scmp_n4_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_n4_collect:
+			NOP;
+
+
+	scmp_n4_n2:
+		SCMP(0b1100, 0b1110);
+		NOP;
+
+		JLE(scmp_n4_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_n2_collect:
+			NOP;
+
+
+	scmp_n4_0:
+		SCMP(0b1100, 0b0000);
+		NOP;
+
+		JLE(scmp_n4_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_0_collect:
+			NOP;
+
+
+	scmp_n4_2:
+		SCMP(0b1100, 0b0010);
+		NOP;
+
+		JLE(scmp_n4_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_2_collect:
+			NOP;
+
+
+	scmp_n4_4:
+		SCMP(0b1100, 0b0100);
+		NOP;
+
+		JLE(scmp_n4_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_4_collect:
+			NOP;
+
+
+	scmp_n4_6:
+		SCMP(0b1100, 0b0110);
+		NOP;
+
+		JLE(scmp_n4_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n4_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n4_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n4_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n4_6_collect:
+			NOP;
+
+
+	scmp_n2_n6:
+		SCMP(0b1110, 0b1010);
+		NOP;
+
+		JLE(scmp_n2_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_n6_collect:
+			NOP;
+
+
+	scmp_n2_n4:
+		SCMP(0b1110, 0b1100);
+		NOP;
+
+		JLE(scmp_n2_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_n4_collect:
+			NOP;
+
+
+	scmp_n2_n2:
+		SCMP(0b1110, 0b1110);
+		NOP;
+
+		JLE(scmp_n2_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_n2_collect:
+			NOP;
+
+
+	scmp_n2_0:
+		SCMP(0b1110, 0b0000);
+		NOP;
+
+		JLE(scmp_n2_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_0_collect:
+			NOP;
+
+
+	scmp_n2_2:
+		SCMP(0b1110, 0b0010);
+		NOP;
+
+		JLE(scmp_n2_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_2_collect:
+			NOP;
+
+
+	scmp_n2_4:
+		SCMP(0b1110, 0b0100);
+		NOP;
+
+		JLE(scmp_n2_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_4_collect:
+			NOP;
+
+
+	scmp_n2_6:
+		SCMP(0b1110, 0b0110);
+		NOP;
+
+		JLE(scmp_n2_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_n2_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_n2_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_n2_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_n2_6_collect:
+			NOP;
+
+
+	scmp_0_n6:
+		SCMP(0b0000, 0b1010);
+		NOP;
+
+		JLE(scmp_0_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_n6_collect:
+			NOP;
+
+
+	scmp_0_n4:
+		SCMP(0b0000, 0b1100);
+		NOP;
+
+		JLE(scmp_0_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_n4_collect:
+			NOP;
+
+
+	scmp_0_n2:
+		SCMP(0b0000, 0b1110);
+		NOP;
+
+		JLE(scmp_0_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_n2_collect:
+			NOP;
+
+
+	scmp_0_0:
+		SCMP(0b0000, 0b0000);
+		NOP;
+
+		JLE(scmp_0_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_0_collect:
+			NOP;
+
+
+	scmp_0_2:
+		SCMP(0b0000, 0b0010);
+		NOP;
+
+		JLE(scmp_0_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_2_collect:
+			NOP;
+
+
+	scmp_0_4:
+		SCMP(0b0000, 0b0100);
+		NOP;
+
+		JLE(scmp_0_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_4_collect:
+			NOP;
+
+
+	scmp_0_6:
+		SCMP(0b0000, 0b0110);
+		NOP;
+
+		JLE(scmp_0_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_0_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_0_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_0_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_0_6_collect:
+			NOP;
+
+
+	scmp_2_n6:
+		SCMP(0b0010, 0b1010);
+		NOP;
+
+		JLE(scmp_2_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_n6_collect:
+			NOP;
+
+
+	scmp_2_n4:
+		SCMP(0b0010, 0b1100);
+		NOP;
+
+		JLE(scmp_2_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_n4_collect:
+			NOP;
+
+
+	scmp_2_n2:
+		SCMP(0b0010, 0b1110);
+		NOP;
+
+		JLE(scmp_2_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_n2_collect:
+			NOP;
+
+
+	scmp_2_0:
+		SCMP(0b0010, 0b0000);
+		NOP;
+
+		JLE(scmp_2_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_0_collect:
+			NOP;
+
+
+	scmp_2_2:
+		SCMP(0b0010, 0b0010);
+		NOP;
+
+		JLE(scmp_2_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_2_collect:
+			NOP;
+
+
+	scmp_2_4:
+		SCMP(0b0010, 0b0100);
+		NOP;
+
+		JLE(scmp_2_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_4_collect:
+			NOP;
+
+
+	scmp_2_6:
+		SCMP(0b0010, 0b0110);
+		NOP;
+
+		JLE(scmp_2_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_2_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_2_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_2_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_2_6_collect:
+			NOP;
+
+
+	scmp_4_n6:
+		SCMP(0b0100, 0b1010);
+		NOP;
+
+		JLE(scmp_4_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_n6_collect:
+			NOP;
+
+
+	scmp_4_n4:
+		SCMP(0b0100, 0b1100);
+		NOP;
+
+		JLE(scmp_4_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_n4_collect:
+			NOP;
+
+
+	scmp_4_n2:
+		SCMP(0b0100, 0b1110);
+		NOP;
+
+		JLE(scmp_4_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_n2_collect:
+			NOP;
+
+
+	scmp_4_0:
+		SCMP(0b0100, 0b0000);
+		NOP;
+
+		JLE(scmp_4_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_0_collect:
+			NOP;
+
+
+	scmp_4_2:
+		SCMP(0b0100, 0b0010);
+		NOP;
+
+		JLE(scmp_4_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_2_collect:
+			NOP;
+
+
+	scmp_4_4:
+		SCMP(0b0100, 0b0100);
+		NOP;
+
+		JLE(scmp_4_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_4_collect:
+			NOP;
+
+
+	scmp_4_6:
+		SCMP(0b0100, 0b0110);
+		NOP;
+
+		JLE(scmp_4_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_4_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_4_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_4_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_4_6_collect:
+			NOP;
+
+
+	scmp_6_n6:
+		SCMP(0b0110, 0b1010);
+		NOP;
+
+		JLE(scmp_6_n6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_n6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_n6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_n6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_n6_collect:
+			NOP;
+
+
+	scmp_6_n4:
+		SCMP(0b0110, 0b1100);
+		NOP;
+
+		JLE(scmp_6_n4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_n4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_n4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_n4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_n4_collect:
+			NOP;
+
+
+	scmp_6_n2:
+		SCMP(0b0110, 0b1110);
+		NOP;
+
+		JLE(scmp_6_n2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_n2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_n2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_n2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_n2_collect:
+			NOP;
+
+
+	scmp_6_0:
+		SCMP(0b0110, 0b0000);
+		NOP;
+
+		JLE(scmp_6_0_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_0_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_0_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_0_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_0_collect:
+			NOP;
+
+
+	scmp_6_2:
+		SCMP(0b0110, 0b0010);
+		NOP;
+
+		JLE(scmp_6_2_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_2_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_2_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_2_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_2_collect:
+			NOP;
+
+
+	scmp_6_4:
+		SCMP(0b0110, 0b0100);
+		NOP;
+
+		JLE(scmp_6_4_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_4_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_4_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_4_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_4_collect:
+			NOP;
+
+
+	scmp_6_6:
+		SCMP(0b0110, 0b0110);
+		NOP;
+
+		JLE(scmp_6_6_jump);
+		NOP;
+		NOP;
+		NOP;
+
+		scmp_6_6_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_6_6_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_6_6_jump:
+			MOV(1, PUT[0]);
+
+		scmp_6_6_collect:
+			NOP;
+
+
+}
