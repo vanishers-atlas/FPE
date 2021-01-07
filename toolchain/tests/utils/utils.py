@@ -93,7 +93,7 @@ def run_simulation(files, simulate_dir, part, time="100 us"):
 
     with open(log, "r") as f:
         for lineNum, line in enumerate(f.readlines()):
-            if line.startswith("Error: "):
+            if line.lower().startswith("error: "):
                 print("Vivado Script error on line %i"%lineNum)
                 print(line)
                 return -1
