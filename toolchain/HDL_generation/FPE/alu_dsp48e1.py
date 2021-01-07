@@ -908,14 +908,14 @@ def handle_DSP():
         INTERFACE["controls"]["DSP_ALU_MODE"]["width"] = 4
         INTERFACE["controls"]["DSP_ALU_MODE"]["values"] = ALU_MODE
     else:
-        ARCH_HEAD += "constant DSP_ALU_MODE : std+logic_vector(3 downto 0) := \"%s\";\n"%(list(ALU_MODE.values())[0], )
+        ARCH_HEAD += "constant DSP_ALU_MODE : std_logic_vector(3 downto 0) := \"%s\";\n"%(list(ALU_MODE.values())[0], )
 
     if len(set(OP_MODE.values())) != 1:
         INTERFACE["controls"]["DSP_OP_MODE"] = {}
         INTERFACE["controls"]["DSP_OP_MODE"]["width"] = 7
         INTERFACE["controls"]["DSP_OP_MODE"]["values"] = OP_MODE
     else:
-        ARCH_HEAD += "constant DSP_OP_MODE : std+logic_vector(6 downto 0) := \"%s\";\n"%(list(OP_MODE.values())[0], )
+        ARCH_HEAD += "constant DSP_OP_MODE : std_logic_vector(6 downto 0) := \"%s\";\n"%(list(OP_MODE.values())[0], )
 
     ARCH_BODY += "ALUMODE => DSP_ALU_MODE,\n"
     ARCH_BODY += "OPMODE  => DSP_OP_MODE,\n"

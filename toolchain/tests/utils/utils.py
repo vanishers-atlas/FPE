@@ -50,7 +50,9 @@ def run_toolchain(
         output_dir
     )
 
-def run_simulation(files, simulate_dir, part, time="100 us"):
+    print("\nToolchain finished")
+
+def run_simulation(files, simulate_dir, part, design_top="test_FPE_inst", sim_top="testbench", time="100 us"):
     if not os.path.exists(simulate_dir):
         os.mkdir(simulate_dir)
 
@@ -65,12 +67,12 @@ def run_simulation(files, simulate_dir, part, time="100 us"):
         # Load all vhdl files
         f.write("".join([
             "read_vhdl -library work %s;\n"%(file.replace("\\", "/"))
-            for file
-            in files
+            for file in files
         ]))
 
-        # Set top module
-        f.write("set_property top testbench [current_fileset -simset];\n")
+        # Set tops for design and sim modes.
+        f.write("set_property top %s [current_fileset];\n"%(design_top, ) )
+        f.write("set_property top %s [current_fileset -simset];\n"%(sim_top, ) )
 
         # Run simulation
         f.write("launch_simulation -simset [current_fileset -simset];\n")
@@ -89,13 +91,14 @@ def run_simulation(files, simulate_dir, part, time="100 us"):
             "-tempDir", simulate_dir
         ]
     )
-    print("Vivado Script Finished")
 
+    # Check for error found by vivaso
+    print("Checking Vivado Output")
     with open(log, "r") as f:
         for lineNum, line in enumerate(f.readlines()):
             if line.startswith("Error: "):
                 print("Vivado Script error on line %i"%lineNum)
                 print(line)
                 return -1
-
+    print("No Vivado Errors Found")
     return 0
