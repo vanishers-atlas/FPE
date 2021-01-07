@@ -799,7 +799,7 @@ def handle_DSP():
 
     if not multiplier_used:
         ARCH_BODY += "USE_MULT => \"NONE\",\n"
-    elif multiplier_used and AB_used:
+    elif multiplier_used and not AB_used:
         ARCH_BODY += "USE_MULT => \"MULTIPLY\",\n"
     elif multiplier_used and AB_used:
         ARCH_BODY += "USE_MULT => \"DYNAMIC\",\n"

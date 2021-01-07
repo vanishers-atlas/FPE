@@ -59,7 +59,7 @@ def compute_widths(config):
         elif "depth" not in mem and "FIFOs" in mem:
             mem["addr_width"]= tc_utils.unsigned.width(mem["FIFOs"] - 1)
         elif "depth" in mem and "FIFOs" in mem:
-            raise ValueError("Both depth and FIFOs given for memory, $s, addr_width is ambiguos"%(mem, ))
+            raise ValueError("Both depth and FIFOs given for memory, $s, addr_width is ambiguous"%(mem))
 
 
 def extract_config(assembly_file, parameter_file, config_file):
