@@ -35,7 +35,8 @@ def run_test(path="."):
     return utils.run_simulation(
         vhdl_files,
         simulation_dir,
-        part
+        part,
+        time="1000 us"
     )
 
 if __name__ == "__main__":

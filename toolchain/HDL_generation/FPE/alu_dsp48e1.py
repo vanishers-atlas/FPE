@@ -944,6 +944,7 @@ def handle_DSP():
     ARCH_BODY += "CEAD => '0',\n"
     ARCH_BODY += "CED  => '0',\n"
     ARCH_BODY += "CEM  => '0',\n"
+
     if CONFIG["stallable"]:
         ARCH_BODY += "CEP  => enable and not stall,\n"
     else:
@@ -1195,14 +1196,17 @@ def handle_DSP():
 
     if "operand_0_sign" in CONFIG["delayed_statuses"]:
         ARCH_HEAD += "signal operand_0_sign_in, operand_0_sign_out : std_logic;\n"
-        ARCH_BODY += "operand_0_sign_in <=\>in_0(in_0'left) when DSP_OP_MODE(5) = '1'\n"
-        ARCH_BODY += "else acc(acc'left) when DSP_OP_MODE(5) = '0'\n"
+
+        ARCH_BODY += "operand_0_sign_in <=\>in_0(in_0'left) when DSP_OP_MODE(4) = '1'\n"
+        ARCH_BODY += "else acc(acc'left) when DSP_OP_MODE(4) = '0'\n"
         ARCH_BODY += "else 'U';\<\n\n"
 
     if "operand_1_sign" in CONFIG["delayed_statuses"]:
         ARCH_HEAD += "signal operand_1_sign_in, operand_1_sign_out : std_logic;\n"
-        ARCH_BODY += "operand_1_sign_in <=\>in_1(in_1'left) when DSP_OP_MODE(0) = '1'\n"
-        ARCH_BODY += "else acc(acc'left) when DSP_OP_MODE(0) = '0'\n"
+
+        ARCH_BODY += "operand_1_sign_in <=\>in_0(in_0'left) when DSP_OP_MODE(1 downto 0) = \"00\"\n"
+        ARCH_BODY += "else in_1(in_1'left) when DSP_OP_MODE(1 downto 0) = \"11\"\n"
+        ARCH_BODY += "else acc(acc'left) when DSP_OP_MODE(1 downto 0) = \"10\"\n"
         ARCH_BODY += "else 'U';\<\n\n"
 
     if len(CONFIG["delayed_statuses"]) != 0:
