@@ -53,7 +53,7 @@ class extractor(ParseTreeListener):
 
     def enterAddr_bam(this, ctx):
         BAM = asm_utils.get_component_addr(ctx, this.program_context)
-        # Record fetched firection signal
+        # Record fetched direction signal
         for mod in [mod.getText().upper() for mod in ctx.addr_bam_mod()]:
             if mod == "FORWARD":
                 try:
@@ -62,8 +62,8 @@ class extractor(ParseTreeListener):
                     this.config["address_sources"][BAM]["steps"]= set(["generic_forward",])
             elif mod == "BACKWARD":
                 try:
-                    this.config["address_sources"][asm_utils.get_component(ctx)]["steps"].add("generic_backward")
+                    this.config["address_sources"][BAM]["steps"].add("generic_backward")
                 except KeyError:
-                    this.config["address_sources"][asm_utils.get_component(ctx)]["steps"]= set(["generic_backward",])
+                    this.config["address_sources"][BAM]["steps"]= set(["generic_backward",])
             else:
                 raise NotImplementedError("unknown mod, %s"%(mod))
