@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on FPE Site</title>
+    <link>https://estreams.gitlab.io/sfpe/tags/</link>
+    <description>Recent content in Tags on FPE Site</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 16 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://estreams.gitlab.io/sfpe/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Branch neurons</title>
+      <link>https://estreams.gitlab.io/sfpe/tags/branch-neurons/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/tags/branch-neurons/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>LIF</title>
+      <link>https://estreams.gitlab.io/sfpe/tags/lif/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/tags/lif/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>ReLU</title>
+      <link>https://estreams.gitlab.io/sfpe/tags/relu/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/tags/relu/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>SReLU</title>
+      <link>https://estreams.gitlab.io/sfpe/tags/srelu/</link>
+      <pubDate>Sun, 13 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/tags/srelu/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

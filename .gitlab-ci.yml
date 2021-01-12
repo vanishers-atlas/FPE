@@ -1,0 +1,44 @@
+# This file is a template, and might need editing before it works on your project.
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+  - test
+  - deploy
+
+test_website:
+  image: registry.gitlab.com/pages/hugo/hugo_extended:latest
+  stage: test
+  script:
+    - mv Site/* ./
+    - rm -rf Site
+    - hugo
+  except:
+    - master
+
+test_code:
+  image: python:3.7
+  stage: test
+  script:
+    - cd ../
+    - mv sfpe ./FPE
+    - PYTHONPATH=$(pwd):$(pwd)/FPE/toolchain/tests
+    - cd FPE
+    - pip install -r requirements.txt
+    # - cd .; pylint ./*
+    # - python toolchain/tests/SISD/run_test_sweep.py
+
+pages:
+  image: registry.gitlab.com/pages/hugo/hugo_extended:latest
+  stage: deploy
+  script:
+    - mv Site/* ./
+    - rm -rf Site
+    - hugo
+  artifacts:
+    paths:
+      - public
+  only:
+    - neurons
+    - master
