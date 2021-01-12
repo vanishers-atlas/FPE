@@ -15,7 +15,10 @@ class handler(ParseTreeListener):
             this.IMM.add(pc_value)
 
     def get_output(this):
-        return {a : v for a, v in enumerate(this.IMM)}, {v : a for a, v in enumerate(this.IMM)}
+        return {
+            a : v
+            for a, v in enumerate(this.IMM)
+        }
 
     def enterAccess_imm(this, ctx):
         imm_value = asm_utils.evaluate_expr(ctx.expr(), this.program_context)

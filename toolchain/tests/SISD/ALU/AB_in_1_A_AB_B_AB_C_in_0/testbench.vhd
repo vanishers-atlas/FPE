@@ -12,88 +12,31 @@ architecture arch of testbench is
 	signal	kickoff : std_logic := '0';
 	signal	running : std_logic;
 
-	signal	PUT_FIFO_0_data  : std_logic_vector(3 downto 0);
+	signal	PUT_FIFO_0_data  : std_logic_vector(31 downto 0);
 	signal	PUT_FIFO_0_write : std_logic;
 	signal  PUT_FIFO_0_index : integer := 0;
-	type  PUT_FIFO_0_data_array is array (0 to 46) of std_logic_vector(3 downto 0);
+	type  PUT_FIFO_0_data_array is array (0 to 9) of std_logic_vector(31 downto 0);
 	constant PUT_FIFO_0_test_data : PUT_FIFO_0_data_array :=
 	(
-		-- Test MOV,
-		"0000",
-		"0001",
-		"0010",
-		"0010",
-
-		-- Test left shifts
-		"1100",
-		"1100",
-		"1000",
-		"1000",
-
-
-		-- Test right shifts
-		"0011",
-		"0011",
-		"0001",
-		"0001",
-
-		-- Test left rolls
-		"1100",
-		"1100",
-		"1001",
-		"1001",
-
-
-		-- Test right rolls
-		"0011",
-		"0011",
-		"1001",
-		"1001",
-
-
-		-- Test multipleation
-		"0100",
-		"0100",
-		"0100",
-		"0100",
-
-
 		-- Test ADD
-		"0010",
-		"0010",
-		"0010",
-		"0010",
-
+		"00011110000111100001111000011110",
+		"01111000011110000111100001111000",
 
 		-- Test SUB
-		"0001",
-		"1111",
-		"0001",
-		"0001",
-		"0000",
-
-		-- Test NOT
-		"1001",
-		"1001",
+		"11010010110100101101001011010011",
+		"00101101001011010010110100101101",
 
 		-- Test OR
-		"0111",
-		"0111",
-		"0111",
-		"0110",
-
+		"00111111001111110011111100111111",
+		"01110111011101110111011101110111",
 
 		-- Test AND
-		"0001",
-		"0001",
-		"0001",
-		"0110",
+		"00001100000011000000110000001100",
+		"00010001000100010001000100010001",
 
 		-- Test XOR
-		"0110",
-		"0110",
-		"0110",
-		"0000"
+		"00110011001100110011001100110011",
+		"01100110011001100110011001100110"
 	);
 
 begin

@@ -4,7 +4,7 @@ if __name__ == "__main__":
     path = __file__.split("\\")
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
-    
+
 # Import ParseTreeWalker from antlr so extactors can walk loading tree
 from antlr4 import ParseTreeWalker
 
@@ -118,7 +118,11 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
         imm_file = processor_name + "_IMM.mem"
         handler = IMM_handling.handler(program_context)
         walker.walk(handler, program_context["program_tree"])
-        imm_data, program_context["IMM_addr_map"]  = handler.get_output()
+        imm_data = handler.get_output()
+        program_context["IMM_addr_map"] = {
+            v : a
+            for (a, v) in imm_data.items()
+        }
         # TEMP, pad imm_data to correct depth, should only trigger when a jump label and an imm operand share the same value
         for i in range(len(imm_data), config["data_memories"]["IMM"]["depth"]):
             imm_data[i] = 0

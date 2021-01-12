@@ -1,0 +1,83 @@
+{
+  // Test multipleation
+  MUL(0b1110, 0b1110, PUT[0]);
+  MUL(0b1110, 0b0000, PUT[0]);
+  MUL(0b1110, 0b0010, PUT[0]);
+
+  MUL(0b0000, 0b1110, PUT[0]);
+  MUL(0b0000, 0b0000, PUT[0]);
+  MUL(0b0000, 0b0010, PUT[0]);
+
+  MUL(0b0010, 0b1110, PUT[0]);
+  MUL(0b0010, 0b0000, PUT[0]);
+  MUL(0b0010, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MOV(0b1110, ACC);
+  MUL(ACC, 0b1110, PUT[0]);
+  MOV(0b1110, ACC);
+  MUL(ACC, 0b0000, PUT[0]);
+  MOV(0b1110, ACC);
+  MUL(ACC, 0b0010, PUT[0]);
+
+  MOV( 0, ACC);
+  MUL(ACC, 0b1110, PUT[0]);
+  MOV( 0, ACC);
+  MUL(ACC, 0b0000, PUT[0]);
+  MOV( 0, ACC);
+  MUL(ACC, 0b0010, PUT[0]);
+
+  MOV( 2, ACC);
+  MUL(ACC, 0b1110, PUT[0]);
+  MOV( 2, ACC);
+  MUL(ACC, 0b0000, PUT[0]);
+  MOV( 2, ACC);
+  MUL(ACC, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MOV(0b1110, ACC);
+  MUL(0b1110, ACC, PUT[0]);
+  MOV( 0, ACC);
+  MUL(0b1110, ACC, PUT[0]);
+  MOV( 2, ACC);
+  MUL(0b1110, ACC, PUT[0]);
+
+  MOV(0b1110, ACC);
+  MUL(0b0000, ACC, PUT[0]);
+  MOV( 0, ACC);
+  MUL(0b0000, ACC, PUT[0]);
+  MOV( 2, ACC);
+  MUL(0b0000, ACC, PUT[0]);
+
+  MOV(0b1110, ACC);
+  MUL(0b0010, ACC, PUT[0]);
+  MOV( 0, ACC);
+  MUL(0b0010, ACC, PUT[0]);
+  MOV( 2, ACC);
+  MUL(0b0010, ACC, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MOV(0b1110, ACC);
+  MUL(ACC, ACC, PUT[0]);
+  MOV( 0, ACC);
+  MUL(ACC, ACC, PUT[0]);
+  MOV( 2, ACC);
+  MUL(ACC, ACC, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+}

@@ -139,12 +139,13 @@ def run_sweep_leaf(path, test_name, processor="test_FPE", part="xc7k160tiffv676-
     return 0
 
 def run_sweep_branch(branch_name, path, test_sets):
-      
+
     print("#####################################################")
     print("Sweeping %s test set"%(branch_name, ) )
     print("#####################################################\n")
 
     for test_set in test_sets:
+        print(test_set)
         test_set_name = test_set.__file__.split("\\")[-2]
 
         result = test_set.run_sweep(path="%s//%s" % (path, test_set_name))

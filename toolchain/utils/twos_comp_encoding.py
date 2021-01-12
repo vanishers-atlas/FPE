@@ -8,6 +8,12 @@ def width(value, bits_if_zero=1):
         # log base 2 to convert to bits
         # ceil to round to smallest integer <- required bits
         # + 1 for leading negtive power of 2's comp
+        print(value)
+        print(value + 1)
+        print(math.log(value + 1, 2))
+        print(math.ceil(math.log(value + 1, 2)))
+        print(math.ceil(math.log(value + 1, 2)) + 1)
+        print()
         return math.ceil(math.log(value + 1, 2)) + 1
     else:  # value < 0:
         # abs to get positive value
