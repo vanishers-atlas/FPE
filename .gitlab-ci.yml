@@ -42,3 +42,4 @@ pages:
   only:
     - neurons
     - master
+    - resync
