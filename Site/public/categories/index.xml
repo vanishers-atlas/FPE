@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Categories on FPE Site</title>
+    <link>https://estreams.gitlab.io/sfpe/categories/</link>
+    <description>Recent content in Categories on FPE Site</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 16 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://estreams.gitlab.io/sfpe/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Branch neurons</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/branch-neurons/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/branch-neurons/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>FPEA</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/fpea/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/fpea/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>LIF</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/lif/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/lif/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>PYNQ Z2</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/pynq-z2/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/pynq-z2/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>ReLU</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/relu/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/relu/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Vivado</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/vivado/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/vivado/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>SReLU</title>
+      <link>https://estreams.gitlab.io/sfpe/categories/srelu/</link>
+      <pubDate>Sun, 13 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/categories/srelu/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

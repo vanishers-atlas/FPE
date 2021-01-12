@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>FPEA on FPE Site</title>
+    <link>https://estreams.gitlab.io/sfpe/categories/fpea/</link>
+    <description>Recent content in FPEA on FPE Site</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 16 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://estreams.gitlab.io/sfpe/categories/fpea/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Ensemble LIF Analysis</title>
+      <link>https://estreams.gitlab.io/sfpe/p/ensemble-lif-analysis/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/p/ensemble-lif-analysis/</guid>
+      <description>The Goals This work establishes how the resources allocated for the LIF FPEA program on the FPGA changes when executing 2, 5, 10, 100 or 1000 neurons in an ensemble.
+Between this version of the LIF neuron FPEA program and the last changes were made to improve the overall program efficiency by reordering instructions in the assembly program as well as using the output from slice P on the DSP slice as an operand to instructions allowing the data to be used two cycles earlier in subsequent instructions than if the data was written to memory.</description>
+    </item>
+    
+    <item>
+      <title>Ensemble ReLU Analysis</title>
+      <link>https://estreams.gitlab.io/sfpe/p/ensemble-relu-analysis/</link>
+      <pubDate>Wed, 16 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/p/ensemble-relu-analysis/</guid>
+      <description>The Goal This work establishes how the resources allocated for the ReLU FPEA program on the FPGA changes when executing 2, 5, 10, 100 or 1000 neurons in an ensemble.
+Between this version of the ReLU neuron FPEA program and the last changes were made to improve the overall program efficiency by reordering instructions in the assembly program as well as using the output from slice P on the DSP slice as an operand to instructions allowing the data to be used two cycles earlier in subsequent instructions than if the data was written to memory.</description>
+    </item>
+    
+    <item>
+      <title>Ensemble SReLU Analysis</title>
+      <link>https://estreams.gitlab.io/sfpe/p/ensemble-srelu-analysis/</link>
+      <pubDate>Sun, 13 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://estreams.gitlab.io/sfpe/p/ensemble-srelu-analysis/</guid>
+      <description>The Goal Between this version of the SReLU neuron FPEA program and the last changes were made to improve the overall program efficiency by reordering instructions in the assembly program as well as using the output from slice P on the DSP slice as an operand to instructions allowing the data to be used two cycles earlier in subsequent instructions than if the data was written to memory.
+This work also establishes how resource cost grows when executing ensembles of SReLU neurons.</description>
+    </item>
+    
+  </channel>
+</rss>
