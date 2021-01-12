@@ -9,7 +9,6 @@ After cloning/ forking the repo rename the root directory from *spfe* to *FPE*.
 Like tools how been written in python 3, any none standard library required to run them are listed below:
 
 * antlr 4 python runtime
-* more_itertools
 
 The packages can be installed by running the following command:
 
