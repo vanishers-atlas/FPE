@@ -158,12 +158,87 @@ def gen_value_array():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Declare internal data array
-    ARCH_HEAD += "type data_array is array (%i downto 0) of std_logic_vector(%i downto 0);\n"%(
-        CONFIG["depth"] / CONFIG["block_size"] - 1,
-        CONFIG["block_size"] * CONFIG["data_width"] - 1
+    # Example generic
+    INTERFACE["generics"] += [
+        {
+            "name": "mem_file",
+            "type": "string"
+        }
+    ]
+
+    IMPORTS += [
+        {
+            "library": "ieee",
+            "package": "std_logic_textio",
+            "parts": "all"
+        },
+        {
+            "library": "STD",
+            "package": "textio",
+            "parts": "all"
+        }
+    ]
+
+    # Declare internal data types
+
+    assert (CONFIG["block_size"] == 1)
+    # split reading mem file into lots of 1024 (2^10), to prevent vivado loop limit licking in
+    loop_counts = []
+    acc = CONFIG["depth"]
+    while acc > 0:
+        loop_counts.append(acc % 1024)
+        acc = int(acc / 1024)
+
+    ARCH_HEAD += "type data_array is array (0 to %i) of std_logic_vector(%i downto 0);\n" % (
+        CONFIG["depth"] - 1,
+        CONFIG["data_width"] - 1,
     )
-    ARCH_HEAD += "signal data : data_array;\n"
+
+    # Define function for loading values into data_array
+    ARCH_HEAD += "impure function init_mem(mem_file_name : in string) return data_array is\n\>"
+
+    ARCH_HEAD += "-- Declare file handle\n"
+    ARCH_HEAD += "file mem_file : text;\n"
+
+    ARCH_HEAD += "-- Declare variables to decode input mem file\n"
+    ARCH_HEAD += "variable addr : integer := 0;\n"
+    ARCH_HEAD += "variable data_line : line;\n"
+    ARCH_HEAD += "variable word_value : std_logic_vector(%i downto 0);\n" % (CONFIG["data_width"] - 1.)
+
+    ARCH_HEAD += "-- Declare variables loop variables\n"
+    for counter in range(len(loop_counts) + 1):
+        ARCH_HEAD += "variable counter_%i : integer;\n" % (counter,)
+
+    ARCH_HEAD += "variable temp_mem : data_array;\n\<"
+
+    ARCH_HEAD += "begin\n\>"
+
+    ARCH_HEAD += "-- open passed file\n"
+    ARCH_HEAD += "file_open(mem_file, mem_file_name,  read_mode);\n"
+
+    for power, count in enumerate(loop_counts):
+        if count != 0:
+            for counter in range(power):
+                ARCH_HEAD += "counter_%i  := 0;\n" % (counter + 1,)
+                ARCH_HEAD += "for counter_%i in 0 to 1023 loop\n\>" % (counter + 1,)
+
+            ARCH_HEAD += "counter_0  := 0;\n"
+            ARCH_HEAD += "for counter_0 in 0 to %i loop\n\>" % (count - 1,)
+            ARCH_HEAD += "readline(mem_file, data_line);\n"
+            ARCH_HEAD += "read(data_line, word_value);\n"
+            ARCH_HEAD += "temp_mem(addr) := word_value;\n"
+            ARCH_HEAD += "addr := addr + 1;\n"
+            ARCH_HEAD += "\<end loop;\n"
+
+            for counter in range(power):
+                ARCH_HEAD += "\<end loop;\n"
+
+    ARCH_HEAD += "return temp_mem;\n"
+
+    ARCH_HEAD += "\<end function;\n"
+
+    # Create internal data array
+    ARCH_HEAD += "signal data : data_array := init_mem(mem_file);\n"
 
 
 def gen_reads():
