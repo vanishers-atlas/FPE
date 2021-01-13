@@ -13,12 +13,14 @@ if __name__ == "__main__":
     import memories
     import ZOL
     import BAM
+    import ALU
     import jumping
 else:
     from . import comms
     from . import memories
     from . import ZOL
     from . import BAM
+    from . import ALU
     from . import jumping
 
 
@@ -27,6 +29,7 @@ test_sets = [
     memories,
     ZOL,
     BAM,
+    ALU,
     jumping,
 ]
 
