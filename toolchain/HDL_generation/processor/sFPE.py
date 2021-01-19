@@ -531,7 +531,7 @@ def gen_non_pipelined_signals():
 
 #####################################################################
 
-def mux_signals(lane, dst_sig, dst_width, srcs):
+def mux_signals(lane, dst_sig, dst_width, srcs, signal_padding):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
@@ -543,7 +543,7 @@ def mux_signals(lane, dst_sig, dst_width, srcs):
                 srcs[0]["signal"],
                 srcs[0]["width"],
                 dst_width,
-                CONFIG["signal_padding"]
+                signal_padding
             )
         )
     # Handle case of multiple sources, ie a muxed connection
@@ -558,7 +558,7 @@ def mux_signals(lane, dst_sig, dst_width, srcs):
         ARCH_BODY += "%s <=\>"%(dst_sig, )
         for sel_val, src in enumerate( sorted( srcs, key=lambda d : d["signal"] ) ):
             ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                gen_utils.connect_signals(lane + src["signal"], src["width"], dst_width, CONFIG["signal_padding"]),
+                gen_utils.connect_signals(lane + src["signal"], src["width"], dst_width, signal_padding),
                 sel_sig,
                 tc_utils.unsigned.encode(sel_val, sel_width),
             )
@@ -643,7 +643,7 @@ def gen_execute_units():
         for input, channels in enumerate(config["inputs"]):
             for word, srcs  in enumerate(channels["data"]):
                 dst_sig = "%s%s_in_%i_word_%i"%(lane, exe, input, word)
-                mux_signals(lane, dst_sig, config["data_width"], srcs)
+                mux_signals(lane, dst_sig, config["data_width"], srcs, CONFIG["signal_padding"])
 
 
 #####################################################################
@@ -731,18 +731,18 @@ def inst_data_memory(lane, mem, config, comp, interface):
     for read, signals in enumerate(config["reads"]):
         # Handle Addr signals
         dst_sig = inst + "_read_%i_addr"%(read,)
-        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"])
+        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], CONFIG["signal_padding"])
 
     # Create write port muxes
     for write, signals in enumerate(config["writes"]):
         # Handle Addr signals
         dst_sig = inst + "_write_%i_addr"%(write,)
-        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"])
+        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], CONFIG["signal_padding"])
 
         # Data port
         for word, details in enumerate(signals["data"]):
             dst_sig = inst + "_write_%i_data_word_%i"%(write,word)
-            mux_signals(lane, dst_sig, config["data_width"], details)
+            mux_signals(lane, dst_sig, config["data_width"], details, CONFIG["signal_padding"])
 
 def gen_data_memories():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -855,7 +855,7 @@ def gen_addr_sources():
             for word, srcs  in enumerate(channels["data"]):
                 dst_sig = "%s_in_%i_word_%i"%(bam, input, word)
                 # Only use lane 0 as BAM as shared across lanes
-                mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, config["step_width"], srcs)
+                mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, config["step_width"], srcs, "unsigned")
 
 #####################################################################
 
@@ -958,7 +958,7 @@ def gen_program_counter():
     for input, channels in enumerate(CONFIG["program_flow"]["inputs"]):
         for word, srcs  in enumerate(channels["data"]):
             dst_sig = "%s_in_%i_word_%i"%("PC", input, word)
-            mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, CONFIG["program_flow"]["PC_width"], srcs)
+            mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, CONFIG["program_flow"]["PC_width"], srcs, "unsigned")
 
     # Handle jump status ports
     for port in [port for port in interface["ports"] if "_status_" in port["name"] ]:
