@@ -5,32 +5,19 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
-import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import JEQ
-    import JLT
-    import JGT
-    import JLE
-    import JGE
-    import JNE
+    import SIGNED
+    import UNSIGNED
 else:
-    from . import JEQ
-    from . import JLT
-    from . import JGT
-    from . import JLE
-    from . import JGE
-    from . import JNE
+    from . import SIGNED
+    from . import UNSIGNED
 
 
 test_sets = [
-    JEQ,
-    JLT,
-    JGT,
-    JLE,
-    JGE,
-    JNE,
+    SIGNED,
+    UNSIGNED
 ]
 
 

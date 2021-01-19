@@ -1,0 +1,57 @@
+{
+  // Test multipleation
+  MUL(0b1110, 0b1110, PUT[0]);
+  MUL(0b1110, 0b1111, PUT[0]);
+  MUL(0b1110, 0b0000, PUT[0]);
+  MUL(0b1110, 0b0001, PUT[0]);
+  MUL(0b1110, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MUL(0b1111, 0b1110, PUT[0]);
+  MUL(0b1111, 0b1111, PUT[0]);
+  MUL(0b1111, 0b0000, PUT[0]);
+  MUL(0b1111, 0b0001, PUT[0]);
+  MUL(0b1111, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MUL(0b0000, 0b1110, PUT[0]);
+  MUL(0b0000, 0b1111, PUT[0]);
+  MUL(0b0000, 0b0000, PUT[0]);
+  MUL(0b0000, 0b0001, PUT[0]);
+  MUL(0b0000, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MUL(0b0001, 0b1110, PUT[0]);
+  MUL(0b0001, 0b1111, PUT[0]);
+  MUL(0b0001, 0b0000, PUT[0]);
+  MUL(0b0001, 0b0001, PUT[0]);
+  MUL(0b0001, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MUL(0b0010, 0b1110, PUT[0]);
+  MUL(0b0010, 0b1111, PUT[0]);
+  MUL(0b0010, 0b0000, PUT[0]);
+  MUL(0b0010, 0b0001, PUT[0]);
+  MUL(0b0010, 0b0010, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+}

@@ -27,5 +27,6 @@
     "instr_decoder": {},
     "instruction_decoder": {},
     "program_fetch": {},
-    "program_flow": {}
+    "program_flow": {},
+    "signal_padding": "unsigned"
 }

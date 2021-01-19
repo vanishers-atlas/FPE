@@ -1,0 +1,43 @@
+{
+  // Test ADD
+  ADD(1, 1, PUT[0]);
+  ADD(2, 2, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test SUB
+  SUB(1, 2, PUT[0]);
+  SUB(2, 1, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test OR
+  OR(0b0101, 0b0011, PUT[0]);
+  OR(0b1010, 0b1100, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test AND
+  AND(0b0101, 0b0011, PUT[0]);
+  AND(0b1010, 0b1100, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test XOR
+  XOR(0b0101, 0b0011, PUT[0]);
+  XOR(0b1010, 0b1100, PUT[0]);
+
+
+}

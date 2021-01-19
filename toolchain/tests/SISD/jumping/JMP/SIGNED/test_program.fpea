@@ -1,0 +1,27 @@
+{
+    MOV(0, PUT[0]);
+
+    JMP(TEST_POINT);
+
+    // Outputs to check post jump bubble size
+    MOV(0x0, PUT[0]);
+    MOV(0x1, PUT[0]);
+    MOV(0x2, PUT[0]);
+    MOV(0x3, PUT[0]);
+    MOV(0x4, PUT[0]);
+    MOV(0x5, PUT[0]);
+    MOV(0x6, PUT[0]);
+    MOV(0x7, PUT[0]);
+    MOV(0x8, PUT[0]);
+    MOV(0x9, PUT[0]);
+    MOV(0xA, PUT[0]);
+    MOV(0xB, PUT[0]);
+    MOV(0xC, PUT[0]);
+    MOV(0xD, PUT[0]);
+    MOV(0xE, PUT[0]);
+    MOV(0xF, PUT[0]);
+
+
+    TEST_POINT:
+    MOV(0x0, PUT[0]);
+}

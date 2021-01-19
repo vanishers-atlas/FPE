@@ -22,5 +22,7 @@
         "ALU": {
             "data_width": 4
         }
-    }
+    },
+
+    "signal_padding": "unsigned"
 }

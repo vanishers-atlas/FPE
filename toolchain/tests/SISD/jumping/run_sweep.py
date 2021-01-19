@@ -5,7 +5,6 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
-import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
