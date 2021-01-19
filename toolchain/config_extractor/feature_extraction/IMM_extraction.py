@@ -37,17 +37,25 @@ class extractor(ParseTreeListener):
         value = asm_utils.evaluate_expr(ctx.expr(), this.program_context)
 
         # Check that value can be encoded in data width
-        if value < 0:
+        if this.config["signal_padding"] == "unsigned":
+            if value < 0:
+                this.data_width = max(
+                    [
+                        tc_utils.twos_comp.width(value),
+                        this.data_width,
+                    ]
+                )
+            else:
+                this.data_width = max(
+                    [
+                        tc_utils.unsigned.width(value),
+                        this.data_width,
+                    ]
+                )
+        elif this.config["signal_padding"] == "signed":
             this.data_width = max(
                 [
                     tc_utils.twos_comp.width(value),
-                    this.data_width,
-                ]
-            )
-        else:
-            this.data_width = max(
-                [
-                    tc_utils.unsigned.width(value),
                     this.data_width,
                 ]
             )

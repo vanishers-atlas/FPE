@@ -1,0 +1,69 @@
+{
+  // Test left shifts
+  LSH(0b0110, 1, PUT[0]);
+  LSH(0b0110, 2, PUT[0]);
+
+  NOP;
+  NOP;
+
+  MOV(0b1001, ACC);
+  LSH(ACC, 1, PUT[0]);
+  MOV(0b1001, ACC);
+  LSH(ACC, 2, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test right shifts.
+  RSH(0b0110, 1, PUT[0]);
+  RSH(0b0110, 2, PUT[0]);
+
+  NOP;
+  NOP;
+
+  MOV(0b1001, ACC);
+  RSH(ACC, 1, PUT[0]);
+  MOV(0b1001, ACC);
+  RSH(ACC, 2, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test left rolls
+  LRL(0b0110, 1, PUT[0]);
+  LRL(0b0110, 2, PUT[0]);
+
+  NOP;
+  NOP;
+
+  MOV(0b1001, ACC);
+  LRL(ACC, 1, PUT[0]);
+  MOV(0b1001, ACC);
+  LRL(ACC, 2, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  // Test right rolls
+  RRL(0b0110, 1, PUT[0]);
+  RRL(0b0110, 2, PUT[0]);
+
+  NOP;
+  NOP;
+
+  MOV(0b1001, ACC);
+  RRL(ACC, 1, PUT[0]);
+  MOV(0b1001, ACC);
+  RRL(ACC, 2, PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+}

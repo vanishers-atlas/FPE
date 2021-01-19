@@ -5,19 +5,19 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
-import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import RAM
-    import REG
+    import SIGNED
+    import UNSIGNED
 else:
-    from . import RAM
-    from . import REG
+    from . import SIGNED
+    from . import UNSIGNED
+
 
 test_sets = [
-    RAM,
-    REG,
+    SIGNED,
+    UNSIGNED
 ]
 
 
