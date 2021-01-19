@@ -13,8 +13,8 @@ from FPE.toolchain.config_extractor   import config_extractor as extractor
 from FPE.toolchain.HDL_generation     import HDL_generator    as generator
 from FPE.toolchain.assembler          import assembler
 
-def run_toolchain(program, parameters, generics, output_dir, processor, generate_name, force_generation):
-    config = "%s\\%s_config.json"%(output_dir, processor, )
+def run_toolchain(program, parameters, generics, output_dir, processor_name, generate_name, force_generation):
+    config = "%s\\%s_config.json"%(output_dir, processor_name, )
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -29,7 +29,7 @@ def run_toolchain(program, parameters, generics, output_dir, processor, generate
     print("\nRunning RTL Generator")
     generator.generate(
         "processor.sFPE",
-        processor,
+        processor_name,
         config,
         output_dir,
         generate_name = generate_name,
@@ -40,9 +40,9 @@ def run_toolchain(program, parameters, generics, output_dir, processor, generate
     assembler.run(
         program,
         config,
-        "%s\\%s.inter"%(output_dir, processor),
+        "%s\\%s.inter"%(output_dir, processor_name),
         generics,
-        processor,
+        processor_name,
         output_dir
     )
 
@@ -98,20 +98,32 @@ def run_simulation(files, simulate_dir, part, design_top, sim_top, time):
     print("No Vivado Errors Found")
     return 0
 
-def run_sweep_leaf(path, test_name, processor="test_FPE", part="xc7k160tiffv676-2L", sim_top="testbench", time="100us"):
-
+def run_sweep_leaf(
+    path,
+    test_name,
+    processor_name="test_FPE",
+    program_file="test_program.fpea",
+    parameters_file="test_parameters.json",
+    generics_file="test_generics.json",
+    part="xc7k160tiffv676-2L",
+    sim_top="testbench",
+    time="100us"
+):
     print("#####################################################")
     print("Running %s test"%(test_name, ) )
     print("#####################################################\n")
 
-    output_dir = path + "\\toolchain_files"
+    output_dir = "\\".join([path, "toolchain_files"])
 
     # Run toolchain for test
     run_toolchain(
-        path + "\\test_program.fpea",
-        path + "\\test_parameters.json",
-        path + "\\test_generics.json",
-        output_dir, processor, False, True
+        "\\".join([path, program_file]),
+        "\\".join([path, parameters_file]),
+        "\\".join([path, generics_file]),
+        output_dir,
+        processor_name,
+        False,
+        True
     )
 
     # Symulate testbench
@@ -125,7 +137,7 @@ def run_sweep_leaf(path, test_name, processor="test_FPE", part="xc7k160tiffv676-
         vhdl_files,
         path + "\\simulation_files",
         part,
-        processor + "_inst",
+        processor_name + "_inst",
         sim_top,
         time
     )
@@ -148,7 +160,7 @@ def run_sweep_branch(branch_name, path, test_sets):
         print(test_set)
         test_set_name = test_set.__file__.split("\\")[-2]
 
-        result = test_set.run_sweep(path="%s//%s" % (path, test_set_name))
+        result = test_set.run_sweep(path="%s\\%s" % (path, test_set_name))
 
         if result != 0:
             raise ValueError("%s test FAILED, result %i"%(test_set_name, result) )
