@@ -443,6 +443,12 @@ def preprocess_config(config_in):
 
         config_out["program_flow"]["statuses"][exe] = config_out["execute_units"][exe]["statuses"]
 
+        # Set the signal padding option for the execute_unit
+        config_out["execute_units"][exe]["signal_padding"] = config_in["signal_padding"]
+
+    # Set the signal padding option
+    config_out["signal_padding"] = config_in["signal_padding"]
+
     return config_out
 
 def handle_module_name(module_name, config, generate_name):
@@ -536,7 +542,8 @@ def mux_signals(lane, dst_sig, dst_width, srcs):
             gen_utils.connect_signals(
                 srcs[0]["signal"],
                 srcs[0]["width"],
-                dst_width
+                dst_width,
+                CONFIG["signal_padding"]
             )
         )
     # Handle case of multiple sources, ie a muxed connection
@@ -551,7 +558,7 @@ def mux_signals(lane, dst_sig, dst_width, srcs):
         ARCH_BODY += "%s <=\>"%(dst_sig, )
         for sel_val, src in enumerate( sorted( srcs, key=lambda d : d["signal"] ) ):
             ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                gen_utils.connect_signals(lane + src["signal"], src["width"], dst_width),
+                gen_utils.connect_signals(lane + src["signal"], src["width"], dst_width, CONFIG["signal_padding"]),
                 sel_sig,
                 tc_utils.unsigned.encode(sel_val, sel_width),
             )

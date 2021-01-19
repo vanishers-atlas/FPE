@@ -101,6 +101,8 @@ def preprocess_config(config_in):
         config_out["delayed_statuses"].add("operand_0_sign")
         config_out["delayed_statuses"].add("operand_1_sign")
 
+    # Set the signal padding option
+    config_out["signal_padding"] = config_in["signal_padding"]
 
     #print(json.dumps(config_out, indent=2, sort_keys=True))
     #exit()
@@ -1001,7 +1003,7 @@ def handle_DSP():
 
         # Single source
         if len(data_mapping["AB"]) == 1:
-            ARCH_BODY += "slice_AB <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["AB"])[0], CONFIG["data_width"], 48), )
+            ARCH_BODY += "slice_AB <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["AB"])[0], CONFIG["data_width"], 48, CONFIG["signal_padding"]), )
 
         # Multiple sources
         else:
@@ -1021,7 +1023,7 @@ def handle_DSP():
             warnings.warn("slice_A can only handle data_widths to up 25 bits, any bits outside 24 downto 0 will be ignored")
         # Single src
         if len(data_mapping["A"]) == 1:
-            ARCH_BODY += "slice_A <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["A"])[0], CONFIG["data_width"], 30), )
+            ARCH_BODY += "slice_A <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["A"])[0], CONFIG["data_width"], 30, CONFIG["signal_padding"]), )
         # Multiple sources,
         else:
             # Generate required control signals for each oper
@@ -1063,7 +1065,7 @@ def handle_DSP():
                 # Handle direct src
                 else:
                     ARCH_BODY += "%s when DSP_A_SEL = \"%s\"\nelse "%(
-                            gen_utils.connect_signals(src, CONFIG["data_width"], 30),
+                            gen_utils.connect_signals(src, CONFIG["data_width"], 30, CONFIG["signal_padding"]),
                             control_code,
                         )
             ARCH_BODY += "(others => 'U');\<\n\n"
@@ -1083,7 +1085,7 @@ def handle_DSP():
 
         # Single src
         if len(data_mapping["B"]) == 1:
-            ARCH_BODY += "slice_B <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["B"])[0], CONFIG["data_width"], 30), )
+            ARCH_BODY += "slice_B <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["B"])[0], CONFIG["data_width"], 30, CONFIG["signal_padding"]), )
 
         # Multiple sources
         else:
@@ -1126,7 +1128,7 @@ def handle_DSP():
                 # Handle direct src
                 else:
                     ARCH_BODY += "%s when DSP_B_SEL = \"%s\"\nelse "%(
-                            gen_utils.connect_signals(src, CONFIG["data_width"], 18),
+                            gen_utils.connect_signals(src, CONFIG["data_width"], 18, CONFIG["signal_padding"]),
                             control_code,
                         )
             ARCH_BODY += "(others => 'U');\<\n\n"
@@ -1143,7 +1145,7 @@ def handle_DSP():
 
         # Single source
         if len(data_mapping["C"]) == 1:
-            ARCH_BODY += "slice_C <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["C"])[0], CONFIG["data_width"], 48), )
+            ARCH_BODY += "slice_C <= %s;\n\n"%(gen_utils.connect_signals(list(data_mapping["C"])[0], CONFIG["data_width"], 48, CONFIG["signal_padding"]), )
         # Multiple sources
         else:
             # Generate required control signals for each oper
@@ -1164,7 +1166,7 @@ def handle_DSP():
             ARCH_BODY += "slice_C <=\>"
             for src, control_code in sel_map.items():
                 ARCH_BODY += "%s when DSP_C_SEL = \"%s\"\nelse "%(
-                        gen_utils.connect_signals(src, CONFIG["data_width"], 48),
+                        gen_utils.connect_signals(src, CONFIG["data_width"], 48, CONFIG["signal_padding"]),
                         control_code,
                     )
             ARCH_BODY += "(others => 'U');\<\n\n"
