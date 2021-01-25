@@ -14,7 +14,7 @@ test_website:
     - mv Site/* ./
     - rm -rf Site
     - hugo
-  except:
+  only:
     - master
 
 test_code:
