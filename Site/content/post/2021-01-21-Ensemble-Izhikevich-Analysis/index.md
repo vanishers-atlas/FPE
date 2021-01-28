@@ -11,6 +11,7 @@ categories:
     - PYNQ Z2
 tags:
     - Izhikevich
+    - Processor V2
 draft: false
 ---
 
@@ -50,167 +51,35 @@ It is possible to reduce the number of jumps in the program by 1/3 by including 
 
 By using the output from slice P of the DSP slice as an operand in instructions a number of NOP instructions could be removed from the program however the combination of NOPs and jump instructions in the program still prevent the program efficiency from reaching 90%.
 
-## 2 Neuron Ensemble Resource Utilization
+## Comparison of Slice Logic Used by Each Ensemble
 
-### Slice Logic
+|          Site Type         | 2 Neurons | 5 Neurons | 10 Neurons | 100 Neurons | 1000 Neurons |
+| :-- | :--: | :--: | :--: | :--: | :--: |
+| Slice LUTs                 |  345 |  292 |  304 |  479 | 1317 |
+|   LUT as Logic             |  331 |  278 |  290 |  386 |  580 |
+|   LUT as Memory            |   14 |   14 |   14 |   93 |  737 |
+|     LUT as Distributed RAM |   12 |   12 |   12 |   88 |  704 |
+|     LUT as Shift Register  |    2 |    2 |    2 |    5 |   33 |
+| Slice Registers            |  300 |  323 |  327 |  340 |  383 |
+|   Register as Flip Flop    |  267 |  274 |  278 |  291 |  334 |
+|   Register as Latch        |   33 |   49 |   49 |   49 |   49 |
+| F7 Muxes                   |    9 |   10 |   10 |   18 |   80 |
+| F8 Muxes                   |    0 |    0 |    0 |    0 |    2 |
 
-|          Site Type         | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Slice LUTs                 |  346 |     0 |     53200 |  0.65 |
-|   LUT as Logic             |  332 |     0 |     53200 |  0.62 |
-|   LUT as Memory            |   14 |     0 |     17400 |  0.08 |
-|     LUT as Distributed RAM |   12 |     0 |           |       |
-|     LUT as Shift Register  |    2 |     0 |           |       |
-| Slice Registers            |  300 |     0 |    106400 |  0.28 |
-|   Register as Flip Flop    |  267 |     0 |    106400 |  0.25 |
-|   Register as Latch        |   33 |     0 |    106400 |  0.03 |
-| F7 Muxes                   |    9 |     0 |     26600 |  0.03 |
-| F8 Muxes                   |    0 |     0 |     13300 |  0.00 |
+## Comparison of Memory Used by Each Ensemble
 
-### Memory
+|    Site Type   | 2 Neurons | 5 Neurons | 10 Neurons | 100 Neurons | 1000 Neurons |
+| :-- | :--: | :--: | :--: | :--: | :--: |
+| Block RAM Tile |    0 |    0 |    0 |    0 |    0 |
+|   RAMB36/FIFO* |    0 |    0 |    0 |    0 |    0 |
+|   RAMB18       |    0 |    0 |    0 |    0 |    0 |
 
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Block RAM Tile |    0 |     0 |       140 |  0.00 |
-|   RAMB36/FIFO* |    0 |     0 |       140 |  0.00 |
-|   RAMB18       |    0 |     0 |       280 |  0.00 |
+## Comparison of DSPs Used by Each Ensemble
 
-### DSP
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| DSPs           |    1 |     0 |       220 |  0.45 |
-|   DSP48E1 only |    1 |       |           |       |
-
-## 5 Neuron Ensemble Resource Utilization
-
-### Resource Utilization
-
-#### Slice Logic
-
-|          Site Type         | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Slice LUTs                 |  292 |     0 |     53200 |  0.55 |
-|   LUT as Logic             |  278 |     0 |     53200 |  0.52 |
-|   LUT as Memory            |   14 |     0 |     17400 |  0.08 |
-|     LUT as Distributed RAM |   12 |     0 |           |       |
-|     LUT as Shift Register  |    2 |     0 |           |       |
-| Slice Registers            |  323 |     0 |    106400 |  0.30 |
-|   Register as Flip Flop    |  274 |     0 |    106400 |  0.26 |
-|   Register as Latch        |   49 |     0 |    106400 |  0.05 |
-| F7 Muxes                   |   10 |     0 |     26600 |  0.04 |
-| F8 Muxes                   |    0 |     0 |     13300 |  0.00 |
-
-#### Memory
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Block RAM Tile |    0 |     0 |       140 |  0.00 |
-|   RAMB36/FIFO* |    0 |     0 |       140 |  0.00 |
-|   RAMB18       |    0 |     0 |       280 |  0.00 |
-
-#### DSP
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| DSPs           |    1 |     0 |       220 |  0.45 |
-|   DSP48E1 only |    1 |       |           |       |
-
-## 10 Neuron Ensemble Resource Utilization
-
-#### Slice Logic
-
-|          Site Type         | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Slice LUTs                 |  304 |     0 |     53200 |  0.57 |
-|   LUT as Logic             |  290 |     0 |     53200 |  0.55 |
-|   LUT as Memory            |   14 |     0 |     17400 |  0.08 |
-|     LUT as Distributed RAM |   12 |     0 |           |       |
-|     LUT as Shift Register  |    2 |     0 |           |       |
-| Slice Registers            |  327 |     0 |    106400 |  0.31 |
-|   Register as Flip Flop    |  278 |     0 |    106400 |  0.26 |
-|   Register as Latch        |   49 |     0 |    106400 |  0.05 |
-| F7 Muxes                   |   10 |     0 |     26600 |  0.04 |
-| F8 Muxes                   |    0 |     0 |     13300 |  0.00 |
-
-#### Memory
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Block RAM Tile |    0 |     0 |       140 |  0.00 |
-|   RAMB36/FIFO* |    0 |     0 |       140 |  0.00 |
-|   RAMB18       |    0 |     0 |       280 |  0.00 |
-
-#### DSP
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| DSPs           |    1 |     0 |       220 |  0.45 |
-|   DSP48E1 only |    1 |       |           |       |
-
-## 100 Neuron Ensemble Resource Utilization
-
-#### Slice Logic
-
-|          Site Type         | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Slice LUTs                 |  479 |     0 |     53200 |  0.90 |
-|   LUT as Logic             |  386 |     0 |     53200 |  0.73 |
-|   LUT as Memory            |   93 |     0 |     17400 |  0.53 |
-|     LUT as Distributed RAM |   88 |     0 |           |       |
-|     LUT as Shift Register  |    5 |     0 |           |       |
-| Slice Registers            |  340 |     0 |    106400 |  0.32 |
-|   Register as Flip Flop    |  291 |     0 |    106400 |  0.27 |
-|   Register as Latch        |   49 |     0 |    106400 |  0.05 |
-| F7 Muxes                   |   18 |     0 |     26600 |  0.07 |
-| F8 Muxes                   |    0 |     0 |     13300 |  0.00 |
-
-#### Memory
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Block RAM Tile |    0 |     0 |       140 |  0.00 |
-|   RAMB36/FIFO* |    0 |     0 |       140 |  0.00 |
-|   RAMB18       |    0 |     0 |       280 |  0.00 |
-
-#### DSP
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| DSPs           |    1 |     0 |       220 |  0.45 |
-|   DSP48E1 only |    1 |       |           |       |
-
-## 1000 Neuron Ensemble Resource Utilization
-
-#### Slice Logic
-
-|          Site Type         | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Slice LUTs                 | 1317 |     0 |     53200 |  2.48 |
-|   LUT as Logic             |  580 |     0 |     53200 |  1.09 |
-|   LUT as Memory            |  737 |     0 |     17400 |  4.24 |
-|     LUT as Distributed RAM |  704 |     0 |           |       |
-|     LUT as Shift Register  |   33 |     0 |           |       |
-| Slice Registers            |  383 |     0 |    106400 |  0.36 |
-|   Register as Flip Flop    |  334 |     0 |    106400 |  0.31 |
-|   Register as Latch        |   49 |     0 |    106400 |  0.05 |
-| F7 Muxes                   |   80 |     0 |     26600 |  0.30 |
-| F8 Muxes                   |    2 |     0 |     13300 |  0.02 |
-
-#### Memory
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| Block RAM Tile |    0 |     0 |       140 |  0.00 |
-|   RAMB36/FIFO* |    0 |     0 |       140 |  0.00 |
-|   RAMB18       |    0 |     0 |       280 |  0.00 |
-
-#### DSP
-
-|    Site Type   | Used | Fixed | Available | Util (%) |
-| :-- | :--: | :--: | :--: | :--: |
-| DSPs           |    1 |     0 |       220 |  0.45 |
-|   DSP48E1 only |    1 |       |           |       |
+|    Site Type   | 2 Neurons | 5 Neurons | 10 Neurons | 100 Neurons | 1000 Neurons |
+| :-- | :--: | :--: | :--: | :--: | :--: |
+| DSPs           |    1 |    1 |    1 |    1 |    1 |
+|   DSP48E1 only |    1 |    1 |    1 |    1 |    1 |
 
 ## FPGA Resource Utilization
 
