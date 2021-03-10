@@ -765,6 +765,7 @@ def generate_exe_signals():
                             exe_unit == exe
                             and len(fetch_mems) > input
                             and fetch_mems[input] == src["com"]
+                            and fetch_mems[:input].count(src["com"]) == src["port"]
                         ):
                             try:
                                 value_opcode_table[sel_val].append(instr_val)
