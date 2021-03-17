@@ -14,19 +14,17 @@ from FPE.toolchain.HDL_generation import utils as gen_utils
 def preprocess_config(config_in):
     config_out = {}
 
-    assert(config_in["width"] > 0)
-    config_out["width"] = config_in["width"]
-
-    assert(config_in["count"] > 0)
-    config_out["count"] = config_in["count"]
+    assert(config_in["PC_width"] > 0)
+    config_out["PC_width"] = config_in["PC_width"]
 
     # Handle delay regs and delay encoding
     config_out["delay_encoding"] = {
         "bais"  : 1,
         "range" : 31
     }
+    assert(config_in["count"] > 0)
     config_out["registers"] = tc_utils.biased_tally.width(
-        config_out["count"],
+        config_in["count"],
         config_out["delay_encoding"]["bais" ],
         config_out["delay_encoding"]["range"]
     )
@@ -38,17 +36,19 @@ def preprocess_config(config_in):
 
 def handle_module_name(module_name, config, generate_name):
     if generate_name == True:
-        generated_name = "ZOL"
+        generated_name = "ZOL_ripple"
 
         if config["stallable"]:
             generated_name += "_stallable"
         else:
             generated_name += "_nonstallable"
 
-        generated_name += "_%iw"%(config["width"])
-        generated_name += "_%ireg"%(config["registers"])
-        generated_name += "_%ib"%(config["delay_encoding"]["bais"])
-        generated_name += "_%ir"%(config["delay_encoding"]["range"])
+        generated_name += "_%iw"%(config["PC_width"])
+        generated_name += "_%ix%i_%i"%(
+            config["registers"],
+            config["delay_encoding"]["bais"],
+            config["delay_encoding"]["bais"] + config["delay_encoding"]["range"],
+        )
 
         return generated_name
     else:
@@ -81,8 +81,9 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             "ports" : [],
             "generics" : [],
             "delay_encoding" : {
-                "width" : CONFIG["registers"],
-                "bais" : CONFIG["delay_encoding"]["bais"],
+                "type"  : "biased_tally",
+                "tallies" : CONFIG["registers"],
+                "bais"  : CONFIG["delay_encoding"]["bais"],
                 "range" : CONFIG["delay_encoding"]["range"]
             }
         }
@@ -105,7 +106,8 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             }
         ]
 
-        generate_PC_checking()
+        generate_PC_interface()
+        generate_state_logic()
         generate_delay()
 
         # Save code to file
@@ -113,7 +115,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 
         return INTERFACE, MODULE_NAME
 
-def generate_PC_checking():
+def generate_PC_interface():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
@@ -139,12 +141,12 @@ def generate_PC_checking():
     INTERFACE["ports"] += [
         {
             "name" : "value_in",
-            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1),
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
             "direction" : "in"
         },
         {
             "name" : "value_out",
-            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1),
+            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
             "direction" : "out"
         },
         {
@@ -167,6 +169,25 @@ def generate_PC_checking():
             },
         ]
 
+    ARCH_HEAD += "signal start_found : std_logic;\n"
+    ARCH_HEAD += "signal end_found : std_logic;\n"
+    ARCH_HEAD += "signal end_found_delayed : std_logic;\n"
+
+    ARCH_BODY += "start_found <= '1' when PC_running = '1' and start_value = to_integer(unsigned(value_in)) else '0';\n"
+
+    if CONFIG["stallable"]:
+        ARCH_BODY += "end_found   <= '1' when stall /= '1' and PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
+    else:
+        ARCH_BODY += "end_found   <= '1' when PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
+
+    ARCH_BODY += "value_out <= std_logic_vector(to_unsigned(start_value, value_out'length)) when end_found = '1' else (others => 'Z');\n"
+    ARCH_BODY += "overwrite <= '1' when end_found = '1' and (curr_state = SETUP or curr_state = ACTIVE) else 'Z';\n\n"
+
+
+def generate_state_logic():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
     ARCH_HEAD += "type tracker_state is (INACTIVE, SETUP, ACTIVE, CLEAR);\n"
     ARCH_HEAD += "signal last_state : tracker_state := INACTIVE;\n"
     ARCH_HEAD += "signal curr_state : tracker_state;\n"
@@ -186,29 +207,12 @@ def generate_PC_checking():
     ARCH_BODY += "else last_state;\n\<\n"
 
 
-    ARCH_HEAD += "signal start_found : std_logic;\n"
-    ARCH_HEAD += "signal end_found : std_logic;\n"
-    ARCH_HEAD += "signal end_found_delayed : std_logic;\n"
-
-    ARCH_BODY += "start_found <= '1' when PC_running = '1' and start_value = to_integer(unsigned(value_in)) else '0';\n"
-
-    if CONFIG["stallable"]:
-        ARCH_BODY += "end_found   <= '1' when stall /= '1' and PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
-    else:
-        ARCH_BODY += "end_found   <= '1' when PC_running = '1' and end_value = to_integer(unsigned(value_in)) else '0';\n\n"
-
     ARCH_BODY += "process (clock)\>\n"
     ARCH_BODY += "\<begin\>\n"
     ARCH_BODY += "if rising_edge(clock) then\>\n"
     ARCH_BODY += "end_found_delayed <= end_found;\n"
     ARCH_BODY += "\<end if;\n"
     ARCH_BODY += "\<end process;\n\n"
-
-    ARCH_BODY += "delay_clock_enable <= end_found;\n"
-    ARCH_BODY += "delay_in <= '1' when curr_state = SETUP else '0';\n\n"
-
-    ARCH_BODY += "value_out <= std_logic_vector(to_unsigned(start_value, value_out'length));\n"
-    ARCH_BODY += "overwrite <= '1' when end_found = '1' and (curr_state = SETUP or curr_state = ACTIVE) else '0';\n\n"
 
 def generate_delay():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -224,12 +228,16 @@ def generate_delay():
 
     INTERFACE["generics"] += [
         {
-            "name" : "delay_tally",
+            "name" : "count_value",
             "type" : "std_logic_vector(%i downto 0)"%(5*CONFIG["registers"] - 1),
         },
     ]
 
     ARCH_HEAD += "signal delay_in, delay_out, delay_clock_enable : std_logic;\n"
+
+    ARCH_BODY += "delay_clock_enable <= end_found;\n"
+    ARCH_BODY += "delay_in <= '1' when curr_state = SETUP else '0';\n\n"
+
 
     # Handle a;; other  SRLs
     for reg in range(CONFIG["registers"]):
@@ -238,7 +246,7 @@ def generate_delay():
         ARCH_BODY += "reg_%i : SRLC32E\n\>"%(reg)
         ARCH_BODY += "generic map (INIT => X\"00000000\")\n"
         ARCH_BODY += "port map (\>\n"
-        ARCH_BODY += "A => delay_tally(%i downto %i),\n"%(5*reg + 4, 5*reg)
+        ARCH_BODY += "A => count_value(%i downto %i),\n"%(5*reg + 4, 5*reg)
 
         # Handle the specail case of the first SRL
         if reg == 0:

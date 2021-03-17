@@ -148,9 +148,6 @@ def generate_data_ports():
                 }
             ]
 
-
-
-
 def generate_state_management():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY

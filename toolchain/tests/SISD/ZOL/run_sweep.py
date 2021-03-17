@@ -5,20 +5,25 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import SIGNED
-    import UNSIGNED
+    import ripple
+    import cascade
+    import dynamic
 else:
-    from . import SIGNED
-    from . import UNSIGNED
+    from . import ripple
+    from . import cascade
+    from . import dynamic
 
 
 test_sets = [
-    SIGNED,
-    UNSIGNED
+    ripple,
+    cascade,
+    dynamic
 ]
+
 
 def run_sweep(path="."):
 

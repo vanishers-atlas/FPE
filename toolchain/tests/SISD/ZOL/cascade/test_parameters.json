@@ -1,9 +1,14 @@
 {
+    "signal_padding": "unsigned",
+
     "SIMD": {
         "lanes": 1
     },
 
-    "program_fetch": {},
+    "program_flow": {
+        "ZOL_type_scheme"  : "cascade",
+        "ZOLs": { }
+    },
 
     "instruction_decoder": {},
 
@@ -22,7 +27,5 @@
         "ALU": {
             "data_width": 4
         }
-    },
-
-    "signal_padding": "signed"
+    }
 }

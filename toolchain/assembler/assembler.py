@@ -36,7 +36,7 @@ def determine_require_generics(interface):
         ]:
             pass
         # Skipped handled ZOL generics
-        elif re.search(r"ZOL_loop_\d*_(delay_tally|start_value|end_value)", generic["name"]) != None:
+        elif re.search(r"bound_ZOL_.+", generic["name"]) != None:
             pass
         else:
             generics[generic["name"]] = None
@@ -150,10 +150,10 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     if "ZOL_delay_encoding" in interface:
         handler = ZOL_handling.handler(program_context, interface["ZOL_delay_encoding"])
         walker.walk(handler, program_context["program_tree"])
-        for ZOL, value in handler.get_output().items():
-            generics["ZOL_loop_%i_delay_tally"%(ZOL)]  = value["tally"]
-            generics["ZOL_loop_%i_start_value"%(ZOL)]  = value["start"]
-            generics["ZOL_loop_%i_end_value"  %(ZOL)]  = value["end"]
+        for ZOL_name, values in handler.get_output().items():
+            generics["%s_count_value"%(ZOL_name)]  = values["count"]
+            generics["%s_start_value"%(ZOL_name)]  = values["start"]
+            generics["%s_end_value"  %(ZOL_name)]  = values["end"]
 
     # Generate testbench style file, with example instancation
     IMPORTS   = []

@@ -13,11 +13,15 @@ class extractor(ParseTreeListener):
 
         # Create a blank config
         this.parameters = {
+            "signal_padding" : None,
+
             "SIMD" : {
                 "lanes" : None,
             },
 
-            "program_flow" : { },
+            "program_flow" : {
+                "ZOLs" : { },
+            },
 
             "instr_decoder"  : { },
 
@@ -128,3 +132,8 @@ class extractor(ParseTreeListener):
             this.parameters["address_sources"][BAM]["addr_max"] = None
         if "step_max" not in this.parameters["address_sources"][BAM]:
             this.parameters["address_sources"][BAM]["step_max"] = None
+
+    #################################################################################
+
+    def enterState_zol(this, ctx):
+        this.parameters["program_flow"]["ZOL_type_scheme"] = "dynamic"

@@ -18,7 +18,8 @@ from FPE.toolchain.HDL_generation.processor import reg_file
 from FPE.toolchain.HDL_generation.processor import BAM
 from FPE.toolchain.HDL_generation.processor import instr_decoder
 from FPE.toolchain.HDL_generation.processor import program_counter
-from FPE.toolchain.HDL_generation.processor import ZOL_manager
+from FPE.toolchain.HDL_generation.processor import ZOL_ripple
+from FPE.toolchain.HDL_generation.processor import ZOL_cascade
 
 from FPE.toolchain.HDL_generation.memory import RAM
 from FPE.toolchain.HDL_generation.memory import ROM
@@ -873,7 +874,9 @@ def gen_program_fetch():
 PC_predeclared_ports = [
     "clock",
     "kickoff",
-    "stall"
+    "stall",
+    "ZOL_value",
+    "ZOL_overwrite",
 ]
 
 def gen_program_counter():
@@ -1000,52 +1003,66 @@ def gen_program_counter():
     ARCH_BODY += "data_out(0) => PC_running_2\n"
     ARCH_BODY += "\<);\<\n\n"
 
+ZOL_lib_lookup = {
+    "ripple"  : ZOL_ripple,
+    "cascade" : ZOL_cascade,
+}
+
 def gen_zero_overhead_loop():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    interface, name = ZOL_manager.generate_HDL(
-        {
-            "PC_width"  : CONFIG["program_flow"]["PC_width"],
-            "ZOLs"      : CONFIG["program_flow"]["ZOLs"],
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        MODULE_NAME + "_ZOL_manager",
-        True,
-        FORCE_GENERATION
-    )
-    INTERFACE["ZOL_delay_encoding"] = interface["delay_encoding"]
+    if len(CONFIG["program_flow"]["ZOLs"]) != 0:
+        INTERFACE["ZOL_delay_encoding"] = {}
 
-    ARCH_BODY += "\nZOL : entity work.%s(arch)\>\n"%(name)
+        # Pull XOL bused to defauly values
+        ARCH_HEAD += "signal ZOL_value : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
+        ARCH_HEAD += "signal ZOL_overwrite : std_logic := 'L';\n"
 
-    if len(interface["generics"]) != 0:
-        ARCH_BODY += "generic map (\>\n"
+        # Generate XOL hardward
+        for ZOL_name, ZOL_details in CONFIG["program_flow"]["ZOLs"].items():
+            interface, name = ZOL_lib_lookup[ZOL_details["type"]].generate_HDL(
+                {
+                    **ZOL_details,
+                    "PC_width"  : CONFIG["program_flow"]["PC_width"],
+                    "stallable" : CONFIG["program_flow"]["stallable"],
+                },
+                OUTPUT_PATH,
+                MODULE_NAME + ZOL_name,
+                True,
+                FORCE_GENERATION
+            )
+            INTERFACE["ZOL_delay_encoding"][ZOL_name] = interface["delay_encoding"]
 
-        for generic in sorted(interface["generics"], key=lambda p : p["name"]):
-            INTERFACE["generics"] += [ { "name" : "ZOL_" + generic["name"], "type" : generic["type"] } ]
-            ARCH_BODY += "%s => ZOL_%s,\n"%(generic["name"], generic["name"])
+            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(ZOL_name, name)
 
-        ARCH_BODY.drop_last_X(2)
-        ARCH_BODY += "\<\n)\n"
+            if len(interface["generics"]) != 0:
+                ARCH_BODY += "generic map (\>\n"
 
-    ARCH_BODY += "port map (\>\n"
+                for generic in sorted(interface["generics"], key=lambda p : p["name"]):
+                    INTERFACE["generics"] += [ { "name" : "%s_%s"%(ZOL_name, generic["name"]), "type" : generic["type"] } ]
+                    ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], ZOL_name, generic["name"])
 
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+                ARCH_BODY.drop_last_X(2)
+                ARCH_BODY += "\<\n)\n"
 
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "PC_running => PC_running_1,\n"
-    ARCH_BODY += "value_in   => PC_value,\n"
-    ARCH_BODY += "value_out  => PC_ZOL_value,\n"
-    ARCH_BODY += "overwrite  => PC_ZOL_overwrite,\n"
+            ARCH_BODY += "port map (\>\n"
 
-    ARCH_BODY.drop_last_X(2)
-    ARCH_BODY += "\<\n);\n"
+            if CONFIG["program_flow"]["stallable"]:
+                ARCH_BODY += "stall => stall,\n"
 
-    ARCH_BODY += "\<\n\n"
+            ARCH_BODY += "clock => clock,\n"
+            ARCH_BODY += "PC_running => PC_running_1,\n"
+            ARCH_BODY += "value_in   => PC_value,\n"
+            ARCH_BODY += "value_out  => ZOL_value,\n"
+            ARCH_BODY += "overwrite  => ZOL_overwrite,\n"
 
-    ARCH_BODY += "PM_addr <= PC_value;\n"
+            ARCH_BODY.drop_last_X(2)
+            ARCH_BODY += "\<\n);\n"
+
+            ARCH_BODY += "\<\n\n"
+
+            ARCH_BODY += "PM_addr <= PC_value;\n"
 
 def gen_program_memory():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
