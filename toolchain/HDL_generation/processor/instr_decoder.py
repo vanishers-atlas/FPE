@@ -194,6 +194,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         ]
 
         # Generation Module Code
+        define_decode_table_type()
         compute_instr_sections()
         generate_input_ports()
         generate_fetch_signals()
@@ -249,25 +250,40 @@ def generate_std_logic_signal(sig_name, value_opcode_table):
     ARCH_BODY += "data_in(0)  => pre_%s,\n"%(sig_name, )
     ARCH_BODY += "data_out(0) => %s\n"%(sig_name, )
 
-    ARCH_BODY += "\<);\n\<\n"
+    ARCH_BODY += "\<);\n\<"
 
-    # Buffer assementment logic
-    ARCH_BODY += "pre_%s <=\> 'U' when %s /= '1'\nelse\>"%(sig_name, INPUT_SIGNALS["enable"])
-    for value, opcodes in value_opcode_table.items():
-        ARCH_BODY += "'%s' when\>%s\<\n\<else\>"%(
-            value,
-            "\nor ".join(
-                [
-                    "%s(%s) = \"%s\""%(
-                        INPUT_SIGNALS["instr"],
-                        INSTR_SECTIONS["opcode"]["range"],
-                        tc_utils.unsigned.encode(opcode, CONFIG["instr_decoder"]["opcode_width"])
-                    )
-                    for opcode in opcodes
-                ]
+    # Built decode table
+    opcode_value_table = {}
+    for opcode in range(2**INSTR_SECTIONS["opcode"]["width"]):
+        values = [
+            value
+            for value, opcodes in value_opcode_table.items()
+            if  opcode in opcodes
+        ]
+
+        if   len(values) == 0:
+            opcode_value_table[opcode] = 'U'
+        elif len(values) == 1:
+            opcode_value_table[opcode] = values[0]
+        else:
+            raise ValueError("Multiple values, %s, for signal, %s, for opcode, %i]"%(
+                    str(values),
+                    sig_name,
+                    opcode,
+                )
             )
-        )
-    ARCH_BODY += "'U';\<\<\n\n"
+
+    # Add decode table
+    ARCH_HEAD += "constant %s_decode_table : decode_table := (\>\n"%(sig_name, )
+    # Working decode table, in as rows of 8 values
+    for i in range(2**max([INSTR_SECTIONS["opcode"]["width"] - 3, 0])):
+        for j in range(2**min([INSTR_SECTIONS["opcode"]["width"], 3])):
+            ARCH_HEAD += "\'%s\',\t"%(opcode_value_table[8*i + j])
+        ARCH_HEAD += "\n"
+    ARCH_HEAD.drop_last_X(3)
+    ARCH_HEAD += "\n\<);\n\n"
+
+    ARCH_BODY += "pre_%s <= 'U' when %s /= '1' else %s_decode_table(%s);\n\n"%(sig_name, INPUT_SIGNALS["enable"], sig_name, INPUT_SIGNALS["OPCODE"])
 
 def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -313,25 +329,54 @@ def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
     ARCH_BODY += "data_in  => pre_%s,\n"%(sig_name, )
     ARCH_BODY += "data_out => %s\n"%(sig_name, )
 
-    ARCH_BODY += "\<);\n\<\n"
+    ARCH_BODY += "\<);\n\<"
 
-    # Buffer assementment logic
-    ARCH_BODY += "pre_%s <=\> (others => 'U') when %s /= '1'\nelse\>"%(sig_name, INPUT_SIGNALS["enable"])
-    for value, opcodes in value_opcode_table.items():
-        ARCH_BODY += "\"%s\" when\>%s\<\n\<else\>"%(
-            value,
-            "\nor ".join(
-                [
-                    "%s(%s) = \"%s\""%(
-                        INPUT_SIGNALS["instr"],
-                        INSTR_SECTIONS["opcode"]["range"],
-                        tc_utils.unsigned.encode(opcode, CONFIG["instr_decoder"]["opcode_width"])
-                    )
-                    for opcode in opcodes
-                ]
+    # Built decode table
+    opcode_value_table = {}
+    for opcode in range(2**INSTR_SECTIONS["opcode"]["width"]):
+        values = [
+            list(value)
+            for value, opcodes in value_opcode_table.items()
+            if  opcode in opcodes
+        ]
+
+        if   len(values) == 0:
+            opcode_value_table[opcode] = ['U']*vec_len
+        elif len(values) == 1:
+            opcode_value_table[opcode] = list(values[0])
+            # Reverse as bit are number right to the left not left to right
+            opcode_value_table[opcode].reverse()
+
+        else:
+            raise ValueError("Multiple values, %s, for signal, %s, for opcode, %i]"%(
+                    str(values),
+                    sig_name,
+                    opcode,
+                )
             )
+
+    # Add decode table
+    for bit in range(vec_len):
+        ARCH_HEAD += "constant %s_bit_%i_decode_table : decode_table := (\>\n"%(sig_name, bit, )
+        # Working decode table, in as rows of 8 values
+        for i in range(2**max([INSTR_SECTIONS["opcode"]["width"] - 3, 0])):
+            for j in range(2**min([INSTR_SECTIONS["opcode"]["width"], 3])):
+                ARCH_HEAD += "\'%s\',\t"%(opcode_value_table[8*i + j][bit])
+            ARCH_HEAD += "\n"
+        ARCH_HEAD.drop_last_X(3)
+        ARCH_HEAD += "\n\<);\n"
+
+        ARCH_BODY += "pre_%s(%i) <= 'U' when %s /= '1' else %s_bit_%i_decode_table(%s);\n"%(
+            sig_name,
+            bit,
+            INPUT_SIGNALS["enable"],
+            sig_name,
+            bit,
+            INPUT_SIGNALS["OPCODE"]
         )
-    ARCH_BODY += "(others => 'U');\<\<\n\n"
+
+    ARCH_HEAD += "\n"
+    ARCH_BODY += "\n"
 
 def generate_input_signals_delay(stage):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -396,7 +441,23 @@ def generate_input_signals_delay(stage):
 
     INPUT_SIGNALS["enable"] = "%s_enable_delay_out"%(stage, )
 
+    ARCH_HEAD += "signal %s_opcode : integer;\n\n"%(stage, )
+    ARCH_BODY += "%s_opcode <= to_integer(unsigned(%s(%s)));\n\n"%(
+        stage,
+        INPUT_SIGNALS["instr"],
+        INSTR_SECTIONS["opcode"]["range"],
+    )
+    INPUT_SIGNALS["OPCODE"] = "%s_opcode"%(stage, )
+
 #####################################################################
+
+def define_decode_table_type():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    ARCH_HEAD += "type decode_table is array(0 to %i) of std_logic;\n\n"%(
+        2**CONFIG["instr_decoder"]["opcode_width"] - 1,
+    )
 
 def compute_instr_sections():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -448,6 +509,13 @@ def generate_input_ports():
     INPUT_SIGNALS = {}
     INPUT_SIGNALS["instr"] = "instr"
     INPUT_SIGNALS["enable"] = "enable"
+
+    ARCH_HEAD += "signal input_opcode : integer;\n\n"
+    ARCH_BODY += "input_opcode <= to_integer(unsigned(%s(%s)));\n\n"%(
+        INPUT_SIGNALS["instr"],
+        INSTR_SECTIONS["opcode"]["range"],
+    )
+    INPUT_SIGNALS["OPCODE"] = "input_opcode"
 
     if CONFIG["program_flow"]["stallable"]:
         INTERFACE["ports"] += [
@@ -662,6 +730,7 @@ def generate_fetch_signals():
         ]
 
         ARCH_BODY += "addr_%i_fetch <= %s(%s);\n"%(addr, INPUT_SIGNALS["instr"], section)
+    ARCH_BODY += "\n"
 
 jump_mnemonic_jump_statuses_map = {
     "JEQ" : {
@@ -1040,3 +1109,4 @@ def generate_store_signals():
         ]
 
         ARCH_BODY += "addr_%i_store <= %s(%s);\n"%(addr, INPUT_SIGNALS["instr"], section)
+    ARCH_BODY += "\n"
