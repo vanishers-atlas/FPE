@@ -318,8 +318,10 @@ def generate_instr_access_fetch(ctx, program_context):
         return generate_instr_access_reg(ctx.access_reg(), program_context)
     elif ctx.access_ram():
         return generate_instr_access_ram(ctx.access_ram(), program_context)
-    elif ctx.access_rom():
-        return generate_instr_access_rom(ctx.access_rom(), program_context)
+    elif ctx.access_rom_a():
+        return generate_instr_access_rom_a(ctx.access_rom_a(), program_context)
+    elif ctx.access_rom_b():
+        return generate_instr_access_rom_b(ctx.access_rom_b(), program_context)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -423,14 +425,29 @@ def generate_instr_access_ram(ctx, program_context):
         ]
     )
 
-def generate_instr_access_rom(ctx, program_context):
+def generate_instr_access_rom_a(ctx, program_context):
     # Get all given mods
     mods = [ ]
 
     return "'".join(
         [
             # Mem
-            "ROM",
+            "ROM_A",
+            # Addr
+            generate_instr_addr(ctx.addr(), program_context),
+            # Mods
+            "@".join( sorted( mods ) ),
+        ]
+    )
+
+def generate_instr_access_rom_b(ctx, program_context):
+    # Get all given mods
+    mods = [ ]
+
+    return "'".join(
+        [
+            # Mem
+            "ROM_B",
             # Addr
             generate_instr_addr(ctx.addr(), program_context),
             # Mods

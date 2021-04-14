@@ -64,8 +64,10 @@ def get_component_access_fetch(ctx, program_context):
         return get_component_access_reg(ctx.access_reg(), program_context)
     elif ctx.access_ram():
         return get_component_access_ram(ctx.access_ram(), program_context)
-    elif ctx.access_rom():
-        return get_component_access_rom(ctx.access_rom(), program_context)
+    elif ctx.access_rom_a():
+        return get_component_access_rom_a(ctx.access_rom_a(), program_context)
+    elif ctx.access_rom_b():
+        return get_component_access_rom_b(ctx.access_rom_b(), program_context)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -107,8 +109,11 @@ def get_component_access_reg(ctx, program_context):
 def get_component_access_ram(ctx, program_context):
     return "RAM"
 
-def get_component_access_rom(ctx, program_context):
-    return "ROM"
+def get_component_access_rom_a(ctx, program_context):
+    return "ROM_A"
+
+def get_component_access_rom_b(ctx, program_context):
+    return "ROM_B"
 
 ################################################################
 

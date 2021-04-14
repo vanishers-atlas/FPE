@@ -654,8 +654,9 @@ mem_lib_lookup = {
     "PUT" : comm_put,
     "REG" : reg_file,
     "RAM" : RAM,
-    "ROM" : ROM,
     "IMM" : ROM,
+    "ROM_A" : ROM,
+    "ROM_B" : ROM,
 }
 
 mem_predeclared_ports = [

@@ -1,0 +1,20 @@
+{
+  MOV (ROMB[0x0], PUT[0]);
+  MOV (ROMB[0x1], PUT[0]);
+  MOV (ROMB[0x2], PUT[0]);
+  MOV (ROMB[0x3], PUT[0]);
+  MOV (ROMB[0x4], PUT[0]);
+  MOV (ROMB[0x5], PUT[0]);
+  MOV (ROMB[0x6], PUT[0]);
+  MOV (ROMB[0x7], PUT[0]);
+  MOV (ROMB[0x8], PUT[0]);
+  MOV (ROMB[0x9], PUT[0]);
+  MOV (ROMB[0xa], PUT[0]);
+  MOV (ROMB[0xb], PUT[0]);
+  MOV (ROMB[0xc], PUT[0]);
+  MOV (ROMB[0xd], PUT[0]);
+  MOV (ROMB[0xe], PUT[0]);
+  MOV (ROMB[0xf], PUT[0]);
+
+  NOP;
+}

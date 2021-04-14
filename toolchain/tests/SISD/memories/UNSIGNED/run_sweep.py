@@ -8,16 +8,25 @@ if __name__ == "__main__":
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    from toolchain.tests.SISD.memories.UNSIGNED import RAM, REG
+    import RAM
+    import REG
+    import ROM_A
+    import ROM_B
+    import DUAL_ROM
 else:
     from . import RAM
     from . import REG
+    from . import ROM_A
+    from . import ROM_B
+    from . import DUAL_ROM
 
 test_sets = [
     RAM,
     REG,
+    ROM_A,
+    ROM_B,
+    DUAL_ROM
 ]
-
 
 def run_sweep(path="."):
 

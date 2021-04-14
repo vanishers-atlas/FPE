@@ -41,7 +41,8 @@ grammar FPE_assembly;
 								| access_get
 								| access_reg
 								| access_ram
-								| access_rom
+								| access_rom_a
+								| access_rom_b
 								;
 	access_store 	: access_put
 								| access_reg
@@ -54,7 +55,8 @@ grammar FPE_assembly;
 	access_put : 'PUT' '[' addr ']' ;
 	access_reg : 'REG' '[' addr ']' ;
 	access_ram : 'RAM' '[' addr ']' ;
-	access_rom : 'ROM' '[' addr ']' ;
+	access_rom_a : 'ROMA' '[' addr ']' ;
+	access_rom_b : 'ROMB' '[' addr ']' ;
 
 	addr 	: addr_literal
 	 			| addr_bam

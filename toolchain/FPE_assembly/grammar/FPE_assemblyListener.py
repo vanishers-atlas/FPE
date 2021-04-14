@@ -116,12 +116,21 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#access_rom.
-    def enterAccess_rom(self, ctx:FPE_assemblyParser.Access_romContext):
+    # Enter a parse tree produced by FPE_assemblyParser#access_rom_a.
+    def enterAccess_rom_a(self, ctx:FPE_assemblyParser.Access_rom_aContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#access_rom.
-    def exitAccess_rom(self, ctx:FPE_assemblyParser.Access_romContext):
+    # Exit a parse tree produced by FPE_assemblyParser#access_rom_a.
+    def exitAccess_rom_a(self, ctx:FPE_assemblyParser.Access_rom_aContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#access_rom_b.
+    def enterAccess_rom_b(self, ctx:FPE_assemblyParser.Access_rom_bContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#access_rom_b.
+    def exitAccess_rom_b(self, ctx:FPE_assemblyParser.Access_rom_bContext):
         pass
 
 

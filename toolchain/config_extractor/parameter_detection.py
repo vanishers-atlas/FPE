@@ -72,7 +72,7 @@ class extractor(ParseTreeListener):
             this.IMM_handling(mem)
         elif mem in ["GET", "PUT"]:
             this.comm_handling(mem)
-        elif mem in ["ROM", "RAM", "REG"]:
+        elif mem in ["ROM_A", "ROM_B", "RAM", "REG"]:
             this.basic_mem_handling(mem)
         else:
             raise ValueError("Unknown mem used in fatch access, " + str(mem))

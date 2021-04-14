@@ -22,7 +22,7 @@
             "can_stall": false,
             "data_width": 4
         },
-        "ROM": {
+        "ROM_A": {
             "data_width": 4,
             "depth": 16
         }
