@@ -733,13 +733,13 @@ def inst_data_memory(lane, mem, config, comp, interface):
     for read, signals in enumerate(config["reads"]):
         # Handle Addr signals
         dst_sig = inst + "_read_%i_addr"%(read,)
-        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], CONFIG["signal_padding"])
+        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], "unsigned")
 
     # Create write port muxes
     for write, signals in enumerate(config["writes"]):
         # Handle Addr signals
         dst_sig = inst + "_write_%i_addr"%(write,)
-        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], CONFIG["signal_padding"])
+        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], "unsigned")
 
         # Data port
         for word, details in enumerate(signals["data"]):
