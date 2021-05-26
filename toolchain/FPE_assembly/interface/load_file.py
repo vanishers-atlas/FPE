@@ -1,9 +1,8 @@
 from antlr4 import *
 
-from FPE.toolchain.FPE_assembly.interface.evaluate_expr import evaluate_expr
-
 from FPE.toolchain.FPE_assembly import grammar
 from FPE.toolchain.FPE_assembly import hypergrammar
+from FPE.toolchain.FPE_assembly import context_extraction
 
 def load_file(inputFile):
 	input  = FileStream(inputFile)
@@ -11,39 +10,30 @@ def load_file(inputFile):
 	stream = CommonTokenStream(lexer)
 	parser = grammar.parser(stream)
 	tree   = parser.scope()
-
-	program_context = {
-		"program_tree"	: tree,
-	}
-
 	walker = ParseTreeWalker()
 
-	# Preload all const def
-	extractor = const_def_estactor(program_context)
-	walker.walk(extractor, program_context["program_tree"])
-	program_context = extractor.get_updated_program_context()
+	# Check precontext 'hyper-grammar rules,
+	for rules in hypergrammar.precontext_rules:
+		extractor = rules.extractor()
+		walker.walk(extractor, tree)
+		extractor.final_check()
 
-	# Check asm rules not enforced by grammar
-	for hyper_rule in hypergrammar.hyper_rules:
+	# Generate program context
+	# Use antlr 4 tree as program tree
+	program_context = {
+		"program_tree" : tree
+	}
+	# Run context extractors to generate the rest of the program context
+	for extractor_type in context_extraction.extractors:
+		extractor = extractor_type.extractor(program_context)
+		walker.walk(extractor, program_context["program_tree"])
+		program_context = extractor.get_updated_program_context()
+
+
+	# Check precontext 'hyper-grammar rules,
+	for hyper_rule in hypergrammar.postcontext_rules:
 		extractor = hyper_rule.extractor(program_context)
 		walker.walk(extractor, tree)
 		extractor.final_check()
 
 	return program_context
-
-class const_def_estactor(ParseTreeListener):
-
-	def __init__(this, program_context):
-		this.program_context = {
-			**program_context,
-			"constants" : {},
-		}
-
-
-	def get_updated_program_context(this):
-		return this.program_context
-
-
-	def enterState_constant(this, ctx):
-		identifer = ctx.IDENTIFER().getText()
-		this.program_context["constants"][identifer] = evaluate_expr(ctx.expr(), this.program_context)

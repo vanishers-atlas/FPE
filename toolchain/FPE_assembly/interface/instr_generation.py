@@ -2,10 +2,10 @@ import antlr4
 
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
-from FPE.toolchain.FPE_assembly import utils as asm_utils
-from FPE.toolchain.FPE_assembly import interface as asm_inter
+from FPE.toolchain import FPE_assembly as asm_utils
 
 def generate_instr(ctx, program_context):
+    generate_instr_addr_literal.port = 0
     if type(ctx) == parser.OperationContext:
         return generate_instr_op(ctx, program_context)
     else:
@@ -23,6 +23,8 @@ def generate_instr_op(ctx, program_context):
         return generate_instr_op_bam(ctx.op_bam(), program_context)
     elif ctx.op_alu() != None:
         return generate_instr_op_alu(ctx.op_alu(), program_context)
+    elif ctx.op_ZOL() != None:
+        return generate_instr_op_ZOL(ctx.op_ZOL(), program_context)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -35,7 +37,6 @@ def generate_instr_op(ctx, program_context):
 ####################################################################
 
 def generate_instr_op_void(ctx, program_context):
-    generate_instr_addr_literal.port = 0
     if ctx.op_void_nop():
         return "#".join(
             [
@@ -44,7 +45,7 @@ def generate_instr_op_void(ctx, program_context):
                 # Sources
                 "~".join([]),
                 # Exe
-                asm_inter.get_component_op(ctx, program_context),
+                asm_utils.get_component_op(ctx, program_context),
                 # Dests
                 "~".join([]),
                 # Mods
@@ -63,7 +64,7 @@ def generate_instr_op_void(ctx, program_context):
 ####################################################################
 
 def generate_instr_op_pc(ctx, program_context):
-    generate_instr_addr_literal.port = 0
+
     if ctx.op_pc_jump():
         return "#".join(
             [
@@ -76,7 +77,7 @@ def generate_instr_op_pc(ctx, program_context):
                     ]
                 ),
                 # Exe
-                asm_inter.get_component_op(ctx, program_context),
+                asm_utils.get_component_op(ctx, program_context),
                 # Dests
                 "~".join([]),
                 # Mods
@@ -109,7 +110,6 @@ def generate_instr_op_bam(ctx, program_context):
             )
 
 def generate_instr_op_bam_reset(ctx, program_context):
-    generate_instr_addr_literal.port = 0
     return "#".join(
         [
             # Mnemonic
@@ -117,7 +117,7 @@ def generate_instr_op_bam_reset(ctx, program_context):
             # Sources
             "~".join([]),
             # Exe
-            asm_inter.get_component_op(ctx, program_context),
+            asm_utils.get_component_op(ctx, program_context),
             # Dests
             "~".join([]),
             # Mods
@@ -126,14 +126,12 @@ def generate_instr_op_bam_reset(ctx, program_context):
     )
 
 def generate_instr_op_bam_seek(ctx, program_context):
-    generate_instr_addr_literal.port = 0
+    mods = []
 
-    # Get all mods
-    mods = [mod.getText() for mod in ctx.op_bam_seek_mod()]
-
-    # include "FORWARD" as default direction if one is not given
-    if "BACKWARD" not in mods and "FORWARD" not in mods:
+    if ctx.step_mod == None:
         mods.append("FORWARD")
+    else:
+        mods.append(asm_utils.token_to_text(ctx.step_mod))
 
     return "#".join(
         [
@@ -142,7 +140,7 @@ def generate_instr_op_bam_seek(ctx, program_context):
             # Sources
             generate_instr_access_fetch(ctx.access_fetch(), program_context),
             # Exe
-            asm_inter.get_component_op(ctx, program_context),
+            asm_utils.get_component_op(ctx, program_context),
             # Dests
             "~".join([]),
             # Mods
@@ -171,7 +169,6 @@ def generate_instr_op_alu(ctx, program_context):
             )
 
 def generate_instr_op_alu_1o_1r(ctx, program_context):
-    generate_instr_addr_literal.port = 0
     return "#".join(
         [
             # Mnemonic
@@ -183,7 +180,7 @@ def generate_instr_op_alu_1o_1r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_inter.get_component_op(ctx, program_context),
+            asm_utils.get_component_op(ctx, program_context),
             # Dests
             "~".join(
                 [
@@ -198,14 +195,13 @@ def generate_instr_op_alu_1o_1r(ctx, program_context):
 def generate_instr_op_alu_1o_1e_1r(ctx, program_context):
     mods = []
 
-    generate_instr_addr_literal.port = 0
     return "#".join(
         [
             # Mnemonic
             "@".join(
                 [
                     asm_utils.token_to_text(ctx.mnemonic),
-                    str(asm_inter.evaluate_expr(ctx.expr(), program_context))
+                    str(asm_utils.evaluate_expr(ctx.expr(), program_context))
                 ]
             ),
             # Sources
@@ -215,7 +211,7 @@ def generate_instr_op_alu_1o_1e_1r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_inter.get_component_op(ctx, program_context),
+            asm_utils.get_component_op(ctx, program_context),
             # Dests
             "~".join(
                 [
@@ -228,7 +224,6 @@ def generate_instr_op_alu_1o_1e_1r(ctx, program_context):
     )
 
 def generate_instr_op_alu_2o_0r(ctx, program_context):
-    generate_instr_addr_literal.port = 0
     return "#".join(
         [
             # Mnemonic
@@ -241,7 +236,7 @@ def generate_instr_op_alu_2o_0r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_inter.get_component_op(ctx, program_context),
+            asm_utils.get_component_op(ctx, program_context),
             # Dests
             "~".join([]),
             # Mods
@@ -250,7 +245,6 @@ def generate_instr_op_alu_2o_0r(ctx, program_context):
     )
 
 def generate_instr_op_alu_2o_1r(ctx, program_context):
-    generate_instr_addr_literal.port = 0
     return "#".join(
         [
             # Mnemonic
@@ -263,7 +257,7 @@ def generate_instr_op_alu_2o_1r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_inter.get_component_op(ctx, program_context),
+            asm_utils.get_component_op(ctx, program_context),
             # Dests
             "~".join(
                 [
@@ -278,7 +272,7 @@ def generate_instr_op_alu_2o_1r(ctx, program_context):
 
 def generate_instr_access_alu_operand(ctx, program_context):
 
-    if ctx.access_fetch():
+    if   ctx.access_fetch():
         return generate_instr_access_fetch(ctx.access_fetch(), program_context)
     elif asm_utils.token_to_text(ctx.internal) == "ACC":
         return "ACC"
@@ -306,6 +300,59 @@ def generate_instr_access_alu_result(ctx, program_context):
             )
         )
 
+
+####################################################################
+
+def generate_instr_op_ZOL(ctx, program_context):
+    if ctx.op_ZOL_set() != None:
+        return generate_instr_op_ZOL_set(ctx.op_ZOL_set(), program_context)
+    elif   ctx.op_ZOL_seek() != None:
+        return generate_instr_op_ZOL_seek(ctx.op_ZOL_seek(), program_context)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def generate_instr_op_ZOL_set(ctx, program_context):
+    return "#".join(
+        [
+            # Mnemonic
+            "ZOL_SET",
+            # Sources
+            "~".join([
+                generate_instr_access_fetch(ctx.iterations, program_context)
+            ]),
+            # Exe
+            asm_utils.get_component_op(ctx, program_context),
+            # Dests
+            "~".join([]),
+            # Mods
+            "~".join(sorted([]))
+        ]
+    )
+
+def generate_instr_op_ZOL_seek(ctx, program_context):
+    return "#".join(
+        [
+            # Mnemonic
+            "ZOL_SEEK",
+            # Sources
+            "~".join([
+                generate_instr_access_imm(),
+                generate_instr_access_imm()
+            ]),
+            # Exe
+            asm_utils.get_component_op(ctx, program_context),
+            # Dests
+            "~".join([]),
+            # Mods
+            "~".join(sorted([]))
+        ]
+    )
 
 ####################################################################
 
@@ -361,15 +408,14 @@ def generate_instr_access_imm():
     )
 
 def generate_instr_access_get(ctx, program_context):
-    # Get all given mods
-    mods = [
-        mod.getText().upper()
-        for mod in ctx.access_get_mod()
-    ]
 
-    # Remove default NO_ADV, if given
-    if "NO_ADV" in mods:
-        mods.remove("NO_ADV")
+    mods = [ ]
+
+    if ctx.advance_mod != None:
+        advance_mod = asm_utils.token_to_text(ctx.advance_mod)
+        # Remove default NO_ADV, if given
+        if advance_mod != "NO_ADV":
+            mods.append(asm_utils.token_to_text(ctx.advance_mod))
 
     return "'".join(
         [
@@ -487,20 +533,20 @@ def generate_instr_addr_literal():
     return rtnStr
 
 def generate_instr_addr_bam(ctx, program_context):
+    mods = []
+
+    if ctx.step_mod != None:
+        mods.append(asm_utils.token_to_text(ctx.step_mod))
+
     return ";".join(
         [
             # Com
-            asm_inter.get_component_addr(ctx, program_context),
+            asm_utils.get_component_addr(ctx, program_context),
             # Port
             "0",
             # Mods
             ":".join(
-                sorted(
-                    [
-                        mod.getText()
-                        for mod in ctx.addr_bam_mod()
-                    ]
-                )
+                sorted( mods )
             )
         ]
     )

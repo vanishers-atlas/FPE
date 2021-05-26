@@ -32,6 +32,9 @@ def preprocess_config(config_in):
     config_out["program_flow"] = {}
     assert(type(config_in["program_flow"]["uncondional_jump"]) == type(True))
     config_out["program_flow"]["uncondional_jump"] = config_in["program_flow"]["uncondional_jump"]
+    assert(type(config_in["program_flow"]["ZOLs"]) == type({}))
+    config_out["program_flow"]["ZOLs"] = copy.deepcopy(config_in["program_flow"]["ZOLs"])
+
 
     assert(type(config_in["program_flow"]["stallable"]) == type(True))
     config_out["program_flow"]["stallable"] = config_in["program_flow"]["stallable"]
@@ -948,6 +951,50 @@ def generate_exe_signals():
                 asm_utils.instr_exe_unit(instr_id) == bam
                 and asm_utils.instr_mnemonic(instr_id) == "BAM_SEEK"
                 and "BACKWARD" in asm_utils.instr_mods(instr_id)
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
+
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
+
+    # Handle ZOL seek signals
+    for ZOL, config in CONFIG["program_flow"]["ZOLs"].items():
+        sig_name = "%s_seek"%(ZOL, )
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
+            if(
+                asm_utils.instr_exe_unit(instr_id) == ZOL
+                and asm_utils.instr_mnemonic(instr_id) == "ZOL_SEEK"
+            ):
+                value_opcode_table["1"].append(instr_val)
+            else:
+                value_opcode_table["0"].append(instr_val)
+
+        # Check the signal varies
+        value_opcode_table = {
+            k : v
+            for k, v in value_opcode_table.items()
+            if len(v) > 0
+        }
+        if len(value_opcode_table) > 1:
+            generate_std_logic_signal(sig_name, value_opcode_table)
+
+    # Handle ZOL set signals
+    for ZOL, config in CONFIG["program_flow"]["ZOLs"].items():
+        sig_name = "%s_set"%(ZOL, )
+        value_opcode_table = { "1" : [], "0" : []}
+        for instr_id, instr_val in CONFIG["instr_set"].items():
+            if(
+                asm_utils.instr_exe_unit(instr_id) == ZOL
+                and asm_utils.instr_mnemonic(instr_id) == "ZOL_SET"
             ):
                 value_opcode_table["1"].append(instr_val)
             else:

@@ -6,7 +6,7 @@
     },
 
     "program_flow": {
-        "ZOL_type_scheme"  : "cascade",
+        "bound_ZOL_tracker_type"  : "cascade",
         "ZOLs": { }
     },
 

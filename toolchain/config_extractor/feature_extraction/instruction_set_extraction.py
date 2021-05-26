@@ -34,10 +34,14 @@ class extractor(ParseTreeListener):
     def enterOperation(this, ctx):
         instr = asm_utils.generate_instr(ctx, this.program_context)
         this.instr_set.add(instr)
-        this.addr_sort = 0
+        this.addr_slot = 0
 
 
     def enterOp_pc_jump(this, ctx):
+        this.enterAddr_literal(ctx, mem="IMM")
+
+    def enterOp_ZOL_seek(this, ctx):
+        this.enterAddr_literal(ctx, mem="IMM")
         this.enterAddr_literal(ctx, mem="IMM")
 
     def enterAccess_imm(this, ctx):
@@ -48,12 +52,12 @@ class extractor(ParseTreeListener):
             mem = asm_utils.get_component_access(ctx, this.program_context)
 
         try:
-            this.config["instr_decoder"]["addr_widths"][this.addr_sort] = max(
+            this.config["instr_decoder"]["addr_widths"][this.addr_slot] = max(
                 [
-                    this.config["instr_decoder"]["addr_widths"][this.addr_sort],
+                    this.config["instr_decoder"]["addr_widths"][this.addr_slot],
                     this.config["data_memories"][mem]["addr_width"]
                 ]
             )
         except IndexError:
             this.config["instr_decoder"]["addr_widths"].append(this.config["data_memories"][mem]["addr_width"])
-        this.addr_sort += 1
+        this.addr_slot += 1

@@ -2,6 +2,11 @@ grammar FPE_assembly;
 
 /* Parser Rules */
 
+	/* Rules for the 2 ways IDENTIFERs are used
+	*/
+	ident_dec : IDENTIFER ;
+	ident_ref : IDENTIFER ;
+
 	/* expr are a way to encode constants within a program,
 		their as be as simple as a number literal,
 		or a complex expression built from a range of operands and
@@ -9,7 +14,7 @@ grammar FPE_assembly;
 		Const exprs are evaluated by the assembler, this means they
 		can able be used to preform assembly time calculations not runtime ones
 	*/
-	expr 	: ORB expr CRB	/* bracket precedence */
+	expr 	: '(' expr ')'	/* bracket precedence */
 				| expr multiplicative=('*'|'/'|'%') expr 	/* multiplicative precedence */
 				| expr additive=('+'|'-') 					expr	/* additive precedence */
 				| expr_operand
@@ -18,13 +23,8 @@ grammar FPE_assembly;
 									| BIN_NUM					/* binary  			number literals */
 									|	OCT_NUM					/* octal       	number literals */
 									| HEX_NUM					/* hexadecimal 	number literals */
-									| IDENTIFER				/* an already defined constant 	*/
+									| ident_ref				/* an already defined constant 	*/
 									;
-
-
-	/* jump labels are used to mark location to which the program can jump
-	*/
-	jump_label : IDENTIFER ;
 
 	/* scopes are used to group statements and operations together
 		within FPE assembly that are used to determine the bodies for certain
@@ -50,8 +50,7 @@ grammar FPE_assembly;
 								;
 
 	access_imm : expr ;
-	access_get : 'GET' '[' addr ']' ('<' access_get_mod (',' access_get_mod)* '>')? ;
-		access_get_mod : 'ADV' | 'NO_ADV' ;
+	access_get : 'GET' '[' addr ']' ('<' advance_mod=('ADV' | 'NO_ADV') '>')? ;
 	access_put : 'PUT' '[' addr ']' ;
 	access_reg : 'REG' '[' addr ']' ;
 	access_ram : 'RAM' '[' addr ']' ;
@@ -64,10 +63,7 @@ grammar FPE_assembly;
 
 		addr_literal  : expr ;
 		addr_bam : 	'BAM' '[' expr ']'
-								('<' addr_bam_mod (',' addr_bam_mod)* '>')? ;
-			addr_bam_mod 	: 'FORWARD'  /* seek forward  after read*/
-										| 'BACKWARD' /* seek BACKWARD after read */
-										;
+								('<' step_mod=('FORWARD' | 'BACKWARD') '>')? ;
 
 	/* Statements are parts of an FPE program which don't map to program code
 		And thus don't take up processor cycles
@@ -75,14 +71,28 @@ grammar FPE_assembly;
 	*/
 	statement : state_zol
 						| state_jump_label
+						| state_loop_label
 						| state_constant
+						| state_component
 						;
 
 		state_zol : 'ZOL' '(' expr ')' scope ;
 
-		state_jump_label : jump_label ':' ;
+		state_jump_label : ident_dec ':' ;
 
-		state_constant : 'DEF' IDENTIFER expr ';' ;
+		state_loop_label : 'LOOP' ident_dec ':' scope ;
+
+		state_constant : 'DEF' ident_dec expr ';' ;
+
+		state_component : 'COM' com_name=ident_dec ':'
+				com_type=IDENTIFER '('
+			 	(
+					state_component_parameter
+					(',' state_component_parameter)*
+				)?
+				')' ';'
+			;
+			state_component_parameter : para_name=IDENTIFER ':' (IDENTIFER|expr) ;
 
 
 	/* operations are parts of an FPE program which map to program code
@@ -92,23 +102,24 @@ grammar FPE_assembly;
 		| op_pc 	';'
 		| op_bam 	';'
 		| op_alu  ';'
+		| op_ZOL  ';'
 		;
 
 		op_void : op_void_nop ;
 			op_void_nop : 'NOP' ;
 
 		op_pc 	: op_pc_jump ;
-			op_pc_jump	: mnemonic=( 'JMP' | 'JEQ' | 'JNE' | 'JLT'| 'JLE' | 'JGT' | 'JGE' )
-										'(' jump_label ')' ;
+			op_pc_jump	: mnemonic=( 'JMP' | 'JEQ' | 'JNE' | 'JLT'| 'JLE' | 'JGT' | 'JGE' ) '(' ident_ref ')' ;
 
 		op_bam	:	op_bam_reset | op_bam_seek;
 			op_bam_reset 	: 'RESET' 'BAM' '[' expr ']' ;
 			op_bam_seek		: 'SEEK'  'BAM' '[' expr ']'
 											'(' access_fetch ')'
-											( '<' op_bam_seek_mod ( ',' op_bam_seek_mod )* '>')? ;
-				op_bam_seek_mod	: 'FORWARD'		/* seek forward */
-					| 'BACKWARD'	/* seek back */
-					;
+											( '<' step_mod=('FORWARD' | 'BACKWARD') '>')? ;
+
+		op_ZOL : op_ZOL_seek | op_ZOL_set ;
+			op_ZOL_seek : exe_com=ident_ref '.' 'SEEK' '(' loop_label=ident_ref ')' ;
+			op_ZOL_set  : exe_com=ident_ref '.' 'SET' '(' iterations=access_fetch ')' ;
 
 		op_alu 	: op_alu_1o_1r | op_alu_1o_1e_1r | op_alu_2o_0r | op_alu_2o_1r ;
 			op_alu_1o_1r 		:  mnemonic=( 'MOV' | 'NOT' )
@@ -120,16 +131,11 @@ grammar FPE_assembly;
 			op_alu_2o_1r 		:  mnemonic=( 'ADD' | 'SUB' | 'AND' | 'OR' | 'XOR' | 'MUL' )
 												'(' alu_operand ',' alu_operand ',' alu_result ')' ;
 				alu_operand : access_fetch
-										| internal=('ACC' | 'ACC') ;
+										| internal='ACC' ;
 				alu_result 	: access_store
-										| internal=('ACC' | 'ACC') ;
+										| internal='ACC' ;
 
 /* lexer Rules */
-	/* Symbol Tokens */
-		ORB : '(' ;
-		CRB : ')' ;
-
-
 	/* Number Handling */
 		DEC_NUM : [0-9]+ ;
 		BIN_NUM : '0' [bB]	[0-1]+ ;

@@ -8,6 +8,24 @@ else:
 # This class defines a complete listener for a parse tree produced by FPE_assemblyParser.
 class FPE_assemblyListener(ParseTreeListener):
 
+    # Enter a parse tree produced by FPE_assemblyParser#ident_dec.
+    def enterIdent_dec(self, ctx:FPE_assemblyParser.Ident_decContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#ident_dec.
+    def exitIdent_dec(self, ctx:FPE_assemblyParser.Ident_decContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#ident_ref.
+    def enterIdent_ref(self, ctx:FPE_assemblyParser.Ident_refContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#ident_ref.
+    def exitIdent_ref(self, ctx:FPE_assemblyParser.Ident_refContext):
+        pass
+
+
     # Enter a parse tree produced by FPE_assemblyParser#expr.
     def enterExpr(self, ctx:FPE_assemblyParser.ExprContext):
         pass
@@ -23,15 +41,6 @@ class FPE_assemblyListener(ParseTreeListener):
 
     # Exit a parse tree produced by FPE_assemblyParser#expr_operand.
     def exitExpr_operand(self, ctx:FPE_assemblyParser.Expr_operandContext):
-        pass
-
-
-    # Enter a parse tree produced by FPE_assemblyParser#jump_label.
-    def enterJump_label(self, ctx:FPE_assemblyParser.Jump_labelContext):
-        pass
-
-    # Exit a parse tree produced by FPE_assemblyParser#jump_label.
-    def exitJump_label(self, ctx:FPE_assemblyParser.Jump_labelContext):
         pass
 
 
@@ -77,15 +86,6 @@ class FPE_assemblyListener(ParseTreeListener):
 
     # Exit a parse tree produced by FPE_assemblyParser#access_get.
     def exitAccess_get(self, ctx:FPE_assemblyParser.Access_getContext):
-        pass
-
-
-    # Enter a parse tree produced by FPE_assemblyParser#access_get_mod.
-    def enterAccess_get_mod(self, ctx:FPE_assemblyParser.Access_get_modContext):
-        pass
-
-    # Exit a parse tree produced by FPE_assemblyParser#access_get_mod.
-    def exitAccess_get_mod(self, ctx:FPE_assemblyParser.Access_get_modContext):
         pass
 
 
@@ -161,15 +161,6 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#addr_bam_mod.
-    def enterAddr_bam_mod(self, ctx:FPE_assemblyParser.Addr_bam_modContext):
-        pass
-
-    # Exit a parse tree produced by FPE_assemblyParser#addr_bam_mod.
-    def exitAddr_bam_mod(self, ctx:FPE_assemblyParser.Addr_bam_modContext):
-        pass
-
-
     # Enter a parse tree produced by FPE_assemblyParser#statement.
     def enterStatement(self, ctx:FPE_assemblyParser.StatementContext):
         pass
@@ -197,12 +188,39 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by FPE_assemblyParser#state_loop_label.
+    def enterState_loop_label(self, ctx:FPE_assemblyParser.State_loop_labelContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#state_loop_label.
+    def exitState_loop_label(self, ctx:FPE_assemblyParser.State_loop_labelContext):
+        pass
+
+
     # Enter a parse tree produced by FPE_assemblyParser#state_constant.
     def enterState_constant(self, ctx:FPE_assemblyParser.State_constantContext):
         pass
 
     # Exit a parse tree produced by FPE_assemblyParser#state_constant.
     def exitState_constant(self, ctx:FPE_assemblyParser.State_constantContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#state_component.
+    def enterState_component(self, ctx:FPE_assemblyParser.State_componentContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#state_component.
+    def exitState_component(self, ctx:FPE_assemblyParser.State_componentContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#state_component_parameter.
+    def enterState_component_parameter(self, ctx:FPE_assemblyParser.State_component_parameterContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#state_component_parameter.
+    def exitState_component_parameter(self, ctx:FPE_assemblyParser.State_component_parameterContext):
         pass
 
 
@@ -278,12 +296,30 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#op_bam_seek_mod.
-    def enterOp_bam_seek_mod(self, ctx:FPE_assemblyParser.Op_bam_seek_modContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_ZOL.
+    def enterOp_ZOL(self, ctx:FPE_assemblyParser.Op_ZOLContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#op_bam_seek_mod.
-    def exitOp_bam_seek_mod(self, ctx:FPE_assemblyParser.Op_bam_seek_modContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_ZOL.
+    def exitOp_ZOL(self, ctx:FPE_assemblyParser.Op_ZOLContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_ZOL_seek.
+    def enterOp_ZOL_seek(self, ctx:FPE_assemblyParser.Op_ZOL_seekContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_ZOL_seek.
+    def exitOp_ZOL_seek(self, ctx:FPE_assemblyParser.Op_ZOL_seekContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_ZOL_set.
+    def enterOp_ZOL_set(self, ctx:FPE_assemblyParser.Op_ZOL_setContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_ZOL_set.
+    def exitOp_ZOL_set(self, ctx:FPE_assemblyParser.Op_ZOL_setContext):
         pass
 
 

@@ -20,7 +20,6 @@ from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation import utils  as gen_utils
 
 # import import assembler files (extactors)
-from FPE.toolchain.assembler import label_handling
 from FPE.toolchain.assembler import IMM_handling
 from FPE.toolchain.assembler import PM_handling
 from FPE.toolchain.assembler import ZOL_handling
@@ -108,17 +107,14 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     program_context = asm_utils.load_file(assembly_filename)
     walker = ParseTreeWalker()
 
-    # Find PC value each label relates to
-    handler = label_handling.handler()
-    walker.walk(handler, program_context["program_tree"])
-    program_context["label_pc_map"] = handler.get_output()
-
     # Handle IMM memory
     if "IMM" in config["data_memories"]:
         imm_file = processor_name + "_IMM.mem"
+
         handler = IMM_handling.handler(program_context)
         walker.walk(handler, program_context["program_tree"])
         imm_data = handler.get_output()
+
         program_context["IMM_addr_map"] = {
             v : a
             for (a, v) in imm_data.items()
@@ -126,34 +122,38 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
         # TEMP, pad imm_data to correct depth, should only trigger when a jump label and an imm operand share the same value
         for i in range(len(imm_data), config["data_memories"]["IMM"]["depth"]):
             imm_data[i] = 0
+
         write_mif_file(output_path + "\\" + imm_file, config["data_memories"]["IMM"]["depth"], config["data_memories"]["IMM"]["data_width"], imm_data)
+
         generics["IMM_mem_file"] = imm_file
     else:
         program_context["IMM_addr_map"] = {}
-
 
     # Handle program memory
     handler = PM_handling.handler(config, program_context)
     pm_file = processor_name + "_PM.mem"
     walker.walk(handler, program_context["program_tree"])
     program_end, program = handler.get_output()
+
     write_mif_file(
         output_path + "\\" + pm_file,
         config["program_flow"]["program_length"],
         config["instr_decoder"]["opcode_width"] + sum(config["instr_decoder"]["addr_widths"]),
         program
     )
+
     generics["PM_mem_file"]  = pm_file
     generics["PC_end_value"] = program_end
 
     # Handle ZOL values
-    if "ZOL_delay_encoding" in interface:
-        handler = ZOL_handling.handler(program_context, interface["ZOL_delay_encoding"])
+    if "ZOL_iterations_encoding" in interface.keys():
+        handler = ZOL_handling.handler(program_context, interface["ZOL_iterations_encoding"])
         walker.walk(handler, program_context["program_tree"])
+
         for ZOL_name, values in handler.get_output().items():
-            generics["%s_count_value"%(ZOL_name)]  = values["count"]
-            generics["%s_start_value"%(ZOL_name)]  = values["start"]
-            generics["%s_end_value"  %(ZOL_name)]  = values["end"]
+            generics["%s_iterations" %(ZOL_name)] = values["iterations"]
+            generics["%s_start_value"%(ZOL_name)] = values["start"]
+            generics["%s_end_value"  %(ZOL_name)] = values["end"]
 
     # Generate testbench style file, with example instancation
     IMPORTS   = []
@@ -191,3 +191,8 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
 
     # Save code to file
     gen_utils.generate_files(output_path, processor_name + "_inst", IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+
+if False:
+    for loop, details in program_context["loop_labels"].items():
+        print(loop, details)
+    exit()

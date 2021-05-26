@@ -1,7 +1,6 @@
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser as parser
 
-from FPE.toolchain.FPE_assembly import utils as asm_utils
-from FPE.toolchain.FPE_assembly import interface as asm_inter
+from FPE.toolchain import FPE_assembly as asm_utils
 
 def get_component_addr(ctx, program_context):
     if   type(ctx) == parser.Addr_literalContext:
@@ -25,7 +24,7 @@ def get_component_addr_literal(ctx, program_context):
 
 def get_component_addr_bam(ctx, program_context):
     if ctx.expr():
-        return "BAM_%i"%(asm_inter.evaluate_expr(ctx.expr(), program_context) )
+        return "BAM_%i"%(asm_utils.evaluate_expr(ctx.expr(), program_context) )
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -126,6 +125,8 @@ def get_component_op(ctx, program_context):
         return get_component_op_void(ctx, program_context)
     elif type(ctx) == parser.Op_pcContext:
         return get_component_op_pc(ctx, program_context)
+    elif type(ctx) == parser.Op_ZOLContext:
+        return get_component_op_ZOL(ctx, program_context)
     else:
         try:
             return get_component_op(ctx.parentCtx, program_context)
@@ -148,7 +149,7 @@ def get_component_op_bam(ctx, program_context):
         child_ctx = ctx.children[0]
         if child_ctx.expr():
             return "BAM_%i"%(
-                asm_inter.evaluate_expr(child_ctx.expr(), program_context)
+                asm_utils.evaluate_expr(child_ctx.expr(), program_context)
             )
         else:
             raise NotImplementedError(
@@ -195,6 +196,22 @@ def get_component_op_pc(ctx, program_context):
         ]
     ):
         return "PC"
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx)),
+            )
+
+def get_component_op_ZOL(ctx, program_context):
+    if any(
+        [
+            ctx.op_ZOL_seek(),
+            ctx.op_ZOL_set(),
+        ]
+    ):
+        return asm_utils.token_to_text(ctx.children[0].exe_com.IDENTIFER())
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%

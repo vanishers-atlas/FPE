@@ -25,45 +25,46 @@ class extractor(ParseTreeListener):
     def enterOp_bam_seek(this, ctx):
         BAM = asm_utils.get_component_op(ctx, this.program_context)
 
-        # Record fetched firection signal
-        for mod in [mod.getText().upper() for mod in ctx.op_bam_seek_mod()]:
-            if mod == "FORWARD":
-                try:
-                    this.config["address_sources"][BAM]["steps"].add("fetched_forward")
-                except KeyError:
-                    this.config["address_sources"][BAM]["steps"]= set(["fetched_forward",])
-            elif mod == "BACKWARD":
-                try:
-                    this.config["address_sources"][asm_utils.get_component_op(ctx, this.program_context)]["steps"].add("fetched_backward")
-                except KeyError:
-                    this.config["address_sources"][asm_utils.get_component_op(ctx, this.program_context)]["steps"]= set(["fetched_backward",])
-            else:
-                raise NotImplementedError("unknown mod, %s"%(mod))
-        # Check fort defaulting to forward
-        if not any(
-            [
-                mod.getText().upper() == "BACKWARD"
-                for mod in ctx.op_bam_seek_mod()
-            ]
-        ):
+        # Defualt to FORWARD
+        if ctx.step_mod == None:
+            step_mod = "FORWARD"
+        else:
+            step_mod = asm_utils.token_to_text(ctx.step_mod)
+
+        # Record fetched direction signal
+        if step_mod == "FORWARD":
             try:
                 this.config["address_sources"][BAM]["steps"].add("fetched_forward")
             except KeyError:
-                this.config["address_sources"][BAM]["steps"]= set(["fetched_forward",])
+                this.config["address_sources"][BAM]["steps"] = set(["fetched_forward",])
+        elif step_mod == "BACKWARD":
+            try:
+                this.config["address_sources"][BAM]["steps"].add("fetched_backward")
+            except KeyError:
+                this.config["address_sources"][BAM]["steps"] = set(["fetched_backward",])
+        else:
+            raise NotImplementedError("unknown mod, %s"%(step_mod))
+
 
     def enterAddr_bam(this, ctx):
         BAM = asm_utils.get_component_addr(ctx, this.program_context)
+
+        # Defualt to FORWARD
+        if ctx.step_mod == None:
+            step_mod = "FORWARD"
+        else:
+            step_mod = asm_utils.token_to_text(ctx.step_mod)
+
         # Record fetched direction signal
-        for mod in [mod.getText().upper() for mod in ctx.addr_bam_mod()]:
-            if mod == "FORWARD":
-                try:
-                    this.config["address_sources"][BAM]["steps"].add("generic_forward")
-                except KeyError:
-                    this.config["address_sources"][BAM]["steps"]= set(["generic_forward",])
-            elif mod == "BACKWARD":
-                try:
-                    this.config["address_sources"][BAM]["steps"].add("generic_backward")
-                except KeyError:
-                    this.config["address_sources"][BAM]["steps"]= set(["generic_backward",])
-            else:
-                raise NotImplementedError("unknown mod, %s"%(mod))
+        if step_mod == "FORWARD":
+            try:
+                this.config["address_sources"][BAM]["steps"].add("generic_forward")
+            except KeyError:
+                this.config["address_sources"][BAM]["steps"] = set(["generic_forward",])
+        elif step_mod == "BACKWARD":
+            try:
+                this.config["address_sources"][BAM]["steps"].add("generic_backward")
+            except KeyError:
+                this.config["address_sources"][BAM]["steps"] = set(["generic_backward",])
+        else:
+            raise NotImplementedError("unknown mod, %s"%(step_mod))

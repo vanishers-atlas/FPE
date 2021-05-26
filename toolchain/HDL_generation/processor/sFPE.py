@@ -18,8 +18,7 @@ from FPE.toolchain.HDL_generation.processor import reg_file
 from FPE.toolchain.HDL_generation.processor import BAM
 from FPE.toolchain.HDL_generation.processor import instr_decoder
 from FPE.toolchain.HDL_generation.processor import program_counter
-from FPE.toolchain.HDL_generation.processor import ZOL_ripple
-from FPE.toolchain.HDL_generation.processor import ZOL_cascade
+from FPE.toolchain.HDL_generation.processor import ZOL
 
 from FPE.toolchain.HDL_generation.memory import RAM
 from FPE.toolchain.HDL_generation.memory import ROM
@@ -232,7 +231,7 @@ def preprocess_mem_access_blocks(config, stage, dst_mem):
 # ie. any component that reads fetched/writes stored data
 #####################################################################
 
-def preprocess_exe_input_datapath(config, exe, exe_width):
+def preprocess_exe_input_datapath(config, exe):
     input_datapath = []
 
     for instr in config["instr_set"].keys():
@@ -329,13 +328,23 @@ def preprocess_config(config_in):
         ]
 
     # Handle program_flow section of config
+    for ZOL in config_out["program_flow"]["ZOLs"].keys():
+        ZOL_input = preprocess_exe_input_datapath(config_out, ZOL)
+        config_out["program_flow"]["ZOLs"][ZOL]["inputs"] = []
+        for data in ZOL_input:
+            config_out["program_flow"]["ZOLs"][ZOL]["inputs"].append(
+                {
+                    "data" : data,
+                }
+            )
+
     config_out["program_flow"]["uncondional_jump"] = any([
         asm_utils.instr_mnemonic(instr) == "JMP"
         for instr in config_out["instr_set"].keys()
     ])
     config_out["program_flow"]["statuses"] = {}
     config_out["program_flow"]["inputs"] = []
-    pc_input = preprocess_exe_input_datapath(config_out, "PC", config_out["program_flow"]["PC_width"])
+    pc_input = preprocess_exe_input_datapath(config_out, "PC")
     for data in pc_input:
         config_out["program_flow"]["inputs"].append(
             {
@@ -352,7 +361,7 @@ def preprocess_config(config_in):
     # Handle address_sources section of config
     for bam in config_out["address_sources"]:
         config_out["address_sources"][bam]["inputs"] = []
-        bam_data = preprocess_exe_input_datapath(config_out, bam, config_out["address_sources"][bam]["step_width"])
+        bam_data = preprocess_exe_input_datapath(config_out, bam)
         for data in bam_data:
             config_out["address_sources"][bam]["inputs"].append(
                 {
@@ -404,7 +413,7 @@ def preprocess_config(config_in):
     for exe in config_out["execute_units"].keys():
         # Work out input datapaths
         config_out["execute_units"][exe]["inputs"] = []
-        input_data = preprocess_exe_input_datapath(config_out, exe, config_out["execute_units"][exe]["data_width"])
+        input_data = preprocess_exe_input_datapath(config_out, exe)
         for data in input_data:
             config_out["execute_units"][exe]["inputs"].append(
                 {
@@ -1004,25 +1013,29 @@ def gen_program_counter():
     ARCH_BODY += "data_out(0) => PC_running_2\n"
     ARCH_BODY += "\<);\<\n\n"
 
-ZOL_lib_lookup = {
-    "ripple"  : ZOL_ripple,
-    "cascade" : ZOL_cascade,
-}
+ZOL_predeclared_ports = [
+    "clock",
+    "PC_running",
+    "PC_value",
+    "overwrite",
+    "overwrite_value",
+    "stall",
+]
 
 def gen_zero_overhead_loop():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     if len(CONFIG["program_flow"]["ZOLs"]) != 0:
-        INTERFACE["ZOL_delay_encoding"] = {}
+        INTERFACE["ZOL_iterations_encoding"] = {}
 
-        # Pull XOL bused to defauly values
+        # Pull ZOL bused to defauly values
         ARCH_HEAD += "signal ZOL_value : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
         ARCH_HEAD += "signal ZOL_overwrite : std_logic := 'L';\n"
 
-        # Generate XOL hardward
+        # Generate ZOL hardward
         for ZOL_name, ZOL_details in CONFIG["program_flow"]["ZOLs"].items():
-            interface, name = ZOL_lib_lookup[ZOL_details["type"]].generate_HDL(
+            interface, name = ZOL.generate_HDL(
                 {
                     **ZOL_details,
                     "PC_width"  : CONFIG["program_flow"]["PC_width"],
@@ -1033,7 +1046,8 @@ def gen_zero_overhead_loop():
                 True,
                 FORCE_GENERATION
             )
-            INTERFACE["ZOL_delay_encoding"][ZOL_name] = interface["delay_encoding"]
+
+            INTERFACE["ZOL_iterations_encoding"][ZOL_name] = interface["iterations_encoding"]
 
             ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(ZOL_name, name)
 
@@ -1049,21 +1063,42 @@ def gen_zero_overhead_loop():
 
             ARCH_BODY += "port map (\>\n"
 
+
+            # Handle predeclared ports
             if CONFIG["program_flow"]["stallable"]:
                 ARCH_BODY += "stall => stall,\n"
-
             ARCH_BODY += "clock => clock,\n"
             ARCH_BODY += "PC_running => PC_running_1,\n"
-            ARCH_BODY += "value_in   => PC_value,\n"
-            ARCH_BODY += "value_out  => ZOL_value,\n"
+            ARCH_BODY += "PC_value   => PC_value,\n"
             ARCH_BODY += "overwrite  => ZOL_overwrite,\n"
+            ARCH_BODY += "overwrite_value  => ZOL_value,\n"
+
+            # Handle declared ports
+            declared_ports = [
+                port
+                for port in interface["ports"]
+                if port["name"] not in ZOL_predeclared_ports
+            ]
+            for port in declared_ports:
+                ARCH_HEAD += "signal %s_%s : %s;\n"%(ZOL_name, port["name"], port["type"])
+                ARCH_BODY += "%s => %s_%s,\n"%(port["name"], ZOL_name, port["name"])
 
             ARCH_BODY.drop_last_X(2)
             ARCH_BODY += "\<\n);\n"
 
             ARCH_BODY += "\<\n\n"
 
-            ARCH_BODY += "PM_addr <= PC_value;\n"
+            # Create input port muxes
+            for input, channels in enumerate(ZOL_details["inputs"]):
+                for word, srcs  in enumerate(channels["data"]):
+                    # Put port width from interface
+                    port_name = "in_%i_word_%i"%(input, word)
+                    port = [port for port in interface["ports"] if port["name"] == port_name]
+                    assert(len(port) == 1)
+                    port_width = int(port[0]["type"].split("(")[1].split("downto")[0]) + 1
+
+                    dst_sig = "%s_%s"%(ZOL_name, port_name)
+                    mux_signals("", dst_sig, port_width, srcs, CONFIG["signal_padding"])
 
 def gen_program_memory():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION

@@ -1,6 +1,6 @@
 from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyParser
 
-from FPE.toolchain.FPE_assembly import utils as asm_utils
+from FPE.toolchain import FPE_assembly as asm_utils
 
 def evaluate_expr(ctx, program_context):
     if type(ctx) != FPE_assemblyParser.ExprContext:
@@ -51,16 +51,20 @@ def evaluate_expr_operand(ctx, program_context):
     if type(ctx) != FPE_assemblyParser.Expr_operandContext:
         raise TypeError("Once takes FPE_assemblyParser.ConstantContext as input")
 
-    operand = ctx.getText()
     if   ctx.DEC_NUM() != None:
+        operand = asm_utils.token_to_text(ctx.DEC_NUM())
         return int(operand, 10)
     elif ctx.BIN_NUM() != None:
+        operand = asm_utils.token_to_text(ctx.BIN_NUM())
         return int(operand[2:], 2)
     elif ctx.OCT_NUM() != None:
+        operand = asm_utils.token_to_text(ctx.OCT_NUM())
         return int(operand[2:], 8)
     elif ctx.HEX_NUM() != None:
+        operand = asm_utils.token_to_text(ctx.HEX_NUM())
         return int(operand[2:], 16)
     elif ctx.IDENTIFER() != None:
+        operand = asm_utils.token_to_text(ctx.IDENTIFER())
         return program_context["constants"][operand]
     else:
         raise NotImplementedError("ConstantContext using an unknown rule")

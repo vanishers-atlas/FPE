@@ -8,137 +8,155 @@ import sys
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3@")
-        buf.write("\u013f\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3D")
+        buf.write("\u0164\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4\23\t\23")
         buf.write("\4\24\t\24\4\25\t\25\4\26\t\26\4\27\t\27\4\30\t\30\4\31")
         buf.write("\t\31\4\32\t\32\4\33\t\33\4\34\t\34\4\35\t\35\4\36\t\36")
         buf.write("\4\37\t\37\4 \t \4!\t!\4\"\t\"\4#\t#\4$\t$\4%\t%\4&\t")
-        buf.write("&\4\'\t\'\3\2\3\2\3\2\3\2\3\2\3\2\5\2U\n\2\3\2\3\2\3\2")
-        buf.write("\3\2\3\2\3\2\7\2]\n\2\f\2\16\2`\13\2\3\3\3\3\3\4\3\4\3")
-        buf.write("\5\3\5\3\5\7\5i\n\5\f\5\16\5l\13\5\3\5\3\5\3\6\3\6\3\6")
-        buf.write("\3\6\3\6\3\6\5\6v\n\6\3\7\3\7\3\7\5\7{\n\7\3\b\3\b\3\t")
-        buf.write("\3\t\3\t\3\t\3\t\3\t\3\t\3\t\7\t\u0087\n\t\f\t\16\t\u008a")
-        buf.write("\13\t\3\t\3\t\5\t\u008e\n\t\3\n\3\n\3\13\3\13\3\13\3\13")
-        buf.write("\3\13\3\f\3\f\3\f\3\f\3\f\3\r\3\r\3\r\3\r\3\r\3\16\3\16")
-        buf.write("\3\16\3\16\3\16\3\17\3\17\3\17\3\17\3\17\3\20\3\20\5\20")
-        buf.write("\u00ad\n\20\3\21\3\21\3\22\3\22\3\22\3\22\3\22\3\22\3")
-        buf.write("\22\3\22\7\22\u00b9\n\22\f\22\16\22\u00bc\13\22\3\22\3")
-        buf.write("\22\5\22\u00c0\n\22\3\23\3\23\3\24\3\24\3\24\5\24\u00c7")
-        buf.write("\n\24\3\25\3\25\3\25\3\25\3\25\3\25\3\26\3\26\3\26\3\27")
-        buf.write("\3\27\3\27\3\27\3\27\3\30\3\30\3\30\3\30\3\30\3\30\3\30")
-        buf.write("\3\30\3\30\3\30\3\30\3\30\5\30\u00e3\n\30\3\31\3\31\3")
-        buf.write("\32\3\32\3\33\3\33\3\34\3\34\3\34\3\34\3\34\3\35\3\35")
-        buf.write("\5\35\u00f2\n\35\3\36\3\36\3\36\3\36\3\36\3\36\3\37\3")
-        buf.write("\37\3\37\3\37\3\37\3\37\3\37\3\37\3\37\3\37\3\37\3\37")
-        buf.write("\7\37\u0106\n\37\f\37\16\37\u0109\13\37\3\37\3\37\5\37")
-        buf.write("\u010d\n\37\3 \3 \3!\3!\3!\3!\5!\u0115\n!\3\"\3\"\3\"")
-        buf.write("\3\"\3\"\3\"\3\"\3#\3#\3#\3#\3#\3#\3#\3#\3#\3$\3$\3$\3")
-        buf.write("$\3$\3$\3$\3%\3%\3%\3%\3%\3%\3%\3%\3%\3&\3&\5&\u0139\n")
-        buf.write("&\3\'\3\'\5\'\u013d\n\'\3\'\2\3\2(\2\4\6\b\n\f\16\20\22")
-        buf.write("\24\26\30\32\34\36 \"$&(*,.\60\62\64\668:<>@BDFHJL\2\r")
-        buf.write("\3\2\3\5\3\2\6\7\3\29=\3\2\20\21\3\2\30\31\3\2\37%\3\2")
-        buf.write("()\3\2*-\3\2./\3\2\60\65\3\2\66\66\2\u0136\2T\3\2\2\2")
-        buf.write("\4a\3\2\2\2\6c\3\2\2\2\be\3\2\2\2\nu\3\2\2\2\fz\3\2\2")
-        buf.write("\2\16|\3\2\2\2\20~\3\2\2\2\22\u008f\3\2\2\2\24\u0091\3")
-        buf.write("\2\2\2\26\u0096\3\2\2\2\30\u009b\3\2\2\2\32\u00a0\3\2")
-        buf.write("\2\2\34\u00a5\3\2\2\2\36\u00ac\3\2\2\2 \u00ae\3\2\2\2")
-        buf.write("\"\u00b0\3\2\2\2$\u00c1\3\2\2\2&\u00c6\3\2\2\2(\u00c8")
-        buf.write("\3\2\2\2*\u00ce\3\2\2\2,\u00d1\3\2\2\2.\u00e2\3\2\2\2")
-        buf.write("\60\u00e4\3\2\2\2\62\u00e6\3\2\2\2\64\u00e8\3\2\2\2\66")
-        buf.write("\u00ea\3\2\2\28\u00f1\3\2\2\2:\u00f3\3\2\2\2<\u00f9\3")
-        buf.write("\2\2\2>\u010e\3\2\2\2@\u0114\3\2\2\2B\u0116\3\2\2\2D\u011d")
-        buf.write("\3\2\2\2F\u0126\3\2\2\2H\u012d\3\2\2\2J\u0138\3\2\2\2")
-        buf.write("L\u013c\3\2\2\2NO\b\2\1\2OP\7\67\2\2PQ\5\2\2\2QR\78\2")
-        buf.write("\2RU\3\2\2\2SU\5\4\3\2TN\3\2\2\2TS\3\2\2\2U^\3\2\2\2V")
-        buf.write("W\f\5\2\2WX\t\2\2\2X]\5\2\2\6YZ\f\4\2\2Z[\t\3\2\2[]\5")
-        buf.write("\2\2\5\\V\3\2\2\2\\Y\3\2\2\2]`\3\2\2\2^\\\3\2\2\2^_\3")
-        buf.write("\2\2\2_\3\3\2\2\2`^\3\2\2\2ab\t\4\2\2b\5\3\2\2\2cd\7=")
-        buf.write("\2\2d\7\3\2\2\2ej\7\b\2\2fi\5&\24\2gi\5.\30\2hf\3\2\2")
-        buf.write("\2hg\3\2\2\2il\3\2\2\2jh\3\2\2\2jk\3\2\2\2km\3\2\2\2l")
-        buf.write("j\3\2\2\2mn\7\t\2\2n\t\3\2\2\2ov\5\16\b\2pv\5\20\t\2q")
-        buf.write("v\5\26\f\2rv\5\30\r\2sv\5\32\16\2tv\5\34\17\2uo\3\2\2")
-        buf.write("\2up\3\2\2\2uq\3\2\2\2ur\3\2\2\2us\3\2\2\2ut\3\2\2\2v")
-        buf.write("\13\3\2\2\2w{\5\24\13\2x{\5\26\f\2y{\5\30\r\2zw\3\2\2")
-        buf.write("\2zx\3\2\2\2zy\3\2\2\2{\r\3\2\2\2|}\5\2\2\2}\17\3\2\2")
-        buf.write("\2~\177\7\n\2\2\177\u0080\7\13\2\2\u0080\u0081\5\36\20")
-        buf.write("\2\u0081\u008d\7\f\2\2\u0082\u0083\7\r\2\2\u0083\u0088")
-        buf.write("\5\22\n\2\u0084\u0085\7\16\2\2\u0085\u0087\5\22\n\2\u0086")
-        buf.write("\u0084\3\2\2\2\u0087\u008a\3\2\2\2\u0088\u0086\3\2\2\2")
-        buf.write("\u0088\u0089\3\2\2\2\u0089\u008b\3\2\2\2\u008a\u0088\3")
-        buf.write("\2\2\2\u008b\u008c\7\17\2\2\u008c\u008e\3\2\2\2\u008d")
-        buf.write("\u0082\3\2\2\2\u008d\u008e\3\2\2\2\u008e\21\3\2\2\2\u008f")
-        buf.write("\u0090\t\5\2\2\u0090\23\3\2\2\2\u0091\u0092\7\22\2\2\u0092")
-        buf.write("\u0093\7\13\2\2\u0093\u0094\5\36\20\2\u0094\u0095\7\f")
-        buf.write("\2\2\u0095\25\3\2\2\2\u0096\u0097\7\23\2\2\u0097\u0098")
-        buf.write("\7\13\2\2\u0098\u0099\5\36\20\2\u0099\u009a\7\f\2\2\u009a")
-        buf.write("\27\3\2\2\2\u009b\u009c\7\24\2\2\u009c\u009d\7\13\2\2")
-        buf.write("\u009d\u009e\5\36\20\2\u009e\u009f\7\f\2\2\u009f\31\3")
-        buf.write("\2\2\2\u00a0\u00a1\7\25\2\2\u00a1\u00a2\7\13\2\2\u00a2")
-        buf.write("\u00a3\5\36\20\2\u00a3\u00a4\7\f\2\2\u00a4\33\3\2\2\2")
-        buf.write("\u00a5\u00a6\7\26\2\2\u00a6\u00a7\7\13\2\2\u00a7\u00a8")
-        buf.write("\5\36\20\2\u00a8\u00a9\7\f\2\2\u00a9\35\3\2\2\2\u00aa")
-        buf.write("\u00ad\5 \21\2\u00ab\u00ad\5\"\22\2\u00ac\u00aa\3\2\2")
-        buf.write("\2\u00ac\u00ab\3\2\2\2\u00ad\37\3\2\2\2\u00ae\u00af\5")
-        buf.write("\2\2\2\u00af!\3\2\2\2\u00b0\u00b1\7\27\2\2\u00b1\u00b2")
-        buf.write("\7\13\2\2\u00b2\u00b3\5\2\2\2\u00b3\u00bf\7\f\2\2\u00b4")
-        buf.write("\u00b5\7\r\2\2\u00b5\u00ba\5$\23\2\u00b6\u00b7\7\16\2")
-        buf.write("\2\u00b7\u00b9\5$\23\2\u00b8\u00b6\3\2\2\2\u00b9\u00bc")
-        buf.write("\3\2\2\2\u00ba\u00b8\3\2\2\2\u00ba\u00bb\3\2\2\2\u00bb")
-        buf.write("\u00bd\3\2\2\2\u00bc\u00ba\3\2\2\2\u00bd\u00be\7\17\2")
-        buf.write("\2\u00be\u00c0\3\2\2\2\u00bf\u00b4\3\2\2\2\u00bf\u00c0")
-        buf.write("\3\2\2\2\u00c0#\3\2\2\2\u00c1\u00c2\t\6\2\2\u00c2%\3\2")
-        buf.write("\2\2\u00c3\u00c7\5(\25\2\u00c4\u00c7\5*\26\2\u00c5\u00c7")
-        buf.write("\5,\27\2\u00c6\u00c3\3\2\2\2\u00c6\u00c4\3\2\2\2\u00c6")
-        buf.write("\u00c5\3\2\2\2\u00c7\'\3\2\2\2\u00c8\u00c9\7\32\2\2\u00c9")
-        buf.write("\u00ca\7\67\2\2\u00ca\u00cb\5\2\2\2\u00cb\u00cc\78\2\2")
-        buf.write("\u00cc\u00cd\5\b\5\2\u00cd)\3\2\2\2\u00ce\u00cf\5\6\4")
-        buf.write("\2\u00cf\u00d0\7\33\2\2\u00d0+\3\2\2\2\u00d1\u00d2\7\34")
-        buf.write("\2\2\u00d2\u00d3\7=\2\2\u00d3\u00d4\5\2\2\2\u00d4\u00d5")
-        buf.write("\7\35\2\2\u00d5-\3\2\2\2\u00d6\u00d7\5\60\31\2\u00d7\u00d8")
-        buf.write("\7\35\2\2\u00d8\u00e3\3\2\2\2\u00d9\u00da\5\64\33\2\u00da")
-        buf.write("\u00db\7\35\2\2\u00db\u00e3\3\2\2\2\u00dc\u00dd\58\35")
-        buf.write("\2\u00dd\u00de\7\35\2\2\u00de\u00e3\3\2\2\2\u00df\u00e0")
-        buf.write("\5@!\2\u00e0\u00e1\7\35\2\2\u00e1\u00e3\3\2\2\2\u00e2")
-        buf.write("\u00d6\3\2\2\2\u00e2\u00d9\3\2\2\2\u00e2\u00dc\3\2\2\2")
-        buf.write("\u00e2\u00df\3\2\2\2\u00e3/\3\2\2\2\u00e4\u00e5\5\62\32")
-        buf.write("\2\u00e5\61\3\2\2\2\u00e6\u00e7\7\36\2\2\u00e7\63\3\2")
-        buf.write("\2\2\u00e8\u00e9\5\66\34\2\u00e9\65\3\2\2\2\u00ea\u00eb")
-        buf.write("\t\7\2\2\u00eb\u00ec\7\67\2\2\u00ec\u00ed\5\6\4\2\u00ed")
-        buf.write("\u00ee\78\2\2\u00ee\67\3\2\2\2\u00ef\u00f2\5:\36\2\u00f0")
-        buf.write("\u00f2\5<\37\2\u00f1\u00ef\3\2\2\2\u00f1\u00f0\3\2\2\2")
-        buf.write("\u00f29\3\2\2\2\u00f3\u00f4\7&\2\2\u00f4\u00f5\7\27\2")
-        buf.write("\2\u00f5\u00f6\7\13\2\2\u00f6\u00f7\5\2\2\2\u00f7\u00f8")
-        buf.write("\7\f\2\2\u00f8;\3\2\2\2\u00f9\u00fa\7\'\2\2\u00fa\u00fb")
-        buf.write("\7\27\2\2\u00fb\u00fc\7\13\2\2\u00fc\u00fd\5\2\2\2\u00fd")
-        buf.write("\u00fe\7\f\2\2\u00fe\u00ff\7\67\2\2\u00ff\u0100\5\n\6")
-        buf.write("\2\u0100\u010c\78\2\2\u0101\u0102\7\r\2\2\u0102\u0107")
-        buf.write("\5> \2\u0103\u0104\7\16\2\2\u0104\u0106\5> \2\u0105\u0103")
-        buf.write("\3\2\2\2\u0106\u0109\3\2\2\2\u0107\u0105\3\2\2\2\u0107")
-        buf.write("\u0108\3\2\2\2\u0108\u010a\3\2\2\2\u0109\u0107\3\2\2\2")
-        buf.write("\u010a\u010b\7\17\2\2\u010b\u010d\3\2\2\2\u010c\u0101")
-        buf.write("\3\2\2\2\u010c\u010d\3\2\2\2\u010d=\3\2\2\2\u010e\u010f")
-        buf.write("\t\6\2\2\u010f?\3\2\2\2\u0110\u0115\5B\"\2\u0111\u0115")
-        buf.write("\5D#\2\u0112\u0115\5F$\2\u0113\u0115\5H%\2\u0114\u0110")
-        buf.write("\3\2\2\2\u0114\u0111\3\2\2\2\u0114\u0112\3\2\2\2\u0114")
-        buf.write("\u0113\3\2\2\2\u0115A\3\2\2\2\u0116\u0117\t\b\2\2\u0117")
-        buf.write("\u0118\7\67\2\2\u0118\u0119\5J&\2\u0119\u011a\7\16\2\2")
-        buf.write("\u011a\u011b\5L\'\2\u011b\u011c\78\2\2\u011cC\3\2\2\2")
-        buf.write("\u011d\u011e\t\t\2\2\u011e\u011f\7\67\2\2\u011f\u0120")
-        buf.write("\5J&\2\u0120\u0121\7\16\2\2\u0121\u0122\5\2\2\2\u0122")
-        buf.write("\u0123\7\16\2\2\u0123\u0124\5L\'\2\u0124\u0125\78\2\2")
-        buf.write("\u0125E\3\2\2\2\u0126\u0127\t\n\2\2\u0127\u0128\7\67\2")
-        buf.write("\2\u0128\u0129\5J&\2\u0129\u012a\7\16\2\2\u012a\u012b")
-        buf.write("\5J&\2\u012b\u012c\78\2\2\u012cG\3\2\2\2\u012d\u012e\t")
-        buf.write("\13\2\2\u012e\u012f\7\67\2\2\u012f\u0130\5J&\2\u0130\u0131")
-        buf.write("\7\16\2\2\u0131\u0132\5J&\2\u0132\u0133\7\16\2\2\u0133")
-        buf.write("\u0134\5L\'\2\u0134\u0135\78\2\2\u0135I\3\2\2\2\u0136")
-        buf.write("\u0139\5\n\6\2\u0137\u0139\t\f\2\2\u0138\u0136\3\2\2\2")
-        buf.write("\u0138\u0137\3\2\2\2\u0139K\3\2\2\2\u013a\u013d\5\f\7")
-        buf.write("\2\u013b\u013d\t\f\2\2\u013c\u013a\3\2\2\2\u013c\u013b")
-        buf.write("\3\2\2\2\u013dM\3\2\2\2\26T\\^hjuz\u0088\u008d\u00ac\u00ba")
-        buf.write("\u00bf\u00c6\u00e2\u00f1\u0107\u010c\u0114\u0138\u013c")
+        buf.write("&\4\'\t\'\4(\t(\4)\t)\4*\t*\4+\t+\3\2\3\2\3\3\3\3\3\4")
+        buf.write("\3\4\3\4\3\4\3\4\3\4\5\4a\n\4\3\4\3\4\3\4\3\4\3\4\3\4")
+        buf.write("\7\4i\n\4\f\4\16\4l\13\4\3\5\3\5\3\5\3\5\3\5\5\5s\n\5")
+        buf.write("\3\6\3\6\3\6\7\6x\n\6\f\6\16\6{\13\6\3\6\3\6\3\7\3\7\3")
+        buf.write("\7\3\7\3\7\3\7\5\7\u0085\n\7\3\b\3\b\3\b\5\b\u008a\n\b")
+        buf.write("\3\t\3\t\3\n\3\n\3\n\3\n\3\n\3\n\3\n\5\n\u0095\n\n\3\13")
+        buf.write("\3\13\3\13\3\13\3\13\3\f\3\f\3\f\3\f\3\f\3\r\3\r\3\r\3")
+        buf.write("\r\3\r\3\16\3\16\3\16\3\16\3\16\3\17\3\17\3\17\3\17\3")
+        buf.write("\17\3\20\3\20\5\20\u00b2\n\20\3\21\3\21\3\22\3\22\3\22")
+        buf.write("\3\22\3\22\3\22\3\22\5\22\u00bd\n\22\3\23\3\23\3\23\3")
+        buf.write("\23\3\23\5\23\u00c4\n\23\3\24\3\24\3\24\3\24\3\24\3\24")
+        buf.write("\3\25\3\25\3\25\3\26\3\26\3\26\3\26\3\26\3\27\3\27\3\27")
+        buf.write("\3\27\3\27\3\30\3\30\3\30\3\30\3\30\3\30\3\30\3\30\7\30")
+        buf.write("\u00e1\n\30\f\30\16\30\u00e4\13\30\5\30\u00e6\n\30\3\30")
+        buf.write("\3\30\3\30\3\31\3\31\3\31\3\31\5\31\u00ef\n\31\3\32\3")
+        buf.write("\32\3\32\3\32\3\32\3\32\3\32\3\32\3\32\3\32\3\32\3\32")
+        buf.write("\3\32\3\32\3\32\5\32\u0100\n\32\3\33\3\33\3\34\3\34\3")
+        buf.write("\35\3\35\3\36\3\36\3\36\3\36\3\36\3\37\3\37\5\37\u010f")
+        buf.write("\n\37\3 \3 \3 \3 \3 \3 \3!\3!\3!\3!\3!\3!\3!\3!\3!\3!")
+        buf.write("\3!\5!\u0122\n!\3\"\3\"\5\"\u0126\n\"\3#\3#\3#\3#\3#\3")
+        buf.write("#\3#\3$\3$\3$\3$\3$\3$\3$\3%\3%\3%\3%\5%\u013a\n%\3&\3")
+        buf.write("&\3&\3&\3&\3&\3&\3\'\3\'\3\'\3\'\3\'\3\'\3\'\3\'\3\'\3")
+        buf.write("(\3(\3(\3(\3(\3(\3(\3)\3)\3)\3)\3)\3)\3)\3)\3)\3*\3*\5")
+        buf.write("*\u015e\n*\3+\3+\5+\u0162\n+\3+\2\3\6,\2\4\6\b\n\f\16")
+        buf.write("\20\22\24\26\30\32\34\36 \"$&(*,.\60\62\64\668:<>@BDF")
+        buf.write("HJLNPRT\2\13\3\2\5\7\3\2\b\t\3\2\20\21\3\2\31\32\3\2#")
+        buf.write(")\3\2./\3\2\60\63\3\2\64\65\3\2\66;\2\u015f\2V\3\2\2\2")
+        buf.write("\4X\3\2\2\2\6`\3\2\2\2\br\3\2\2\2\nt\3\2\2\2\f\u0084\3")
+        buf.write("\2\2\2\16\u0089\3\2\2\2\20\u008b\3\2\2\2\22\u008d\3\2")
+        buf.write("\2\2\24\u0096\3\2\2\2\26\u009b\3\2\2\2\30\u00a0\3\2\2")
+        buf.write("\2\32\u00a5\3\2\2\2\34\u00aa\3\2\2\2\36\u00b1\3\2\2\2")
+        buf.write(" \u00b3\3\2\2\2\"\u00b5\3\2\2\2$\u00c3\3\2\2\2&\u00c5")
+        buf.write("\3\2\2\2(\u00cb\3\2\2\2*\u00ce\3\2\2\2,\u00d3\3\2\2\2")
+        buf.write(".\u00d8\3\2\2\2\60\u00ea\3\2\2\2\62\u00ff\3\2\2\2\64\u0101")
+        buf.write("\3\2\2\2\66\u0103\3\2\2\28\u0105\3\2\2\2:\u0107\3\2\2")
+        buf.write("\2<\u010e\3\2\2\2>\u0110\3\2\2\2@\u0116\3\2\2\2B\u0125")
+        buf.write("\3\2\2\2D\u0127\3\2\2\2F\u012e\3\2\2\2H\u0139\3\2\2\2")
+        buf.write("J\u013b\3\2\2\2L\u0142\3\2\2\2N\u014b\3\2\2\2P\u0152\3")
+        buf.write("\2\2\2R\u015d\3\2\2\2T\u0161\3\2\2\2VW\7A\2\2W\3\3\2\2")
+        buf.write("\2XY\7A\2\2Y\5\3\2\2\2Z[\b\4\1\2[\\\7\3\2\2\\]\5\6\4\2")
+        buf.write("]^\7\4\2\2^a\3\2\2\2_a\5\b\5\2`Z\3\2\2\2`_\3\2\2\2aj\3")
+        buf.write("\2\2\2bc\f\5\2\2cd\t\2\2\2di\5\6\4\6ef\f\4\2\2fg\t\3\2")
+        buf.write("\2gi\5\6\4\5hb\3\2\2\2he\3\2\2\2il\3\2\2\2jh\3\2\2\2j")
+        buf.write("k\3\2\2\2k\7\3\2\2\2lj\3\2\2\2ms\7=\2\2ns\7>\2\2os\7?")
+        buf.write("\2\2ps\7@\2\2qs\5\4\3\2rm\3\2\2\2rn\3\2\2\2ro\3\2\2\2")
+        buf.write("rp\3\2\2\2rq\3\2\2\2s\t\3\2\2\2ty\7\n\2\2ux\5$\23\2vx")
+        buf.write("\5\62\32\2wu\3\2\2\2wv\3\2\2\2x{\3\2\2\2yw\3\2\2\2yz\3")
+        buf.write("\2\2\2z|\3\2\2\2{y\3\2\2\2|}\7\13\2\2}\13\3\2\2\2~\u0085")
+        buf.write("\5\20\t\2\177\u0085\5\22\n\2\u0080\u0085\5\26\f\2\u0081")
+        buf.write("\u0085\5\30\r\2\u0082\u0085\5\32\16\2\u0083\u0085\5\34")
+        buf.write("\17\2\u0084~\3\2\2\2\u0084\177\3\2\2\2\u0084\u0080\3\2")
+        buf.write("\2\2\u0084\u0081\3\2\2\2\u0084\u0082\3\2\2\2\u0084\u0083")
+        buf.write("\3\2\2\2\u0085\r\3\2\2\2\u0086\u008a\5\24\13\2\u0087\u008a")
+        buf.write("\5\26\f\2\u0088\u008a\5\30\r\2\u0089\u0086\3\2\2\2\u0089")
+        buf.write("\u0087\3\2\2\2\u0089\u0088\3\2\2\2\u008a\17\3\2\2\2\u008b")
+        buf.write("\u008c\5\6\4\2\u008c\21\3\2\2\2\u008d\u008e\7\f\2\2\u008e")
+        buf.write("\u008f\7\r\2\2\u008f\u0090\5\36\20\2\u0090\u0094\7\16")
+        buf.write("\2\2\u0091\u0092\7\17\2\2\u0092\u0093\t\4\2\2\u0093\u0095")
+        buf.write("\7\22\2\2\u0094\u0091\3\2\2\2\u0094\u0095\3\2\2\2\u0095")
+        buf.write("\23\3\2\2\2\u0096\u0097\7\23\2\2\u0097\u0098\7\r\2\2\u0098")
+        buf.write("\u0099\5\36\20\2\u0099\u009a\7\16\2\2\u009a\25\3\2\2\2")
+        buf.write("\u009b\u009c\7\24\2\2\u009c\u009d\7\r\2\2\u009d\u009e")
+        buf.write("\5\36\20\2\u009e\u009f\7\16\2\2\u009f\27\3\2\2\2\u00a0")
+        buf.write("\u00a1\7\25\2\2\u00a1\u00a2\7\r\2\2\u00a2\u00a3\5\36\20")
+        buf.write("\2\u00a3\u00a4\7\16\2\2\u00a4\31\3\2\2\2\u00a5\u00a6\7")
+        buf.write("\26\2\2\u00a6\u00a7\7\r\2\2\u00a7\u00a8\5\36\20\2\u00a8")
+        buf.write("\u00a9\7\16\2\2\u00a9\33\3\2\2\2\u00aa\u00ab\7\27\2\2")
+        buf.write("\u00ab\u00ac\7\r\2\2\u00ac\u00ad\5\36\20\2\u00ad\u00ae")
+        buf.write("\7\16\2\2\u00ae\35\3\2\2\2\u00af\u00b2\5 \21\2\u00b0\u00b2")
+        buf.write("\5\"\22\2\u00b1\u00af\3\2\2\2\u00b1\u00b0\3\2\2\2\u00b2")
+        buf.write("\37\3\2\2\2\u00b3\u00b4\5\6\4\2\u00b4!\3\2\2\2\u00b5\u00b6")
+        buf.write("\7\30\2\2\u00b6\u00b7\7\r\2\2\u00b7\u00b8\5\6\4\2\u00b8")
+        buf.write("\u00bc\7\16\2\2\u00b9\u00ba\7\17\2\2\u00ba\u00bb\t\5\2")
+        buf.write("\2\u00bb\u00bd\7\22\2\2\u00bc\u00b9\3\2\2\2\u00bc\u00bd")
+        buf.write("\3\2\2\2\u00bd#\3\2\2\2\u00be\u00c4\5&\24\2\u00bf\u00c4")
+        buf.write("\5(\25\2\u00c0\u00c4\5*\26\2\u00c1\u00c4\5,\27\2\u00c2")
+        buf.write("\u00c4\5.\30\2\u00c3\u00be\3\2\2\2\u00c3\u00bf\3\2\2\2")
+        buf.write("\u00c3\u00c0\3\2\2\2\u00c3\u00c1\3\2\2\2\u00c3\u00c2\3")
+        buf.write("\2\2\2\u00c4%\3\2\2\2\u00c5\u00c6\7\33\2\2\u00c6\u00c7")
+        buf.write("\7\3\2\2\u00c7\u00c8\5\6\4\2\u00c8\u00c9\7\4\2\2\u00c9")
+        buf.write("\u00ca\5\n\6\2\u00ca\'\3\2\2\2\u00cb\u00cc\5\2\2\2\u00cc")
+        buf.write("\u00cd\7\34\2\2\u00cd)\3\2\2\2\u00ce\u00cf\7\35\2\2\u00cf")
+        buf.write("\u00d0\5\2\2\2\u00d0\u00d1\7\34\2\2\u00d1\u00d2\5\n\6")
+        buf.write("\2\u00d2+\3\2\2\2\u00d3\u00d4\7\36\2\2\u00d4\u00d5\5\2")
+        buf.write("\2\2\u00d5\u00d6\5\6\4\2\u00d6\u00d7\7\37\2\2\u00d7-\3")
+        buf.write("\2\2\2\u00d8\u00d9\7 \2\2\u00d9\u00da\5\2\2\2\u00da\u00db")
+        buf.write("\7\34\2\2\u00db\u00dc\7A\2\2\u00dc\u00e5\7\3\2\2\u00dd")
+        buf.write("\u00e2\5\60\31\2\u00de\u00df\7!\2\2\u00df\u00e1\5\60\31")
+        buf.write("\2\u00e0\u00de\3\2\2\2\u00e1\u00e4\3\2\2\2\u00e2\u00e0")
+        buf.write("\3\2\2\2\u00e2\u00e3\3\2\2\2\u00e3\u00e6\3\2\2\2\u00e4")
+        buf.write("\u00e2\3\2\2\2\u00e5\u00dd\3\2\2\2\u00e5\u00e6\3\2\2\2")
+        buf.write("\u00e6\u00e7\3\2\2\2\u00e7\u00e8\7\4\2\2\u00e8\u00e9\7")
+        buf.write("\37\2\2\u00e9/\3\2\2\2\u00ea\u00eb\7A\2\2\u00eb\u00ee")
+        buf.write("\7\34\2\2\u00ec\u00ef\7A\2\2\u00ed\u00ef\5\6\4\2\u00ee")
+        buf.write("\u00ec\3\2\2\2\u00ee\u00ed\3\2\2\2\u00ef\61\3\2\2\2\u00f0")
+        buf.write("\u00f1\5\64\33\2\u00f1\u00f2\7\37\2\2\u00f2\u0100\3\2")
+        buf.write("\2\2\u00f3\u00f4\58\35\2\u00f4\u00f5\7\37\2\2\u00f5\u0100")
+        buf.write("\3\2\2\2\u00f6\u00f7\5<\37\2\u00f7\u00f8\7\37\2\2\u00f8")
+        buf.write("\u0100\3\2\2\2\u00f9\u00fa\5H%\2\u00fa\u00fb\7\37\2\2")
+        buf.write("\u00fb\u0100\3\2\2\2\u00fc\u00fd\5B\"\2\u00fd\u00fe\7")
+        buf.write("\37\2\2\u00fe\u0100\3\2\2\2\u00ff\u00f0\3\2\2\2\u00ff")
+        buf.write("\u00f3\3\2\2\2\u00ff\u00f6\3\2\2\2\u00ff\u00f9\3\2\2\2")
+        buf.write("\u00ff\u00fc\3\2\2\2\u0100\63\3\2\2\2\u0101\u0102\5\66")
+        buf.write("\34\2\u0102\65\3\2\2\2\u0103\u0104\7\"\2\2\u0104\67\3")
+        buf.write("\2\2\2\u0105\u0106\5:\36\2\u01069\3\2\2\2\u0107\u0108")
+        buf.write("\t\6\2\2\u0108\u0109\7\3\2\2\u0109\u010a\5\4\3\2\u010a")
+        buf.write("\u010b\7\4\2\2\u010b;\3\2\2\2\u010c\u010f\5> \2\u010d")
+        buf.write("\u010f\5@!\2\u010e\u010c\3\2\2\2\u010e\u010d\3\2\2\2\u010f")
+        buf.write("=\3\2\2\2\u0110\u0111\7*\2\2\u0111\u0112\7\30\2\2\u0112")
+        buf.write("\u0113\7\r\2\2\u0113\u0114\5\6\4\2\u0114\u0115\7\16\2")
+        buf.write("\2\u0115?\3\2\2\2\u0116\u0117\7+\2\2\u0117\u0118\7\30")
+        buf.write("\2\2\u0118\u0119\7\r\2\2\u0119\u011a\5\6\4\2\u011a\u011b")
+        buf.write("\7\16\2\2\u011b\u011c\7\3\2\2\u011c\u011d\5\f\7\2\u011d")
+        buf.write("\u0121\7\4\2\2\u011e\u011f\7\17\2\2\u011f\u0120\t\5\2")
+        buf.write("\2\u0120\u0122\7\22\2\2\u0121\u011e\3\2\2\2\u0121\u0122")
+        buf.write("\3\2\2\2\u0122A\3\2\2\2\u0123\u0126\5D#\2\u0124\u0126")
+        buf.write("\5F$\2\u0125\u0123\3\2\2\2\u0125\u0124\3\2\2\2\u0126C")
+        buf.write("\3\2\2\2\u0127\u0128\5\4\3\2\u0128\u0129\7,\2\2\u0129")
+        buf.write("\u012a\7+\2\2\u012a\u012b\7\3\2\2\u012b\u012c\5\4\3\2")
+        buf.write("\u012c\u012d\7\4\2\2\u012dE\3\2\2\2\u012e\u012f\5\4\3")
+        buf.write("\2\u012f\u0130\7,\2\2\u0130\u0131\7-\2\2\u0131\u0132\7")
+        buf.write("\3\2\2\u0132\u0133\5\f\7\2\u0133\u0134\7\4\2\2\u0134G")
+        buf.write("\3\2\2\2\u0135\u013a\5J&\2\u0136\u013a\5L\'\2\u0137\u013a")
+        buf.write("\5N(\2\u0138\u013a\5P)\2\u0139\u0135\3\2\2\2\u0139\u0136")
+        buf.write("\3\2\2\2\u0139\u0137\3\2\2\2\u0139\u0138\3\2\2\2\u013a")
+        buf.write("I\3\2\2\2\u013b\u013c\t\7\2\2\u013c\u013d\7\3\2\2\u013d")
+        buf.write("\u013e\5R*\2\u013e\u013f\7!\2\2\u013f\u0140\5T+\2\u0140")
+        buf.write("\u0141\7\4\2\2\u0141K\3\2\2\2\u0142\u0143\t\b\2\2\u0143")
+        buf.write("\u0144\7\3\2\2\u0144\u0145\5R*\2\u0145\u0146\7!\2\2\u0146")
+        buf.write("\u0147\5\6\4\2\u0147\u0148\7!\2\2\u0148\u0149\5T+\2\u0149")
+        buf.write("\u014a\7\4\2\2\u014aM\3\2\2\2\u014b\u014c\t\t\2\2\u014c")
+        buf.write("\u014d\7\3\2\2\u014d\u014e\5R*\2\u014e\u014f\7!\2\2\u014f")
+        buf.write("\u0150\5R*\2\u0150\u0151\7\4\2\2\u0151O\3\2\2\2\u0152")
+        buf.write("\u0153\t\n\2\2\u0153\u0154\7\3\2\2\u0154\u0155\5R*\2\u0155")
+        buf.write("\u0156\7!\2\2\u0156\u0157\5R*\2\u0157\u0158\7!\2\2\u0158")
+        buf.write("\u0159\5T+\2\u0159\u015a\7\4\2\2\u015aQ\3\2\2\2\u015b")
+        buf.write("\u015e\5\f\7\2\u015c\u015e\7<\2\2\u015d\u015b\3\2\2\2")
+        buf.write("\u015d\u015c\3\2\2\2\u015eS\3\2\2\2\u015f\u0162\5\16\b")
+        buf.write("\2\u0160\u0162\7<\2\2\u0161\u015f\3\2\2\2\u0161\u0160")
+        buf.write("\3\2\2\2\u0162U\3\2\2\2\30`hjrwy\u0084\u0089\u0094\u00b1")
+        buf.write("\u00bc\u00c3\u00e2\u00e5\u00ee\u00ff\u010e\u0121\u0125")
+        buf.write("\u0139\u015d\u0161")
         return buf.getvalue()
 
 
@@ -152,15 +170,16 @@ class FPE_assemblyParser ( Parser ):
 
     sharedContextCache = PredictionContextCache()
 
-    literalNames = [ "<INVALID>", "'*'", "'/'", "'%'", "'+'", "'-'", "'{'", 
-                     "'}'", "'GET'", "'['", "']'", "'<'", "','", "'>'", 
-                     "'ADV'", "'NO_ADV'", "'PUT'", "'REG'", "'RAM'", "'ROMA'", 
-                     "'ROMB'", "'BAM'", "'FORWARD'", "'BACKWARD'", "'ZOL'", 
-                     "':'", "'DEF'", "';'", "'NOP'", "'JMP'", "'JEQ'", "'JNE'", 
-                     "'JLT'", "'JLE'", "'JGT'", "'JGE'", "'RESET'", "'SEEK'", 
-                     "'MOV'", "'NOT'", "'LSH'", "'RSH'", "'LRL'", "'RRL'", 
-                     "'UCMP'", "'SCMP'", "'ADD'", "'SUB'", "'AND'", "'OR'", 
-                     "'XOR'", "'MUL'", "'ACC'", "'('", "')'" ]
+    literalNames = [ "<INVALID>", "'('", "')'", "'*'", "'/'", "'%'", "'+'", 
+                     "'-'", "'{'", "'}'", "'GET'", "'['", "']'", "'<'", 
+                     "'ADV'", "'NO_ADV'", "'>'", "'PUT'", "'REG'", "'RAM'", 
+                     "'ROMA'", "'ROMB'", "'BAM'", "'FORWARD'", "'BACKWARD'", 
+                     "'ZOL'", "':'", "'LOOP'", "'DEF'", "';'", "'COM'", 
+                     "','", "'NOP'", "'JMP'", "'JEQ'", "'JNE'", "'JLT'", 
+                     "'JLE'", "'JGT'", "'JGE'", "'RESET'", "'SEEK'", "'.'", 
+                     "'SET'", "'MOV'", "'NOT'", "'LSH'", "'RSH'", "'LRL'", 
+                     "'RRL'", "'UCMP'", "'SCMP'", "'ADD'", "'SUB'", "'AND'", 
+                     "'OR'", "'XOR'", "'MUL'", "'ACC'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
@@ -175,19 +194,20 @@ class FPE_assemblyParser ( Parser ):
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "ORB", "CRB", "DEC_NUM", "BIN_NUM", "OCT_NUM", 
-                      "HEX_NUM", "IDENTIFER", "MUTL_LINE_COMMENT", "SING_LINE_COMMENT", 
-                      "WHITESPACE" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "<INVALID>", "<INVALID>", "<INVALID>", "DEC_NUM", 
+                      "BIN_NUM", "OCT_NUM", "HEX_NUM", "IDENTIFER", "MUTL_LINE_COMMENT", 
+                      "SING_LINE_COMMENT", "WHITESPACE" ]
 
-    RULE_expr = 0
-    RULE_expr_operand = 1
-    RULE_jump_label = 2
-    RULE_scope = 3
-    RULE_access_fetch = 4
-    RULE_access_store = 5
-    RULE_access_imm = 6
-    RULE_access_get = 7
-    RULE_access_get_mod = 8
+    RULE_ident_dec = 0
+    RULE_ident_ref = 1
+    RULE_expr = 2
+    RULE_expr_operand = 3
+    RULE_scope = 4
+    RULE_access_fetch = 5
+    RULE_access_store = 6
+    RULE_access_imm = 7
+    RULE_access_get = 8
     RULE_access_put = 9
     RULE_access_reg = 10
     RULE_access_ram = 11
@@ -196,37 +216,42 @@ class FPE_assemblyParser ( Parser ):
     RULE_addr = 14
     RULE_addr_literal = 15
     RULE_addr_bam = 16
-    RULE_addr_bam_mod = 17
-    RULE_statement = 18
-    RULE_state_zol = 19
-    RULE_state_jump_label = 20
+    RULE_statement = 17
+    RULE_state_zol = 18
+    RULE_state_jump_label = 19
+    RULE_state_loop_label = 20
     RULE_state_constant = 21
-    RULE_operation = 22
-    RULE_op_void = 23
-    RULE_op_void_nop = 24
-    RULE_op_pc = 25
-    RULE_op_pc_jump = 26
-    RULE_op_bam = 27
-    RULE_op_bam_reset = 28
-    RULE_op_bam_seek = 29
-    RULE_op_bam_seek_mod = 30
-    RULE_op_alu = 31
-    RULE_op_alu_1o_1r = 32
-    RULE_op_alu_1o_1e_1r = 33
-    RULE_op_alu_2o_0r = 34
-    RULE_op_alu_2o_1r = 35
-    RULE_alu_operand = 36
-    RULE_alu_result = 37
+    RULE_state_component = 22
+    RULE_state_component_parameter = 23
+    RULE_operation = 24
+    RULE_op_void = 25
+    RULE_op_void_nop = 26
+    RULE_op_pc = 27
+    RULE_op_pc_jump = 28
+    RULE_op_bam = 29
+    RULE_op_bam_reset = 30
+    RULE_op_bam_seek = 31
+    RULE_op_ZOL = 32
+    RULE_op_ZOL_seek = 33
+    RULE_op_ZOL_set = 34
+    RULE_op_alu = 35
+    RULE_op_alu_1o_1r = 36
+    RULE_op_alu_1o_1e_1r = 37
+    RULE_op_alu_2o_0r = 38
+    RULE_op_alu_2o_1r = 39
+    RULE_alu_operand = 40
+    RULE_alu_result = 41
 
-    ruleNames =  [ "expr", "expr_operand", "jump_label", "scope", "access_fetch", 
-                   "access_store", "access_imm", "access_get", "access_get_mod", 
+    ruleNames =  [ "ident_dec", "ident_ref", "expr", "expr_operand", "scope", 
+                   "access_fetch", "access_store", "access_imm", "access_get", 
                    "access_put", "access_reg", "access_ram", "access_rom_a", 
-                   "access_rom_b", "addr", "addr_literal", "addr_bam", "addr_bam_mod", 
-                   "statement", "state_zol", "state_jump_label", "state_constant", 
+                   "access_rom_b", "addr", "addr_literal", "addr_bam", "statement", 
+                   "state_zol", "state_jump_label", "state_loop_label", 
+                   "state_constant", "state_component", "state_component_parameter", 
                    "operation", "op_void", "op_void_nop", "op_pc", "op_pc_jump", 
-                   "op_bam", "op_bam_reset", "op_bam_seek", "op_bam_seek_mod", 
-                   "op_alu", "op_alu_1o_1r", "op_alu_1o_1e_1r", "op_alu_2o_0r", 
-                   "op_alu_2o_1r", "alu_operand", "alu_result" ]
+                   "op_bam", "op_bam_reset", "op_bam_seek", "op_ZOL", "op_ZOL_seek", 
+                   "op_ZOL_set", "op_alu", "op_alu_1o_1r", "op_alu_1o_1e_1r", 
+                   "op_alu_2o_0r", "op_alu_2o_1r", "alu_operand", "alu_result" ]
 
     EOF = Token.EOF
     T__0=1
@@ -281,16 +306,20 @@ class FPE_assemblyParser ( Parser ):
     T__49=50
     T__50=51
     T__51=52
-    ORB=53
-    CRB=54
-    DEC_NUM=55
-    BIN_NUM=56
-    OCT_NUM=57
-    HEX_NUM=58
-    IDENTIFER=59
-    MUTL_LINE_COMMENT=60
-    SING_LINE_COMMENT=61
-    WHITESPACE=62
+    T__52=53
+    T__53=54
+    T__54=55
+    T__55=56
+    T__56=57
+    T__57=58
+    DEC_NUM=59
+    BIN_NUM=60
+    OCT_NUM=61
+    HEX_NUM=62
+    IDENTIFER=63
+    MUTL_LINE_COMMENT=64
+    SING_LINE_COMMENT=65
+    WHITESPACE=66
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -301,6 +330,86 @@ class FPE_assemblyParser ( Parser ):
 
 
 
+    class Ident_decContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def IDENTIFER(self):
+            return self.getToken(FPE_assemblyParser.IDENTIFER, 0)
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_ident_dec
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterIdent_dec" ):
+                listener.enterIdent_dec(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitIdent_dec" ):
+                listener.exitIdent_dec(self)
+
+
+
+
+    def ident_dec(self):
+
+        localctx = FPE_assemblyParser.Ident_decContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 0, self.RULE_ident_dec)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 84
+            self.match(FPE_assemblyParser.IDENTIFER)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class Ident_refContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def IDENTIFER(self):
+            return self.getToken(FPE_assemblyParser.IDENTIFER, 0)
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_ident_ref
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterIdent_ref" ):
+                listener.enterIdent_ref(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitIdent_ref" ):
+                listener.exitIdent_ref(self)
+
+
+
+
+    def ident_ref(self):
+
+        localctx = FPE_assemblyParser.Ident_refContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 2, self.RULE_ident_ref)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 86
+            self.match(FPE_assemblyParser.IDENTIFER)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
     class ExprContext(ParserRuleContext):
 
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
@@ -309,18 +418,12 @@ class FPE_assemblyParser ( Parser ):
             self.multiplicative = None # Token
             self.additive = None # Token
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def expr(self, i:int=None):
             if i is None:
                 return self.getTypedRuleContexts(FPE_assemblyParser.ExprContext)
             else:
                 return self.getTypedRuleContext(FPE_assemblyParser.ExprContext,i)
 
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def expr_operand(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Expr_operandContext,0)
@@ -344,31 +447,31 @@ class FPE_assemblyParser ( Parser ):
         _parentState = self.state
         localctx = FPE_assemblyParser.ExprContext(self, self._ctx, _parentState)
         _prevctx = localctx
-        _startState = 0
-        self.enterRecursionRule(localctx, 0, self.RULE_expr, _p)
+        _startState = 4
+        self.enterRecursionRule(localctx, 4, self.RULE_expr, _p)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 82
+            self.state = 94
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.ORB]:
-                self.state = 77
-                self.match(FPE_assemblyParser.ORB)
-                self.state = 78
+            if token in [FPE_assemblyParser.T__0]:
+                self.state = 89
+                self.match(FPE_assemblyParser.T__0)
+                self.state = 90
                 self.expr(0)
-                self.state = 79
-                self.match(FPE_assemblyParser.CRB)
+                self.state = 91
+                self.match(FPE_assemblyParser.T__1)
                 pass
             elif token in [FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
-                self.state = 81
+                self.state = 93
                 self.expr_operand()
                 pass
             else:
                 raise NoViableAltException(self)
 
             self._ctx.stop = self._input.LT(-1)
-            self.state = 92
+            self.state = 104
             self._errHandler.sync(self)
             _alt = self._interp.adaptivePredict(self._input,2,self._ctx)
             while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
@@ -376,49 +479,49 @@ class FPE_assemblyParser ( Parser ):
                     if self._parseListeners is not None:
                         self.triggerExitRuleEvent()
                     _prevctx = localctx
-                    self.state = 90
+                    self.state = 102
                     self._errHandler.sync(self)
                     la_ = self._interp.adaptivePredict(self._input,1,self._ctx)
                     if la_ == 1:
                         localctx = FPE_assemblyParser.ExprContext(self, _parentctx, _parentState)
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
-                        self.state = 84
+                        self.state = 96
                         if not self.precpred(self._ctx, 3):
                             from antlr4.error.Errors import FailedPredicateException
                             raise FailedPredicateException(self, "self.precpred(self._ctx, 3)")
-                        self.state = 85
+                        self.state = 97
                         localctx.multiplicative = self._input.LT(1)
                         _la = self._input.LA(1)
-                        if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__0) | (1 << FPE_assemblyParser.T__1) | (1 << FPE_assemblyParser.T__2))) != 0)):
+                        if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__2) | (1 << FPE_assemblyParser.T__3) | (1 << FPE_assemblyParser.T__4))) != 0)):
                             localctx.multiplicative = self._errHandler.recoverInline(self)
                         else:
                             self._errHandler.reportMatch(self)
                             self.consume()
-                        self.state = 86
+                        self.state = 98
                         self.expr(4)
                         pass
 
                     elif la_ == 2:
                         localctx = FPE_assemblyParser.ExprContext(self, _parentctx, _parentState)
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
-                        self.state = 87
+                        self.state = 99
                         if not self.precpred(self._ctx, 2):
                             from antlr4.error.Errors import FailedPredicateException
                             raise FailedPredicateException(self, "self.precpred(self._ctx, 2)")
-                        self.state = 88
+                        self.state = 100
                         localctx.additive = self._input.LT(1)
                         _la = self._input.LA(1)
-                        if not(_la==FPE_assemblyParser.T__3 or _la==FPE_assemblyParser.T__4):
+                        if not(_la==FPE_assemblyParser.T__5 or _la==FPE_assemblyParser.T__6):
                             localctx.additive = self._errHandler.recoverInline(self)
                         else:
                             self._errHandler.reportMatch(self)
                             self.consume()
-                        self.state = 89
+                        self.state = 101
                         self.expr(3)
                         pass
 
              
-                self.state = 94
+                self.state = 106
                 self._errHandler.sync(self)
                 _alt = self._interp.adaptivePredict(self._input,2,self._ctx)
 
@@ -449,8 +552,9 @@ class FPE_assemblyParser ( Parser ):
         def HEX_NUM(self):
             return self.getToken(FPE_assemblyParser.HEX_NUM, 0)
 
-        def IDENTIFER(self):
-            return self.getToken(FPE_assemblyParser.IDENTIFER, 0)
+        def ident_ref(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_refContext,0)
+
 
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_expr_operand
@@ -469,57 +573,39 @@ class FPE_assemblyParser ( Parser ):
     def expr_operand(self):
 
         localctx = FPE_assemblyParser.Expr_operandContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 2, self.RULE_expr_operand)
-        self._la = 0 # Token type
+        self.enterRule(localctx, 6, self.RULE_expr_operand)
         try:
-            self.enterOuterAlt(localctx, 1)
-            self.state = 95
-            _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.DEC_NUM) | (1 << FPE_assemblyParser.BIN_NUM) | (1 << FPE_assemblyParser.OCT_NUM) | (1 << FPE_assemblyParser.HEX_NUM) | (1 << FPE_assemblyParser.IDENTIFER))) != 0)):
-                self._errHandler.recoverInline(self)
+            self.state = 112
+            self._errHandler.sync(self)
+            token = self._input.LA(1)
+            if token in [FPE_assemblyParser.DEC_NUM]:
+                self.enterOuterAlt(localctx, 1)
+                self.state = 107
+                self.match(FPE_assemblyParser.DEC_NUM)
+                pass
+            elif token in [FPE_assemblyParser.BIN_NUM]:
+                self.enterOuterAlt(localctx, 2)
+                self.state = 108
+                self.match(FPE_assemblyParser.BIN_NUM)
+                pass
+            elif token in [FPE_assemblyParser.OCT_NUM]:
+                self.enterOuterAlt(localctx, 3)
+                self.state = 109
+                self.match(FPE_assemblyParser.OCT_NUM)
+                pass
+            elif token in [FPE_assemblyParser.HEX_NUM]:
+                self.enterOuterAlt(localctx, 4)
+                self.state = 110
+                self.match(FPE_assemblyParser.HEX_NUM)
+                pass
+            elif token in [FPE_assemblyParser.IDENTIFER]:
+                self.enterOuterAlt(localctx, 5)
+                self.state = 111
+                self.ident_ref()
+                pass
             else:
-                self._errHandler.reportMatch(self)
-                self.consume()
-        except RecognitionException as re:
-            localctx.exception = re
-            self._errHandler.reportError(self, re)
-            self._errHandler.recover(self, re)
-        finally:
-            self.exitRule()
-        return localctx
+                raise NoViableAltException(self)
 
-
-    class Jump_labelContext(ParserRuleContext):
-
-        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
-            super().__init__(parent, invokingState)
-            self.parser = parser
-
-        def IDENTIFER(self):
-            return self.getToken(FPE_assemblyParser.IDENTIFER, 0)
-
-        def getRuleIndex(self):
-            return FPE_assemblyParser.RULE_jump_label
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterJump_label" ):
-                listener.enterJump_label(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitJump_label" ):
-                listener.exitJump_label(self)
-
-
-
-
-    def jump_label(self):
-
-        localctx = FPE_assemblyParser.Jump_labelContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 4, self.RULE_jump_label)
-        try:
-            self.enterOuterAlt(localctx, 1)
-            self.state = 97
-            self.match(FPE_assemblyParser.IDENTIFER)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -566,36 +652,36 @@ class FPE_assemblyParser ( Parser ):
     def scope(self):
 
         localctx = FPE_assemblyParser.ScopeContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 6, self.RULE_scope)
+        self.enterRule(localctx, 8, self.RULE_scope)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 99
-            self.match(FPE_assemblyParser.T__5)
-            self.state = 104
+            self.state = 114
+            self.match(FPE_assemblyParser.T__7)
+            self.state = 119
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__23) | (1 << FPE_assemblyParser.T__25) | (1 << FPE_assemblyParser.T__27) | (1 << FPE_assemblyParser.T__28) | (1 << FPE_assemblyParser.T__29) | (1 << FPE_assemblyParser.T__30) | (1 << FPE_assemblyParser.T__31) | (1 << FPE_assemblyParser.T__32) | (1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36) | (1 << FPE_assemblyParser.T__37) | (1 << FPE_assemblyParser.T__38) | (1 << FPE_assemblyParser.T__39) | (1 << FPE_assemblyParser.T__40) | (1 << FPE_assemblyParser.T__41) | (1 << FPE_assemblyParser.T__42) | (1 << FPE_assemblyParser.T__43) | (1 << FPE_assemblyParser.T__44) | (1 << FPE_assemblyParser.T__45) | (1 << FPE_assemblyParser.T__46) | (1 << FPE_assemblyParser.T__47) | (1 << FPE_assemblyParser.T__48) | (1 << FPE_assemblyParser.T__49) | (1 << FPE_assemblyParser.T__50) | (1 << FPE_assemblyParser.IDENTIFER))) != 0):
-                self.state = 102
+            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__24) | (1 << FPE_assemblyParser.T__26) | (1 << FPE_assemblyParser.T__27) | (1 << FPE_assemblyParser.T__29) | (1 << FPE_assemblyParser.T__31) | (1 << FPE_assemblyParser.T__32) | (1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36) | (1 << FPE_assemblyParser.T__37) | (1 << FPE_assemblyParser.T__38) | (1 << FPE_assemblyParser.T__39) | (1 << FPE_assemblyParser.T__40) | (1 << FPE_assemblyParser.T__43) | (1 << FPE_assemblyParser.T__44) | (1 << FPE_assemblyParser.T__45) | (1 << FPE_assemblyParser.T__46) | (1 << FPE_assemblyParser.T__47) | (1 << FPE_assemblyParser.T__48) | (1 << FPE_assemblyParser.T__49) | (1 << FPE_assemblyParser.T__50) | (1 << FPE_assemblyParser.T__51) | (1 << FPE_assemblyParser.T__52) | (1 << FPE_assemblyParser.T__53) | (1 << FPE_assemblyParser.T__54) | (1 << FPE_assemblyParser.T__55) | (1 << FPE_assemblyParser.T__56) | (1 << FPE_assemblyParser.IDENTIFER))) != 0):
+                self.state = 117
                 self._errHandler.sync(self)
-                token = self._input.LA(1)
-                if token in [FPE_assemblyParser.T__23, FPE_assemblyParser.T__25, FPE_assemblyParser.IDENTIFER]:
-                    self.state = 100
+                la_ = self._interp.adaptivePredict(self._input,4,self._ctx)
+                if la_ == 1:
+                    self.state = 115
                     self.statement()
                     pass
-                elif token in [FPE_assemblyParser.T__27, FPE_assemblyParser.T__28, FPE_assemblyParser.T__29, FPE_assemblyParser.T__30, FPE_assemblyParser.T__31, FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36, FPE_assemblyParser.T__37, FPE_assemblyParser.T__38, FPE_assemblyParser.T__39, FPE_assemblyParser.T__40, FPE_assemblyParser.T__41, FPE_assemblyParser.T__42, FPE_assemblyParser.T__43, FPE_assemblyParser.T__44, FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48, FPE_assemblyParser.T__49, FPE_assemblyParser.T__50]:
-                    self.state = 101
+
+                elif la_ == 2:
+                    self.state = 116
                     self.operation()
                     pass
-                else:
-                    raise NoViableAltException(self)
 
-                self.state = 106
+
+                self.state = 121
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 107
-            self.match(FPE_assemblyParser.T__6)
+            self.state = 122
+            self.match(FPE_assemblyParser.T__8)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -652,39 +738,39 @@ class FPE_assemblyParser ( Parser ):
     def access_fetch(self):
 
         localctx = FPE_assemblyParser.Access_fetchContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 8, self.RULE_access_fetch)
+        self.enterRule(localctx, 10, self.RULE_access_fetch)
         try:
-            self.state = 115
+            self.state = 130
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.ORB, FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
+            if token in [FPE_assemblyParser.T__0, FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 109
+                self.state = 124
                 self.access_imm()
                 pass
-            elif token in [FPE_assemblyParser.T__7]:
+            elif token in [FPE_assemblyParser.T__9]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 110
+                self.state = 125
                 self.access_get()
                 pass
-            elif token in [FPE_assemblyParser.T__16]:
+            elif token in [FPE_assemblyParser.T__17]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 111
+                self.state = 126
                 self.access_reg()
                 pass
-            elif token in [FPE_assemblyParser.T__17]:
+            elif token in [FPE_assemblyParser.T__18]:
                 self.enterOuterAlt(localctx, 4)
-                self.state = 112
+                self.state = 127
                 self.access_ram()
                 pass
-            elif token in [FPE_assemblyParser.T__18]:
+            elif token in [FPE_assemblyParser.T__19]:
                 self.enterOuterAlt(localctx, 5)
-                self.state = 113
+                self.state = 128
                 self.access_rom_a()
                 pass
-            elif token in [FPE_assemblyParser.T__19]:
+            elif token in [FPE_assemblyParser.T__20]:
                 self.enterOuterAlt(localctx, 6)
-                self.state = 114
+                self.state = 129
                 self.access_rom_b()
                 pass
             else:
@@ -734,24 +820,24 @@ class FPE_assemblyParser ( Parser ):
     def access_store(self):
 
         localctx = FPE_assemblyParser.Access_storeContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 10, self.RULE_access_store)
+        self.enterRule(localctx, 12, self.RULE_access_store)
         try:
-            self.state = 120
+            self.state = 135
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__15]:
+            if token in [FPE_assemblyParser.T__16]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 117
+                self.state = 132
                 self.access_put()
                 pass
-            elif token in [FPE_assemblyParser.T__16]:
+            elif token in [FPE_assemblyParser.T__17]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 118
+                self.state = 133
                 self.access_reg()
                 pass
-            elif token in [FPE_assemblyParser.T__17]:
+            elif token in [FPE_assemblyParser.T__18]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 119
+                self.state = 134
                 self.access_ram()
                 pass
             else:
@@ -793,10 +879,10 @@ class FPE_assemblyParser ( Parser ):
     def access_imm(self):
 
         localctx = FPE_assemblyParser.Access_immContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 12, self.RULE_access_imm)
+        self.enterRule(localctx, 14, self.RULE_access_imm)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 122
+            self.state = 137
             self.expr(0)
         except RecognitionException as re:
             localctx.exception = re
@@ -812,16 +898,10 @@ class FPE_assemblyParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
+            self.advance_mod = None # Token
 
         def addr(self):
             return self.getTypedRuleContext(FPE_assemblyParser.AddrContext,0)
-
-
-        def access_get_mod(self, i:int=None):
-            if i is None:
-                return self.getTypedRuleContexts(FPE_assemblyParser.Access_get_modContext)
-            else:
-                return self.getTypedRuleContext(FPE_assemblyParser.Access_get_modContext,i)
 
 
         def getRuleIndex(self):
@@ -841,86 +921,36 @@ class FPE_assemblyParser ( Parser ):
     def access_get(self):
 
         localctx = FPE_assemblyParser.Access_getContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 14, self.RULE_access_get)
+        self.enterRule(localctx, 16, self.RULE_access_get)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 124
-            self.match(FPE_assemblyParser.T__7)
-            self.state = 125
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 126
-            self.addr()
-            self.state = 127
-            self.match(FPE_assemblyParser.T__9)
             self.state = 139
+            self.match(FPE_assemblyParser.T__9)
+            self.state = 140
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 141
+            self.addr()
+            self.state = 142
+            self.match(FPE_assemblyParser.T__11)
+            self.state = 146
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==FPE_assemblyParser.T__10:
-                self.state = 128
-                self.match(FPE_assemblyParser.T__10)
-                self.state = 129
-                self.access_get_mod()
-                self.state = 134
-                self._errHandler.sync(self)
-                _la = self._input.LA(1)
-                while _la==FPE_assemblyParser.T__11:
-                    self.state = 130
-                    self.match(FPE_assemblyParser.T__11)
-                    self.state = 131
-                    self.access_get_mod()
-                    self.state = 136
-                    self._errHandler.sync(self)
-                    _la = self._input.LA(1)
-
-                self.state = 137
+            if _la==FPE_assemblyParser.T__12:
+                self.state = 143
                 self.match(FPE_assemblyParser.T__12)
+                self.state = 144
+                localctx.advance_mod = self._input.LT(1)
+                _la = self._input.LA(1)
+                if not(_la==FPE_assemblyParser.T__13 or _la==FPE_assemblyParser.T__14):
+                    localctx.advance_mod = self._errHandler.recoverInline(self)
+                else:
+                    self._errHandler.reportMatch(self)
+                    self.consume()
+                self.state = 145
+                self.match(FPE_assemblyParser.T__15)
 
 
-        except RecognitionException as re:
-            localctx.exception = re
-            self._errHandler.reportError(self, re)
-            self._errHandler.recover(self, re)
-        finally:
-            self.exitRule()
-        return localctx
-
-
-    class Access_get_modContext(ParserRuleContext):
-
-        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
-            super().__init__(parent, invokingState)
-            self.parser = parser
-
-
-        def getRuleIndex(self):
-            return FPE_assemblyParser.RULE_access_get_mod
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAccess_get_mod" ):
-                listener.enterAccess_get_mod(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAccess_get_mod" ):
-                listener.exitAccess_get_mod(self)
-
-
-
-
-    def access_get_mod(self):
-
-        localctx = FPE_assemblyParser.Access_get_modContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 16, self.RULE_access_get_mod)
-        self._la = 0 # Token type
-        try:
-            self.enterOuterAlt(localctx, 1)
-            self.state = 141
-            _la = self._input.LA(1)
-            if not(_la==FPE_assemblyParser.T__13 or _la==FPE_assemblyParser.T__14):
-                self._errHandler.recoverInline(self)
-            else:
-                self._errHandler.reportMatch(self)
-                self.consume()
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -960,14 +990,14 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 18, self.RULE_access_put)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 143
-            self.match(FPE_assemblyParser.T__15)
-            self.state = 144
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 145
+            self.state = 148
+            self.match(FPE_assemblyParser.T__16)
+            self.state = 149
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 150
             self.addr()
-            self.state = 146
-            self.match(FPE_assemblyParser.T__9)
+            self.state = 151
+            self.match(FPE_assemblyParser.T__11)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1007,14 +1037,14 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 20, self.RULE_access_reg)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 148
-            self.match(FPE_assemblyParser.T__16)
-            self.state = 149
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 150
+            self.state = 153
+            self.match(FPE_assemblyParser.T__17)
+            self.state = 154
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 155
             self.addr()
-            self.state = 151
-            self.match(FPE_assemblyParser.T__9)
+            self.state = 156
+            self.match(FPE_assemblyParser.T__11)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1054,14 +1084,14 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 22, self.RULE_access_ram)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 153
-            self.match(FPE_assemblyParser.T__17)
-            self.state = 154
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 155
+            self.state = 158
+            self.match(FPE_assemblyParser.T__18)
+            self.state = 159
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 160
             self.addr()
-            self.state = 156
-            self.match(FPE_assemblyParser.T__9)
+            self.state = 161
+            self.match(FPE_assemblyParser.T__11)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1101,14 +1131,14 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 24, self.RULE_access_rom_a)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 158
-            self.match(FPE_assemblyParser.T__18)
-            self.state = 159
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 160
+            self.state = 163
+            self.match(FPE_assemblyParser.T__19)
+            self.state = 164
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 165
             self.addr()
-            self.state = 161
-            self.match(FPE_assemblyParser.T__9)
+            self.state = 166
+            self.match(FPE_assemblyParser.T__11)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1148,14 +1178,14 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 26, self.RULE_access_rom_b)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 163
-            self.match(FPE_assemblyParser.T__19)
-            self.state = 164
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 165
+            self.state = 168
+            self.match(FPE_assemblyParser.T__20)
+            self.state = 169
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 170
             self.addr()
-            self.state = 166
-            self.match(FPE_assemblyParser.T__9)
+            self.state = 171
+            self.match(FPE_assemblyParser.T__11)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1198,17 +1228,17 @@ class FPE_assemblyParser ( Parser ):
         localctx = FPE_assemblyParser.AddrContext(self, self._ctx, self.state)
         self.enterRule(localctx, 28, self.RULE_addr)
         try:
-            self.state = 170
+            self.state = 175
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.ORB, FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
+            if token in [FPE_assemblyParser.T__0, FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 168
+                self.state = 173
                 self.addr_literal()
                 pass
-            elif token in [FPE_assemblyParser.T__20]:
+            elif token in [FPE_assemblyParser.T__21]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 169
+                self.state = 174
                 self.addr_bam()
                 pass
             else:
@@ -1253,7 +1283,7 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 30, self.RULE_addr_literal)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 172
+            self.state = 177
             self.expr(0)
         except RecognitionException as re:
             localctx.exception = re
@@ -1269,16 +1299,10 @@ class FPE_assemblyParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
+            self.step_mod = None # Token
 
         def expr(self):
             return self.getTypedRuleContext(FPE_assemblyParser.ExprContext,0)
-
-
-        def addr_bam_mod(self, i:int=None):
-            if i is None:
-                return self.getTypedRuleContexts(FPE_assemblyParser.Addr_bam_modContext)
-            else:
-                return self.getTypedRuleContext(FPE_assemblyParser.Addr_bam_modContext,i)
 
 
         def getRuleIndex(self):
@@ -1302,82 +1326,32 @@ class FPE_assemblyParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 174
-            self.match(FPE_assemblyParser.T__20)
-            self.state = 175
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 176
+            self.state = 179
+            self.match(FPE_assemblyParser.T__21)
+            self.state = 180
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 181
             self.expr(0)
-            self.state = 177
-            self.match(FPE_assemblyParser.T__9)
-            self.state = 189
+            self.state = 182
+            self.match(FPE_assemblyParser.T__11)
+            self.state = 186
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==FPE_assemblyParser.T__10:
-                self.state = 178
-                self.match(FPE_assemblyParser.T__10)
-                self.state = 179
-                self.addr_bam_mod()
-                self.state = 184
-                self._errHandler.sync(self)
-                _la = self._input.LA(1)
-                while _la==FPE_assemblyParser.T__11:
-                    self.state = 180
-                    self.match(FPE_assemblyParser.T__11)
-                    self.state = 181
-                    self.addr_bam_mod()
-                    self.state = 186
-                    self._errHandler.sync(self)
-                    _la = self._input.LA(1)
-
-                self.state = 187
+            if _la==FPE_assemblyParser.T__12:
+                self.state = 183
                 self.match(FPE_assemblyParser.T__12)
+                self.state = 184
+                localctx.step_mod = self._input.LT(1)
+                _la = self._input.LA(1)
+                if not(_la==FPE_assemblyParser.T__22 or _la==FPE_assemblyParser.T__23):
+                    localctx.step_mod = self._errHandler.recoverInline(self)
+                else:
+                    self._errHandler.reportMatch(self)
+                    self.consume()
+                self.state = 185
+                self.match(FPE_assemblyParser.T__15)
 
 
-        except RecognitionException as re:
-            localctx.exception = re
-            self._errHandler.reportError(self, re)
-            self._errHandler.recover(self, re)
-        finally:
-            self.exitRule()
-        return localctx
-
-
-    class Addr_bam_modContext(ParserRuleContext):
-
-        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
-            super().__init__(parent, invokingState)
-            self.parser = parser
-
-
-        def getRuleIndex(self):
-            return FPE_assemblyParser.RULE_addr_bam_mod
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAddr_bam_mod" ):
-                listener.enterAddr_bam_mod(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAddr_bam_mod" ):
-                listener.exitAddr_bam_mod(self)
-
-
-
-
-    def addr_bam_mod(self):
-
-        localctx = FPE_assemblyParser.Addr_bam_modContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 34, self.RULE_addr_bam_mod)
-        self._la = 0 # Token type
-        try:
-            self.enterOuterAlt(localctx, 1)
-            self.state = 191
-            _la = self._input.LA(1)
-            if not(_la==FPE_assemblyParser.T__21 or _la==FPE_assemblyParser.T__22):
-                self._errHandler.recoverInline(self)
-            else:
-                self._errHandler.reportMatch(self)
-                self.consume()
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1401,8 +1375,16 @@ class FPE_assemblyParser ( Parser ):
             return self.getTypedRuleContext(FPE_assemblyParser.State_jump_labelContext,0)
 
 
+        def state_loop_label(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.State_loop_labelContext,0)
+
+
         def state_constant(self):
             return self.getTypedRuleContext(FPE_assemblyParser.State_constantContext,0)
+
+
+        def state_component(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.State_componentContext,0)
 
 
         def getRuleIndex(self):
@@ -1422,25 +1404,35 @@ class FPE_assemblyParser ( Parser ):
     def statement(self):
 
         localctx = FPE_assemblyParser.StatementContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 36, self.RULE_statement)
+        self.enterRule(localctx, 34, self.RULE_statement)
         try:
-            self.state = 196
+            self.state = 193
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__23]:
+            if token in [FPE_assemblyParser.T__24]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 193
+                self.state = 188
                 self.state_zol()
                 pass
             elif token in [FPE_assemblyParser.IDENTIFER]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 194
+                self.state = 189
                 self.state_jump_label()
                 pass
-            elif token in [FPE_assemblyParser.T__25]:
+            elif token in [FPE_assemblyParser.T__26]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 195
+                self.state = 190
+                self.state_loop_label()
+                pass
+            elif token in [FPE_assemblyParser.T__27]:
+                self.enterOuterAlt(localctx, 4)
+                self.state = 191
                 self.state_constant()
+                pass
+            elif token in [FPE_assemblyParser.T__29]:
+                self.enterOuterAlt(localctx, 5)
+                self.state = 192
+                self.state_component()
                 pass
             else:
                 raise NoViableAltException(self)
@@ -1460,15 +1452,9 @@ class FPE_assemblyParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def expr(self):
             return self.getTypedRuleContext(FPE_assemblyParser.ExprContext,0)
 
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def scope(self):
             return self.getTypedRuleContext(FPE_assemblyParser.ScopeContext,0)
@@ -1491,18 +1477,18 @@ class FPE_assemblyParser ( Parser ):
     def state_zol(self):
 
         localctx = FPE_assemblyParser.State_zolContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 38, self.RULE_state_zol)
+        self.enterRule(localctx, 36, self.RULE_state_zol)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 198
-            self.match(FPE_assemblyParser.T__23)
-            self.state = 199
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 200
+            self.state = 195
+            self.match(FPE_assemblyParser.T__24)
+            self.state = 196
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 197
             self.expr(0)
-            self.state = 201
-            self.match(FPE_assemblyParser.CRB)
-            self.state = 202
+            self.state = 198
+            self.match(FPE_assemblyParser.T__1)
+            self.state = 199
             self.scope()
         except RecognitionException as re:
             localctx.exception = re
@@ -1519,8 +1505,8 @@ class FPE_assemblyParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def jump_label(self):
-            return self.getTypedRuleContext(FPE_assemblyParser.Jump_labelContext,0)
+        def ident_dec(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_decContext,0)
 
 
         def getRuleIndex(self):
@@ -1540,13 +1526,64 @@ class FPE_assemblyParser ( Parser ):
     def state_jump_label(self):
 
         localctx = FPE_assemblyParser.State_jump_labelContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 40, self.RULE_state_jump_label)
+        self.enterRule(localctx, 38, self.RULE_state_jump_label)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 201
+            self.ident_dec()
+            self.state = 202
+            self.match(FPE_assemblyParser.T__25)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class State_loop_labelContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def ident_dec(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_decContext,0)
+
+
+        def scope(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.ScopeContext,0)
+
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_state_loop_label
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterState_loop_label" ):
+                listener.enterState_loop_label(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitState_loop_label" ):
+                listener.exitState_loop_label(self)
+
+
+
+
+    def state_loop_label(self):
+
+        localctx = FPE_assemblyParser.State_loop_labelContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 40, self.RULE_state_loop_label)
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 204
-            self.jump_label()
+            self.match(FPE_assemblyParser.T__26)
             self.state = 205
-            self.match(FPE_assemblyParser.T__24)
+            self.ident_dec()
+            self.state = 206
+            self.match(FPE_assemblyParser.T__25)
+            self.state = 207
+            self.scope()
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1562,8 +1599,9 @@ class FPE_assemblyParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def IDENTIFER(self):
-            return self.getToken(FPE_assemblyParser.IDENTIFER, 0)
+        def ident_dec(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_decContext,0)
+
 
         def expr(self):
             return self.getTypedRuleContext(FPE_assemblyParser.ExprContext,0)
@@ -1589,14 +1627,164 @@ class FPE_assemblyParser ( Parser ):
         self.enterRule(localctx, 42, self.RULE_state_constant)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 207
-            self.match(FPE_assemblyParser.T__25)
-            self.state = 208
-            self.match(FPE_assemblyParser.IDENTIFER)
             self.state = 209
-            self.expr(0)
+            self.match(FPE_assemblyParser.T__27)
             self.state = 210
-            self.match(FPE_assemblyParser.T__26)
+            self.ident_dec()
+            self.state = 211
+            self.expr(0)
+            self.state = 212
+            self.match(FPE_assemblyParser.T__28)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class State_componentContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+            self.com_name = None # Ident_decContext
+            self.com_type = None # Token
+
+        def ident_dec(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_decContext,0)
+
+
+        def IDENTIFER(self):
+            return self.getToken(FPE_assemblyParser.IDENTIFER, 0)
+
+        def state_component_parameter(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(FPE_assemblyParser.State_component_parameterContext)
+            else:
+                return self.getTypedRuleContext(FPE_assemblyParser.State_component_parameterContext,i)
+
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_state_component
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterState_component" ):
+                listener.enterState_component(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitState_component" ):
+                listener.exitState_component(self)
+
+
+
+
+    def state_component(self):
+
+        localctx = FPE_assemblyParser.State_componentContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 44, self.RULE_state_component)
+        self._la = 0 # Token type
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 214
+            self.match(FPE_assemblyParser.T__29)
+            self.state = 215
+            localctx.com_name = self.ident_dec()
+            self.state = 216
+            self.match(FPE_assemblyParser.T__25)
+            self.state = 217
+            localctx.com_type = self.match(FPE_assemblyParser.IDENTIFER)
+            self.state = 218
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 227
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            if _la==FPE_assemblyParser.IDENTIFER:
+                self.state = 219
+                self.state_component_parameter()
+                self.state = 224
+                self._errHandler.sync(self)
+                _la = self._input.LA(1)
+                while _la==FPE_assemblyParser.T__30:
+                    self.state = 220
+                    self.match(FPE_assemblyParser.T__30)
+                    self.state = 221
+                    self.state_component_parameter()
+                    self.state = 226
+                    self._errHandler.sync(self)
+                    _la = self._input.LA(1)
+
+
+
+            self.state = 229
+            self.match(FPE_assemblyParser.T__1)
+            self.state = 230
+            self.match(FPE_assemblyParser.T__28)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class State_component_parameterContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+            self.para_name = None # Token
+
+        def IDENTIFER(self, i:int=None):
+            if i is None:
+                return self.getTokens(FPE_assemblyParser.IDENTIFER)
+            else:
+                return self.getToken(FPE_assemblyParser.IDENTIFER, i)
+
+        def expr(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.ExprContext,0)
+
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_state_component_parameter
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterState_component_parameter" ):
+                listener.enterState_component_parameter(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitState_component_parameter" ):
+                listener.exitState_component_parameter(self)
+
+
+
+
+    def state_component_parameter(self):
+
+        localctx = FPE_assemblyParser.State_component_parameterContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 46, self.RULE_state_component_parameter)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 232
+            localctx.para_name = self.match(FPE_assemblyParser.IDENTIFER)
+            self.state = 233
+            self.match(FPE_assemblyParser.T__25)
+            self.state = 236
+            self._errHandler.sync(self)
+            la_ = self._interp.adaptivePredict(self._input,14,self._ctx)
+            if la_ == 1:
+                self.state = 234
+                self.match(FPE_assemblyParser.IDENTIFER)
+                pass
+
+            elif la_ == 2:
+                self.state = 235
+                self.expr(0)
+                pass
+
+
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1628,6 +1816,10 @@ class FPE_assemblyParser ( Parser ):
             return self.getTypedRuleContext(FPE_assemblyParser.Op_aluContext,0)
 
 
+        def op_ZOL(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Op_ZOLContext,0)
+
+
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_operation
 
@@ -1645,38 +1837,45 @@ class FPE_assemblyParser ( Parser ):
     def operation(self):
 
         localctx = FPE_assemblyParser.OperationContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 44, self.RULE_operation)
+        self.enterRule(localctx, 48, self.RULE_operation)
         try:
-            self.state = 224
+            self.state = 253
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__27]:
+            if token in [FPE_assemblyParser.T__31]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 212
+                self.state = 238
                 self.op_void()
-                self.state = 213
-                self.match(FPE_assemblyParser.T__26)
+                self.state = 239
+                self.match(FPE_assemblyParser.T__28)
                 pass
-            elif token in [FPE_assemblyParser.T__28, FPE_assemblyParser.T__29, FPE_assemblyParser.T__30, FPE_assemblyParser.T__31, FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34]:
+            elif token in [FPE_assemblyParser.T__32, FPE_assemblyParser.T__33, FPE_assemblyParser.T__34, FPE_assemblyParser.T__35, FPE_assemblyParser.T__36, FPE_assemblyParser.T__37, FPE_assemblyParser.T__38]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 215
+                self.state = 241
                 self.op_pc()
-                self.state = 216
-                self.match(FPE_assemblyParser.T__26)
+                self.state = 242
+                self.match(FPE_assemblyParser.T__28)
                 pass
-            elif token in [FPE_assemblyParser.T__35, FPE_assemblyParser.T__36]:
+            elif token in [FPE_assemblyParser.T__39, FPE_assemblyParser.T__40]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 218
+                self.state = 244
                 self.op_bam()
-                self.state = 219
-                self.match(FPE_assemblyParser.T__26)
+                self.state = 245
+                self.match(FPE_assemblyParser.T__28)
                 pass
-            elif token in [FPE_assemblyParser.T__37, FPE_assemblyParser.T__38, FPE_assemblyParser.T__39, FPE_assemblyParser.T__40, FPE_assemblyParser.T__41, FPE_assemblyParser.T__42, FPE_assemblyParser.T__43, FPE_assemblyParser.T__44, FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48, FPE_assemblyParser.T__49, FPE_assemblyParser.T__50]:
+            elif token in [FPE_assemblyParser.T__43, FPE_assemblyParser.T__44, FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48, FPE_assemblyParser.T__49, FPE_assemblyParser.T__50, FPE_assemblyParser.T__51, FPE_assemblyParser.T__52, FPE_assemblyParser.T__53, FPE_assemblyParser.T__54, FPE_assemblyParser.T__55, FPE_assemblyParser.T__56]:
                 self.enterOuterAlt(localctx, 4)
-                self.state = 221
+                self.state = 247
                 self.op_alu()
-                self.state = 222
-                self.match(FPE_assemblyParser.T__26)
+                self.state = 248
+                self.match(FPE_assemblyParser.T__28)
+                pass
+            elif token in [FPE_assemblyParser.IDENTIFER]:
+                self.enterOuterAlt(localctx, 5)
+                self.state = 250
+                self.op_ZOL()
+                self.state = 251
+                self.match(FPE_assemblyParser.T__28)
                 pass
             else:
                 raise NoViableAltException(self)
@@ -1717,10 +1916,10 @@ class FPE_assemblyParser ( Parser ):
     def op_void(self):
 
         localctx = FPE_assemblyParser.Op_voidContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 46, self.RULE_op_void)
+        self.enterRule(localctx, 50, self.RULE_op_void)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 226
+            self.state = 255
             self.op_void_nop()
         except RecognitionException as re:
             localctx.exception = re
@@ -1755,11 +1954,11 @@ class FPE_assemblyParser ( Parser ):
     def op_void_nop(self):
 
         localctx = FPE_assemblyParser.Op_void_nopContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 48, self.RULE_op_void_nop)
+        self.enterRule(localctx, 52, self.RULE_op_void_nop)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 228
-            self.match(FPE_assemblyParser.T__27)
+            self.state = 257
+            self.match(FPE_assemblyParser.T__31)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1796,10 +1995,10 @@ class FPE_assemblyParser ( Parser ):
     def op_pc(self):
 
         localctx = FPE_assemblyParser.Op_pcContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 50, self.RULE_op_pc)
+        self.enterRule(localctx, 54, self.RULE_op_pc)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 230
+            self.state = 259
             self.op_pc_jump()
         except RecognitionException as re:
             localctx.exception = re
@@ -1817,15 +2016,9 @@ class FPE_assemblyParser ( Parser ):
             self.parser = parser
             self.mnemonic = None # Token
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
+        def ident_ref(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_refContext,0)
 
-        def jump_label(self):
-            return self.getTypedRuleContext(FPE_assemblyParser.Jump_labelContext,0)
-
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_op_pc_jump
@@ -1844,24 +2037,24 @@ class FPE_assemblyParser ( Parser ):
     def op_pc_jump(self):
 
         localctx = FPE_assemblyParser.Op_pc_jumpContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 52, self.RULE_op_pc_jump)
+        self.enterRule(localctx, 56, self.RULE_op_pc_jump)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 232
+            self.state = 261
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__28) | (1 << FPE_assemblyParser.T__29) | (1 << FPE_assemblyParser.T__30) | (1 << FPE_assemblyParser.T__31) | (1 << FPE_assemblyParser.T__32) | (1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34))) != 0)):
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__32) | (1 << FPE_assemblyParser.T__33) | (1 << FPE_assemblyParser.T__34) | (1 << FPE_assemblyParser.T__35) | (1 << FPE_assemblyParser.T__36) | (1 << FPE_assemblyParser.T__37) | (1 << FPE_assemblyParser.T__38))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
-            self.state = 233
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 234
-            self.jump_label()
-            self.state = 235
-            self.match(FPE_assemblyParser.CRB)
+            self.state = 262
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 263
+            self.ident_ref()
+            self.state = 264
+            self.match(FPE_assemblyParser.T__1)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1902,19 +2095,19 @@ class FPE_assemblyParser ( Parser ):
     def op_bam(self):
 
         localctx = FPE_assemblyParser.Op_bamContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 54, self.RULE_op_bam)
+        self.enterRule(localctx, 58, self.RULE_op_bam)
         try:
-            self.state = 239
+            self.state = 268
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__35]:
+            if token in [FPE_assemblyParser.T__39]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 237
+                self.state = 266
                 self.op_bam_reset()
                 pass
-            elif token in [FPE_assemblyParser.T__36]:
+            elif token in [FPE_assemblyParser.T__40]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 238
+                self.state = 267
                 self.op_bam_seek()
                 pass
             else:
@@ -1956,19 +2149,19 @@ class FPE_assemblyParser ( Parser ):
     def op_bam_reset(self):
 
         localctx = FPE_assemblyParser.Op_bam_resetContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 56, self.RULE_op_bam_reset)
+        self.enterRule(localctx, 60, self.RULE_op_bam_reset)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 241
-            self.match(FPE_assemblyParser.T__35)
-            self.state = 242
-            self.match(FPE_assemblyParser.T__20)
-            self.state = 243
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 244
+            self.state = 270
+            self.match(FPE_assemblyParser.T__39)
+            self.state = 271
+            self.match(FPE_assemblyParser.T__21)
+            self.state = 272
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 273
             self.expr(0)
-            self.state = 245
-            self.match(FPE_assemblyParser.T__9)
+            self.state = 274
+            self.match(FPE_assemblyParser.T__11)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1983,26 +2176,14 @@ class FPE_assemblyParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
+            self.step_mod = None # Token
 
         def expr(self):
             return self.getTypedRuleContext(FPE_assemblyParser.ExprContext,0)
 
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def access_fetch(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Access_fetchContext,0)
-
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
-
-        def op_bam_seek_mod(self, i:int=None):
-            if i is None:
-                return self.getTypedRuleContexts(FPE_assemblyParser.Op_bam_seek_modContext)
-            else:
-                return self.getTypedRuleContext(FPE_assemblyParser.Op_bam_seek_modContext,i)
 
 
         def getRuleIndex(self):
@@ -2022,48 +2203,42 @@ class FPE_assemblyParser ( Parser ):
     def op_bam_seek(self):
 
         localctx = FPE_assemblyParser.Op_bam_seekContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 58, self.RULE_op_bam_seek)
+        self.enterRule(localctx, 62, self.RULE_op_bam_seek)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 247
-            self.match(FPE_assemblyParser.T__36)
-            self.state = 248
-            self.match(FPE_assemblyParser.T__20)
-            self.state = 249
-            self.match(FPE_assemblyParser.T__8)
-            self.state = 250
+            self.state = 276
+            self.match(FPE_assemblyParser.T__40)
+            self.state = 277
+            self.match(FPE_assemblyParser.T__21)
+            self.state = 278
+            self.match(FPE_assemblyParser.T__10)
+            self.state = 279
             self.expr(0)
-            self.state = 251
-            self.match(FPE_assemblyParser.T__9)
-            self.state = 252
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 253
+            self.state = 280
+            self.match(FPE_assemblyParser.T__11)
+            self.state = 281
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 282
             self.access_fetch()
-            self.state = 254
-            self.match(FPE_assemblyParser.CRB)
-            self.state = 266
+            self.state = 283
+            self.match(FPE_assemblyParser.T__1)
+            self.state = 287
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==FPE_assemblyParser.T__10:
-                self.state = 255
-                self.match(FPE_assemblyParser.T__10)
-                self.state = 256
-                self.op_bam_seek_mod()
-                self.state = 261
-                self._errHandler.sync(self)
-                _la = self._input.LA(1)
-                while _la==FPE_assemblyParser.T__11:
-                    self.state = 257
-                    self.match(FPE_assemblyParser.T__11)
-                    self.state = 258
-                    self.op_bam_seek_mod()
-                    self.state = 263
-                    self._errHandler.sync(self)
-                    _la = self._input.LA(1)
-
-                self.state = 264
+            if _la==FPE_assemblyParser.T__12:
+                self.state = 284
                 self.match(FPE_assemblyParser.T__12)
+                self.state = 285
+                localctx.step_mod = self._input.LT(1)
+                _la = self._input.LA(1)
+                if not(_la==FPE_assemblyParser.T__22 or _la==FPE_assemblyParser.T__23):
+                    localctx.step_mod = self._errHandler.recoverInline(self)
+                else:
+                    self._errHandler.reportMatch(self)
+                    self.consume()
+                self.state = 286
+                self.match(FPE_assemblyParser.T__15)
 
 
         except RecognitionException as re:
@@ -2075,41 +2250,168 @@ class FPE_assemblyParser ( Parser ):
         return localctx
 
 
-    class Op_bam_seek_modContext(ParserRuleContext):
+    class Op_ZOLContext(ParserRuleContext):
 
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
 
+        def op_ZOL_seek(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Op_ZOL_seekContext,0)
+
+
+        def op_ZOL_set(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Op_ZOL_setContext,0)
+
 
         def getRuleIndex(self):
-            return FPE_assemblyParser.RULE_op_bam_seek_mod
+            return FPE_assemblyParser.RULE_op_ZOL
 
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterOp_bam_seek_mod" ):
-                listener.enterOp_bam_seek_mod(self)
+            if hasattr( listener, "enterOp_ZOL" ):
+                listener.enterOp_ZOL(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitOp_bam_seek_mod" ):
-                listener.exitOp_bam_seek_mod(self)
+            if hasattr( listener, "exitOp_ZOL" ):
+                listener.exitOp_ZOL(self)
 
 
 
 
-    def op_bam_seek_mod(self):
+    def op_ZOL(self):
 
-        localctx = FPE_assemblyParser.Op_bam_seek_modContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 60, self.RULE_op_bam_seek_mod)
-        self._la = 0 # Token type
+        localctx = FPE_assemblyParser.Op_ZOLContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 64, self.RULE_op_ZOL)
+        try:
+            self.state = 291
+            self._errHandler.sync(self)
+            la_ = self._interp.adaptivePredict(self._input,18,self._ctx)
+            if la_ == 1:
+                self.enterOuterAlt(localctx, 1)
+                self.state = 289
+                self.op_ZOL_seek()
+                pass
+
+            elif la_ == 2:
+                self.enterOuterAlt(localctx, 2)
+                self.state = 290
+                self.op_ZOL_set()
+                pass
+
+
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class Op_ZOL_seekContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+            self.exe_com = None # Ident_refContext
+            self.loop_label = None # Ident_refContext
+
+        def ident_ref(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(FPE_assemblyParser.Ident_refContext)
+            else:
+                return self.getTypedRuleContext(FPE_assemblyParser.Ident_refContext,i)
+
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_op_ZOL_seek
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterOp_ZOL_seek" ):
+                listener.enterOp_ZOL_seek(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitOp_ZOL_seek" ):
+                listener.exitOp_ZOL_seek(self)
+
+
+
+
+    def op_ZOL_seek(self):
+
+        localctx = FPE_assemblyParser.Op_ZOL_seekContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 66, self.RULE_op_ZOL_seek)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 268
-            _la = self._input.LA(1)
-            if not(_la==FPE_assemblyParser.T__21 or _la==FPE_assemblyParser.T__22):
-                self._errHandler.recoverInline(self)
-            else:
-                self._errHandler.reportMatch(self)
-                self.consume()
+            self.state = 293
+            localctx.exe_com = self.ident_ref()
+            self.state = 294
+            self.match(FPE_assemblyParser.T__41)
+            self.state = 295
+            self.match(FPE_assemblyParser.T__40)
+            self.state = 296
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 297
+            localctx.loop_label = self.ident_ref()
+            self.state = 298
+            self.match(FPE_assemblyParser.T__1)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class Op_ZOL_setContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+            self.exe_com = None # Ident_refContext
+            self.iterations = None # Access_fetchContext
+
+        def ident_ref(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Ident_refContext,0)
+
+
+        def access_fetch(self):
+            return self.getTypedRuleContext(FPE_assemblyParser.Access_fetchContext,0)
+
+
+        def getRuleIndex(self):
+            return FPE_assemblyParser.RULE_op_ZOL_set
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterOp_ZOL_set" ):
+                listener.enterOp_ZOL_set(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitOp_ZOL_set" ):
+                listener.exitOp_ZOL_set(self)
+
+
+
+
+    def op_ZOL_set(self):
+
+        localctx = FPE_assemblyParser.Op_ZOL_setContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 68, self.RULE_op_ZOL_set)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 300
+            localctx.exe_com = self.ident_ref()
+            self.state = 301
+            self.match(FPE_assemblyParser.T__41)
+            self.state = 302
+            self.match(FPE_assemblyParser.T__42)
+            self.state = 303
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 304
+            localctx.iterations = self.access_fetch()
+            self.state = 305
+            self.match(FPE_assemblyParser.T__1)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -2158,29 +2460,29 @@ class FPE_assemblyParser ( Parser ):
     def op_alu(self):
 
         localctx = FPE_assemblyParser.Op_aluContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 62, self.RULE_op_alu)
+        self.enterRule(localctx, 70, self.RULE_op_alu)
         try:
-            self.state = 274
+            self.state = 311
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__37, FPE_assemblyParser.T__38]:
+            if token in [FPE_assemblyParser.T__43, FPE_assemblyParser.T__44]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 270
+                self.state = 307
                 self.op_alu_1o_1r()
                 pass
-            elif token in [FPE_assemblyParser.T__39, FPE_assemblyParser.T__40, FPE_assemblyParser.T__41, FPE_assemblyParser.T__42]:
+            elif token in [FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 271
+                self.state = 308
                 self.op_alu_1o_1e_1r()
                 pass
-            elif token in [FPE_assemblyParser.T__43, FPE_assemblyParser.T__44]:
+            elif token in [FPE_assemblyParser.T__49, FPE_assemblyParser.T__50]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 272
+                self.state = 309
                 self.op_alu_2o_0r()
                 pass
-            elif token in [FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48, FPE_assemblyParser.T__49, FPE_assemblyParser.T__50]:
+            elif token in [FPE_assemblyParser.T__51, FPE_assemblyParser.T__52, FPE_assemblyParser.T__53, FPE_assemblyParser.T__54, FPE_assemblyParser.T__55, FPE_assemblyParser.T__56]:
                 self.enterOuterAlt(localctx, 4)
-                self.state = 273
+                self.state = 310
                 self.op_alu_2o_1r()
                 pass
             else:
@@ -2202,9 +2504,6 @@ class FPE_assemblyParser ( Parser ):
             self.parser = parser
             self.mnemonic = None # Token
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def alu_operand(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Alu_operandContext,0)
 
@@ -2212,9 +2511,6 @@ class FPE_assemblyParser ( Parser ):
         def alu_result(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Alu_resultContext,0)
 
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_op_alu_1o_1r
@@ -2233,28 +2529,28 @@ class FPE_assemblyParser ( Parser ):
     def op_alu_1o_1r(self):
 
         localctx = FPE_assemblyParser.Op_alu_1o_1rContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 64, self.RULE_op_alu_1o_1r)
+        self.enterRule(localctx, 72, self.RULE_op_alu_1o_1r)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 276
+            self.state = 313
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not(_la==FPE_assemblyParser.T__37 or _la==FPE_assemblyParser.T__38):
+            if not(_la==FPE_assemblyParser.T__43 or _la==FPE_assemblyParser.T__44):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
-            self.state = 277
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 278
+            self.state = 314
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 315
             self.alu_operand()
-            self.state = 279
-            self.match(FPE_assemblyParser.T__11)
-            self.state = 280
+            self.state = 316
+            self.match(FPE_assemblyParser.T__30)
+            self.state = 317
             self.alu_result()
-            self.state = 281
-            self.match(FPE_assemblyParser.CRB)
+            self.state = 318
+            self.match(FPE_assemblyParser.T__1)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -2271,9 +2567,6 @@ class FPE_assemblyParser ( Parser ):
             self.parser = parser
             self.mnemonic = None # Token
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def alu_operand(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Alu_operandContext,0)
 
@@ -2285,9 +2578,6 @@ class FPE_assemblyParser ( Parser ):
         def alu_result(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Alu_resultContext,0)
 
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_op_alu_1o_1e_1r
@@ -2306,32 +2596,32 @@ class FPE_assemblyParser ( Parser ):
     def op_alu_1o_1e_1r(self):
 
         localctx = FPE_assemblyParser.Op_alu_1o_1e_1rContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 66, self.RULE_op_alu_1o_1e_1r)
+        self.enterRule(localctx, 74, self.RULE_op_alu_1o_1e_1r)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 283
+            self.state = 320
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__39) | (1 << FPE_assemblyParser.T__40) | (1 << FPE_assemblyParser.T__41) | (1 << FPE_assemblyParser.T__42))) != 0)):
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__45) | (1 << FPE_assemblyParser.T__46) | (1 << FPE_assemblyParser.T__47) | (1 << FPE_assemblyParser.T__48))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
-            self.state = 284
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 285
+            self.state = 321
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 322
             self.alu_operand()
-            self.state = 286
-            self.match(FPE_assemblyParser.T__11)
-            self.state = 287
+            self.state = 323
+            self.match(FPE_assemblyParser.T__30)
+            self.state = 324
             self.expr(0)
-            self.state = 288
-            self.match(FPE_assemblyParser.T__11)
-            self.state = 289
+            self.state = 325
+            self.match(FPE_assemblyParser.T__30)
+            self.state = 326
             self.alu_result()
-            self.state = 290
-            self.match(FPE_assemblyParser.CRB)
+            self.state = 327
+            self.match(FPE_assemblyParser.T__1)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -2348,18 +2638,12 @@ class FPE_assemblyParser ( Parser ):
             self.parser = parser
             self.mnemonic = None # Token
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def alu_operand(self, i:int=None):
             if i is None:
                 return self.getTypedRuleContexts(FPE_assemblyParser.Alu_operandContext)
             else:
                 return self.getTypedRuleContext(FPE_assemblyParser.Alu_operandContext,i)
 
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_op_alu_2o_0r
@@ -2378,28 +2662,28 @@ class FPE_assemblyParser ( Parser ):
     def op_alu_2o_0r(self):
 
         localctx = FPE_assemblyParser.Op_alu_2o_0rContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 68, self.RULE_op_alu_2o_0r)
+        self.enterRule(localctx, 76, self.RULE_op_alu_2o_0r)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 292
+            self.state = 329
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not(_la==FPE_assemblyParser.T__43 or _la==FPE_assemblyParser.T__44):
+            if not(_la==FPE_assemblyParser.T__49 or _la==FPE_assemblyParser.T__50):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
-            self.state = 293
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 294
+            self.state = 330
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 331
             self.alu_operand()
-            self.state = 295
-            self.match(FPE_assemblyParser.T__11)
-            self.state = 296
+            self.state = 332
+            self.match(FPE_assemblyParser.T__30)
+            self.state = 333
             self.alu_operand()
-            self.state = 297
-            self.match(FPE_assemblyParser.CRB)
+            self.state = 334
+            self.match(FPE_assemblyParser.T__1)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -2416,9 +2700,6 @@ class FPE_assemblyParser ( Parser ):
             self.parser = parser
             self.mnemonic = None # Token
 
-        def ORB(self):
-            return self.getToken(FPE_assemblyParser.ORB, 0)
-
         def alu_operand(self, i:int=None):
             if i is None:
                 return self.getTypedRuleContexts(FPE_assemblyParser.Alu_operandContext)
@@ -2429,9 +2710,6 @@ class FPE_assemblyParser ( Parser ):
         def alu_result(self):
             return self.getTypedRuleContext(FPE_assemblyParser.Alu_resultContext,0)
 
-
-        def CRB(self):
-            return self.getToken(FPE_assemblyParser.CRB, 0)
 
         def getRuleIndex(self):
             return FPE_assemblyParser.RULE_op_alu_2o_1r
@@ -2450,32 +2728,32 @@ class FPE_assemblyParser ( Parser ):
     def op_alu_2o_1r(self):
 
         localctx = FPE_assemblyParser.Op_alu_2o_1rContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 70, self.RULE_op_alu_2o_1r)
+        self.enterRule(localctx, 78, self.RULE_op_alu_2o_1r)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 299
+            self.state = 336
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__45) | (1 << FPE_assemblyParser.T__46) | (1 << FPE_assemblyParser.T__47) | (1 << FPE_assemblyParser.T__48) | (1 << FPE_assemblyParser.T__49) | (1 << FPE_assemblyParser.T__50))) != 0)):
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__51) | (1 << FPE_assemblyParser.T__52) | (1 << FPE_assemblyParser.T__53) | (1 << FPE_assemblyParser.T__54) | (1 << FPE_assemblyParser.T__55) | (1 << FPE_assemblyParser.T__56))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
-            self.state = 300
-            self.match(FPE_assemblyParser.ORB)
-            self.state = 301
+            self.state = 337
+            self.match(FPE_assemblyParser.T__0)
+            self.state = 338
             self.alu_operand()
-            self.state = 302
-            self.match(FPE_assemblyParser.T__11)
-            self.state = 303
+            self.state = 339
+            self.match(FPE_assemblyParser.T__30)
+            self.state = 340
             self.alu_operand()
-            self.state = 304
-            self.match(FPE_assemblyParser.T__11)
-            self.state = 305
+            self.state = 341
+            self.match(FPE_assemblyParser.T__30)
+            self.state = 342
             self.alu_result()
-            self.state = 306
-            self.match(FPE_assemblyParser.CRB)
+            self.state = 343
+            self.match(FPE_assemblyParser.T__1)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -2513,27 +2791,20 @@ class FPE_assemblyParser ( Parser ):
     def alu_operand(self):
 
         localctx = FPE_assemblyParser.Alu_operandContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 72, self.RULE_alu_operand)
-        self._la = 0 # Token type
+        self.enterRule(localctx, 80, self.RULE_alu_operand)
         try:
-            self.state = 310
+            self.state = 347
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__7, FPE_assemblyParser.T__16, FPE_assemblyParser.T__17, FPE_assemblyParser.T__18, FPE_assemblyParser.T__19, FPE_assemblyParser.ORB, FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
+            if token in [FPE_assemblyParser.T__0, FPE_assemblyParser.T__9, FPE_assemblyParser.T__17, FPE_assemblyParser.T__18, FPE_assemblyParser.T__19, FPE_assemblyParser.T__20, FPE_assemblyParser.DEC_NUM, FPE_assemblyParser.BIN_NUM, FPE_assemblyParser.OCT_NUM, FPE_assemblyParser.HEX_NUM, FPE_assemblyParser.IDENTIFER]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 308
+                self.state = 345
                 self.access_fetch()
                 pass
-            elif token in [FPE_assemblyParser.T__51]:
+            elif token in [FPE_assemblyParser.T__57]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 309
-                localctx.internal = self._input.LT(1)
-                _la = self._input.LA(1)
-                if not(_la==FPE_assemblyParser.T__51):
-                    localctx.internal = self._errHandler.recoverInline(self)
-                else:
-                    self._errHandler.reportMatch(self)
-                    self.consume()
+                self.state = 346
+                localctx.internal = self.match(FPE_assemblyParser.T__57)
                 pass
             else:
                 raise NoViableAltException(self)
@@ -2575,27 +2846,20 @@ class FPE_assemblyParser ( Parser ):
     def alu_result(self):
 
         localctx = FPE_assemblyParser.Alu_resultContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 74, self.RULE_alu_result)
-        self._la = 0 # Token type
+        self.enterRule(localctx, 82, self.RULE_alu_result)
         try:
-            self.state = 314
+            self.state = 351
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__15, FPE_assemblyParser.T__16, FPE_assemblyParser.T__17]:
+            if token in [FPE_assemblyParser.T__16, FPE_assemblyParser.T__17, FPE_assemblyParser.T__18]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 312
+                self.state = 349
                 self.access_store()
                 pass
-            elif token in [FPE_assemblyParser.T__51]:
+            elif token in [FPE_assemblyParser.T__57]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 313
-                localctx.internal = self._input.LT(1)
-                _la = self._input.LA(1)
-                if not(_la==FPE_assemblyParser.T__51):
-                    localctx.internal = self._errHandler.recoverInline(self)
-                else:
-                    self._errHandler.reportMatch(self)
-                    self.consume()
+                self.state = 350
+                localctx.internal = self.match(FPE_assemblyParser.T__57)
                 pass
             else:
                 raise NoViableAltException(self)
@@ -2613,7 +2877,7 @@ class FPE_assemblyParser ( Parser ):
     def sempred(self, localctx:RuleContext, ruleIndex:int, predIndex:int):
         if self._predicates == None:
             self._predicates = dict()
-        self._predicates[0] = self.expr_sempred
+        self._predicates[2] = self.expr_sempred
         pred = self._predicates.get(ruleIndex, None)
         if pred is None:
             raise Exception("No predicate with index:" + str(ruleIndex))

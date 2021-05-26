@@ -9,18 +9,16 @@ import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import ripple
-    import cascade
-    import counter
+    import fixed_iterations
+    import settable_iterations
 else:
-    from . import ripple
-    from . import cascade
-    from . import counter
+    from . import fixed_iterations
+    from . import settable_iterations
 
 
 test_sets = [
-    ripple,
-    cascade,
+    fixed_iterations,
+    settable_iterations,
 ]
 
 

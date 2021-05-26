@@ -23,31 +23,43 @@ class extractor(ParseTreeListener):
 
         # Handke ZOL type schemes
         # Always ripple (old scheme)
-        if   this.config["program_flow"]["ZOL_type_scheme"].lower() == "ripple":
+        if   this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "ripple":
             this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
-                "type"  : "ripple",
-                "count" : count
+                "tracker_type" : "ripple",
+                "iterations"  : count,
+                "seekable"     : False,
             }
         # Always cascade
-        elif this.config["program_flow"]["ZOL_type_scheme"].lower() == "cascade":
+        elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "cascade":
             this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
-                "type"  : "cascade",
-                "count" : count
+                "tracker_type" : "cascade",
+                "iterations"  : count,
+                "seekable"     : False,
             }
         # dynamical select maybe ripple and cascade based on count
-        elif this.config["program_flow"]["ZOL_type_scheme"].lower() == "dynamic":
+        elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "dynamic":
             if count < 64:
                 this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
-                    "type"  : "ripple",
-                    "count" : count
+                    "tracker_type" : "ripple",
+                    "iterations"  : count,
+                    "seekable"     : False,
                 }
             else:
                 this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
-                    "type"  : "cascade",
-                    "count" : count
+                    "tracker_type" : "cascade",
+                    "iterations"  : count,
+                    "seekable"     : False,
                 }
+        elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "counter":
+            this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
+                "tracker_type" : "counter",
+                "iterations"   : count,
+                "seekable"     : False,
+                "dynamic"      : False,
+            }
+
         # unknown type scheme
         else:
-            raise ValueError("unknown ZOL_type_scheme. " + str(this.config["program_flow"]["ZOL_type_scheme"]) )
+            raise ValueError("unknown ZOL_type_scheme. " + str(this.config["program_flow"]["bound_ZOL_tracker_type"]) )
 
         this.ZOL_id += 1

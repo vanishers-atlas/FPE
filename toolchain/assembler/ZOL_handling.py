@@ -10,9 +10,9 @@ from FPE.toolchain.HDL_generation import utils  as gen_utils
 
 class handler(ParseTreeListener):
 
-    def __init__(this, program_context, encoding):
+    def __init__(this, program_context, iterations_encodings):
         this.program_context = program_context
-        this.count_encoding = encoding
+        this.iterations_encodings = iterations_encodings
         this.PC = 0
         this.ZOLs = {}
         this.ZOL_stack = []
@@ -25,30 +25,28 @@ class handler(ParseTreeListener):
         ZOL_name = "bound_ZOL_%i"%(this.ZOL_id, )
         this.ZOL_id += 1
 
+        interations = asm_utils.evaluate_expr(ctx.expr(), this.program_context) - 1
+        if   this.iterations_encodings[ZOL_name]["type"] == "biased_tally":
+            iterations_encoded = '"' + tc_utils.biased_tally.encode(
+                interations,
+                this.iterations_encodings[ZOL_name]["tallies"],
+                this.iterations_encodings[ZOL_name]["bias"],
+                this.iterations_encodings[ZOL_name]["range"]
+            ) + '"'
+        elif this.iterations_encodings[ZOL_name]["type"] == "unsigned":
+            iterations_encoded = '"' + tc_utils.unsigned.encode(
+                interations,
+                this.iterations_encodings[ZOL_name]["width"]
+            ) + '"'
+        else:
+            raise ValueError("unknown encoding type, " + this.iterations_encodings[ZOL_name]["type"])
+
         this.ZOL_stack.append(ZOL_name)
         this.ZOLs[this.ZOL_stack[-1]] = {
             "start" : this.PC,
             "end"   : None,
+            "iterations" : iterations_encoded,
         }
-
-        if   this.count_encoding[ZOL_name]["type"] == "biased_tally":
-            this.ZOLs[this.ZOL_stack[-1]]["count"] = "\"%s\""%(
-                tc_utils.biased_tally.encode(
-                    asm_utils.evaluate_expr(ctx.expr(), this.program_context) - 1,
-                    this.count_encoding[this.ZOL_stack[-1]]["tallies"],
-                    this.count_encoding[this.ZOL_stack[-1]]["bais" ],
-                    this.count_encoding[this.ZOL_stack[-1]]["range"]
-                ),
-            )
-        elif this.count_encoding[ZOL_name]["type"] == "unsigned":
-            this.ZOLs[this.ZOL_stack[-1]]["count"] = "\"%s\""%(
-                tc_utils.unsigned.encode(
-                    asm_utils.evaluate_expr(ctx.expr(), this.program_context) - 1,
-                    this.count_encoding[this.ZOL_stack[-1]]["bits"],
-                ),
-            )
-        else:
-            raise ValueError("Unknown ZOL type, " + str(this.count_encoding[ZOL_name]["type"]))
 
     def exitState_zol(this, ctx):
         this.ZOLs[this.ZOL_stack[-1]]["end"] = this.PC - 1

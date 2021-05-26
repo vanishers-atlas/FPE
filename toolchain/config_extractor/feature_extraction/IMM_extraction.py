@@ -2,6 +2,7 @@
 from antlr4 import ParseTreeListener
 
 # Import utils libraries
+
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain import utils  as tc_utils
 
@@ -25,7 +26,23 @@ class extractor(ParseTreeListener):
 
 
     def enterOp_pc_jump(this, ctx):
-        this.values.add(ctx.jump_label().IDENTIFER().getText())
+        jump_label = asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())
+        
+        this.values.add(this.program_context["jump_labels"][jump_label])
+
+        this.data_width = max(
+            [
+                this.config["program_flow"]["PC_width"],
+                this.data_width,
+            ]
+        )
+
+    def enterOp_ZOL_seek(this, ctx):
+        loop_label = asm_utils.token_to_text(ctx.loop_label.IDENTIFER())
+
+        this.values.add(this.program_context["loop_labels"][loop_label]["start"])
+        this.values.add(this.program_context["loop_labels"][loop_label]["end"])
+
         this.data_width = max(
             [
                 this.config["program_flow"]["PC_width"],
