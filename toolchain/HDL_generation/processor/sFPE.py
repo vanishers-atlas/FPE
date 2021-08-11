@@ -86,9 +86,9 @@ def precheck_config(config_in):
         assert(config_in["data_memories"][mem]["addr_width"] > 0)
         assert(config_in["data_memories"][mem]["data_width"] > 0)
 
-        # Check can_stall of comm memories
+        # Check FIFO_handshakes of comm memories
         if mem in ["GET", "PUT"]:
-            assert(type(config_in["data_memories"][mem]["can_stall"]) == type(True))
+            assert(type(config_in["data_memories"][mem]["FIFO_handshakes"]) == type(True))
 
     # Handle execute_units section of config
     config_out["execute_units"] = {}
@@ -375,7 +375,7 @@ def preprocess_config(config_in):
     for mem in config_out["data_memories"].keys():
         # Check for stall sources
         if mem in ["GET", "PUT"]:
-            if config_out["data_memories"][mem]["can_stall"] == True:
+            if config_out["data_memories"][mem]["FIFO_handshakes"] == True:
                 config_out["program_flow"]["stallable"] = True
 
         # Work out read blocks

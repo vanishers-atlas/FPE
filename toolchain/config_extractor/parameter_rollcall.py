@@ -148,8 +148,8 @@ class extractor(ParseTreeListener):
             this.para_file["data_memories"][mem]["data_width"] = None
         if "FIFOs" not in this.para_file["data_memories"][mem]:
             this.para_file["data_memories"][mem]["FIFOs"] = None
-        if "can_stall" not in this.para_file["data_memories"][mem]:
-            this.para_file["data_memories"][mem]["can_stall"] = None
+        if "FIFO_handshakes" not in this.para_file["data_memories"][mem]:
+            this.para_file["data_memories"][mem]["FIFO_handshakes"] = None
 
     def basic_mem_handling(this, mem):
         # Ensure mem is declared in config
