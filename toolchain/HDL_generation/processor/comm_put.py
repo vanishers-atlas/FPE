@@ -9,7 +9,7 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import register
 
 
 #####################################################################
@@ -144,8 +144,8 @@ def gen_FIFO_ports():
 
     reg_interface, reg_name = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_force"  : False,
+            "has_sync_force"   : False,
             "has_enable"    : False
         },
         OUTPUT_PATH,
@@ -185,7 +185,7 @@ def gen_FIFO_ports():
         ARCH_BODY += "FIFO_%i_data_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
         ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "trigger => clock,\n"
+        ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "data_in  => FIFO_%i_data_buffer_in,\n"%(FIFO, )
         ARCH_BODY += "data_out => FIFO_%i_data\n"%(FIFO, )
         ARCH_BODY += "\<);\n\<"
@@ -193,7 +193,7 @@ def gen_FIFO_ports():
         ARCH_BODY += "FIFO_%i_write_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
         ARCH_BODY += "generic map (data_width => 1)\n"
         ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "trigger => clock,\n"
+        ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "data_in (0) => FIFO_%i_write_internal,\n"%(FIFO, )
         ARCH_BODY += "data_out(0) => FIFO_%i_write\n"%(FIFO, )
         ARCH_BODY += "\<);\n\<"
@@ -211,7 +211,7 @@ def gen_write_ports():
                 "direction" : "in"
             },
             {
-                "name" : "write_%i_data_word_0"%(port, ),
+                "name" : "write_%i_data"%(port, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "in"
             },
@@ -247,7 +247,7 @@ def gen_assignment_logic():
     ARCH_BODY += "\n-- Data Path\n"
     if CONFIG["writes"] == 1:
         for FIFO in range(CONFIG["FIFOs"]):
-            ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data_word_0;\n"%(FIFO, )
+            ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data;\n"%(FIFO, )
 
             if CONFIG["stalling"] == "NONE":
                 ARCH_BODY += "FIFO_%i_write_internal <= '1' when write_0_enable = '1' and write_0_addr = \"%s\" else '0';\n"%(FIFO, tc_utils.unsigned.encode(0, CONFIG["addr_width"]))

@@ -11,18 +11,18 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain import FPE_assembly as asm_utils
 
-from FPE.toolchain.HDL_generation.processor import alu_dsp48e1
-from FPE.toolchain.HDL_generation.processor import comm_get
-from FPE.toolchain.HDL_generation.processor import comm_put
-from FPE.toolchain.HDL_generation.processor import reg_file
-from FPE.toolchain.HDL_generation.processor import BAM
-from FPE.toolchain.HDL_generation.processor import instr_decoder
-from FPE.toolchain.HDL_generation.processor import program_counter
-from FPE.toolchain.HDL_generation.processor import ZOL
+from FPE.toolchain.HDL_generation.processor import alu_dsp48e1 as ALU
+from FPE.toolchain.HDL_generation.processor import comm_get as GET
+from FPE.toolchain.HDL_generation.processor import comm_put as PUT
+from FPE.toolchain.HDL_generation.processor import mem_regfile as REG
+from FPE.toolchain.HDL_generation.processor import mem_RAM as RAM
+from FPE.toolchain.HDL_generation.processor import mem_ROM as ROM
+from FPE.toolchain.HDL_generation.processor import block_access_manager as BAM
+from FPE.toolchain.HDL_generation.processor import instruction_decoder as ID
+from FPE.toolchain.HDL_generation.processor import program_counter as PC
+from FPE.toolchain.HDL_generation.processor import zero_overhead_loop as ZOL
 
-from FPE.toolchain.HDL_generation.memory import RAM
-from FPE.toolchain.HDL_generation.memory import ROM
-from FPE.toolchain.HDL_generation.memory import delay
+from FPE.toolchain.HDL_generation.basic import delay, mux, dist_ROM
 
 import itertools as it
 import copy
@@ -181,7 +181,8 @@ def preprocess_mem_data_datapath(config, mem):
                 input_datapath[write].append( [] )
 
             for word in range(words):
-                data_signal = "%s_out_%i_word_%i"%(exe_unit, index, word)
+                assert(word == 0)
+                data_signal = "%s_out_%i"%(exe_unit, index, )
 
                 if not any([
                     data_signal == scr["signal"]
@@ -261,7 +262,8 @@ def preprocess_exe_input_datapath(config, exe):
                     input_datapath[input].append( [] )
 
                 for word in range(words):
-                    data_signal = "%s_read_%i_data_word_%i"%(fetch_mem, fetch_read, word)
+                    assert(word == 0)
+                    data_signal = "%s_read_%i_data"%(fetch_mem, fetch_read, )
 
                     if not any([
                         data_signal == scr["signal"]
@@ -582,7 +584,7 @@ exe_predeclared_ports = [
 ]
 
 exe_lib_lookup = {
-    "ALU" : alu_dsp48e1,
+    "ALU" : ALU,
 }
 
 def gen_execute_units():
@@ -652,16 +654,17 @@ def gen_execute_units():
         # Create input port muxes
         for input, channels in enumerate(config["inputs"]):
             for word, srcs  in enumerate(channels["data"]):
-                dst_sig = "%s%s_in_%i_word_%i"%(lane, exe, input, word)
+                assert(word == 0)
+                dst_sig = "%s%s_in_%i"%(lane, exe, input, )
                 mux_signals(lane, dst_sig, config["data_width"], srcs, CONFIG["signal_padding"])
 
 
 #####################################################################
 
 mem_lib_lookup = {
-    "GET" : comm_get,
-    "PUT" : comm_put,
-    "REG" : reg_file,
+    "GET" : GET,
+    "PUT" : PUT,
+    "REG" : REG,
     "RAM" : RAM,
     "IMM" : ROM,
     "ROM_A" : ROM,
@@ -752,7 +755,8 @@ def inst_data_memory(lane, mem, config, comp, interface):
 
         # Data port
         for word, details in enumerate(signals["data"]):
-            dst_sig = inst + "_write_%i_data_word_%i"%(write,word)
+            assert(word == 0)
+            dst_sig = inst + "_write_%i_data"%(write, )
             mux_signals(lane, dst_sig, config["data_width"], details, CONFIG["signal_padding"])
 
 def gen_data_memories():
@@ -864,7 +868,8 @@ def gen_addr_sources():
         # Create input port muxes
         for input, channels in enumerate(config["inputs"]):
             for word, srcs  in enumerate(channels["data"]):
-                dst_sig = "%s_in_%i_word_%i"%(bam, input, word)
+                assert(word == 0)
+                dst_sig = "%s_in_%i"%(bam, input, )
                 # Only use lane 0 as BAM as shared across lanes
                 mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, config["step_width"], srcs, "unsigned")
 
@@ -893,7 +898,7 @@ def gen_program_counter():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    interface, name = program_counter.generate_HDL(
+    interface, name = PC.generate_HDL(
         {
             **CONFIG["program_flow"],
             "statuses"  : {
@@ -970,7 +975,8 @@ def gen_program_counter():
     # Create input port muxes
     for input, channels in enumerate(CONFIG["program_flow"]["inputs"]):
         for word, srcs  in enumerate(channels["data"]):
-            dst_sig = "%s_in_%i_word_%i"%("PC", input, word)
+            assert(word == 0)
+            dst_sig = "%s_in_%i"%("PC", input, )
             mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, CONFIG["program_flow"]["PC_width"], srcs, "unsigned")
 
     # Handle jump status ports
@@ -1091,8 +1097,9 @@ def gen_zero_overhead_loop():
             # Create input port muxes
             for input, channels in enumerate(ZOL_details["inputs"]):
                 for word, srcs  in enumerate(channels["data"]):
+                    assert(word == 0)
                     # Put port width from interface
-                    port_name = "in_%i_word_%i"%(input, word)
+                    port_name = "in_%i"%(input, )
                     port = [port for port in interface["ports"] if port["name"] == port_name]
                     assert(len(port) == 1)
                     port_width = int(port[0]["type"].split("(")[1].split("downto")[0]) + 1
@@ -1123,12 +1130,12 @@ def gen_program_memory():
 
     INTERFACE["generics"] += [
         {
-            "name" : "PM_mem_file",
+            "name" : "PM_init_mif",
             "type" : "string"
         }
     ]
     ARCH_BODY += "generic map (\>\n"
-    ARCH_BODY += "mem_file => PM_mem_file\n"
+    ARCH_BODY += "init_mif => PM_init_mif\n"
     ARCH_BODY += "\<)\n"
 
     ARCH_HEAD += "signal PM_addr : std_logic_vector(%i downto 0);\n"%( CONFIG["program_flow"]["PC_width"] - 1)
@@ -1139,7 +1146,7 @@ def gen_program_memory():
     if CONFIG["program_flow"]["stallable"]:
         ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "read_0_addr => PM_addr,\n"
-    ARCH_BODY += "read_0_data_word_0 => PM_data\n"
+    ARCH_BODY += "read_0_data => PM_data\n"
     ARCH_BODY += "\<);\n"
 
     ARCH_BODY += "\<\n"
@@ -1162,7 +1169,7 @@ def gen_instr_decoder():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    interface, name = instr_decoder.generate_HDL(
+    interface, name = ID.generate_HDL(
         {
             **CONFIG,
         },

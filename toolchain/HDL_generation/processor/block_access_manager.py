@@ -9,8 +9,8 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.memory import register
-from FPE.toolchain.HDL_generation.memory import delay
+from FPE.toolchain.HDL_generation.basic import register
+from FPE.toolchain.HDL_generation.basic import delay
 
 #####################################################################
 
@@ -147,9 +147,10 @@ def generate_data_ports():
 
     for input, words in enumerate(CONFIG["inputs"]):
         for word in range(words):
+            assert(word == 0)
             INTERFACE["ports"] += [
                 {
-                    "name" : "in_%i_word_%i"%(input, word, ) ,
+                    "name" : "in_%i"%(input, ) ,
                     "type" : "std_logic_vector(%i downto 0)"%(CONFIG["step_width"] - 1, ),
                     "direction" : "in"
                 }
@@ -203,7 +204,7 @@ def generate_step_controls():
                     "direction" : "in"
                 }
             ]
-            ARCH_BODY += "in_0_word_0 when step_fetched_forward = '1'\nelse "
+            ARCH_BODY += "in_0 when step_fetched_forward = '1'\nelse "
         if "fetched_backward" in CONFIG["steps"]:
             INTERFACE["ports"] += [
                 {
@@ -212,7 +213,7 @@ def generate_step_controls():
                     "direction" : "in"
                 }
             ]
-            ARCH_BODY += "in_0_word_0 when step_fetched_backward = '1'\nelse "
+            ARCH_BODY += "in_0 when step_fetched_backward = '1'\nelse "
 
     ARCH_BODY += "(others => '0');\<\n"
 
@@ -254,8 +255,8 @@ def generate_outset_adder_acc():
 
     reg_interface, reg_name = register.generate_HDL(
         {
-            "async_forces"  : 1,
-            "sync_forces"   : 0,
+            "has_async_force"  : True,
+            "has_sync_force"   : False,
             "has_enable"    : True
         },
         OUTPUT_PATH,
@@ -268,7 +269,7 @@ def generate_outset_adder_acc():
 
     ARCH_BODY += "generic map (\>\n"
 
-    ARCH_BODY += "asyn_0_value => 0,\n"
+    ARCH_BODY += "force_value => 0,\n"
     ARCH_BODY += "data_width => %i\n"%(CONFIG["offset_width"])
 
     ARCH_BODY += "\<)\n"
@@ -280,10 +281,10 @@ def generate_outset_adder_acc():
     else:
         ARCH_BODY += "enable => step_forward or step_backward,\n"
 
-    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in => next_offset,\n"
     ARCH_BODY += "data_out => curr_offset,\n"
-    ARCH_BODY += "asyn_reset_sel(0) => reset\n"
+    ARCH_BODY += "force => reset\n"
 
     ARCH_BODY += "\<);\n\<"
 

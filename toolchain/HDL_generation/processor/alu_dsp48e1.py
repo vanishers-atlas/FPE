@@ -9,7 +9,7 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import register
 
 import warnings
 
@@ -228,27 +228,21 @@ def generate_ports():
     for read in range(CONFIG["inputs"]):
         INTERFACE["ports"] += [
             {
-                "name" : "in_%i_word_0"%(read, ),
+                "name" : "in_%i"%(read, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "in"
             }
         ]
 
-        ARCH_HEAD += "signal in_%i : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1, )
-        ARCH_BODY += "in_%i <= in_%i_word_0;\n"%(read, read, )
-
     # Generate data outputs
     for write in range(CONFIG["outputs"]):
         INTERFACE["ports"] += [
             {
-                "name" : "out_%i_word_0"%(write, ),
+                "name" : "out_%i"%(write, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "out"
             }
         ]
-
-        ARCH_HEAD += "signal out_%i : std_logic_vector(%i downto 0);\n"%(write, CONFIG["data_width"] - 1, )
-        ARCH_BODY += "out_%i_word_0 <= out_%i;\n"%(write, write, )
 
     # Generate status outputs
     INTERFACE["ports"] += [
@@ -1214,8 +1208,8 @@ def handle_DSP():
     if len(CONFIG["delayed_statuses"]) != 0:
         reg_interface, reg_name = register.generate_HDL(
             {
-                "async_forces"  : 0,
-                "sync_forces"   : 0,
+                "has_async_force"  : False,
+                "has_sync_force"   : False,
                 "has_enable"    : True
             },
             OUTPUT_PATH,
@@ -1239,7 +1233,7 @@ def handle_DSP():
         else:
             ARCH_BODY += "enable  => enable,\n"
 
-        ARCH_BODY += "trigger => clock,\n"
+        ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "data_in  => delayed_statuses_in,\n"
         ARCH_BODY += "data_out => delayed_statuses_out\n"
         ARCH_BODY += "\<);\<\n\n"
@@ -1275,8 +1269,8 @@ def handle_DSP():
             # Delay LESSER_DATATYPE until after sub runs
             reg_interface, reg_name = register.generate_HDL(
                 {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
+                    "has_async_force"  : False,
+                    "has_sync_force"   : False,
                     "has_enable"    : True
                 },
                 OUTPUT_PATH,
@@ -1300,7 +1294,7 @@ def handle_DSP():
             else:
                 ARCH_BODY += "enable  => enable,\n"
 
-            ARCH_BODY += "trigger => clock,\n"
+            ARCH_BODY += "clock => clock,\n"
             ARCH_BODY += "data_in  => LESSER_DATATYPE,\n"
             ARCH_BODY += "data_out => LESSER_DATATYPE_synced\n"
             ARCH_BODY += "\<);\<\n\n"

@@ -9,7 +9,7 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import register
 
 #####################################################################
 
@@ -127,8 +127,8 @@ def gen_registers():
 
     reg_interface, reg_name = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_force"  : False,
+            "has_sync_force"   : False,
             "has_enable"    : True
         },
         OUTPUT_PATH,
@@ -148,7 +148,7 @@ def gen_registers():
         ARCH_BODY += "reg_%i : entity work.%s(arch)\>\n"%(reg, reg_name)
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"], )
         ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "trigger => clock,\n"
+        ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "enable  => reg_%i_enable,\n"%(reg, )
         ARCH_BODY += "data_in  => reg_%i_in,\n"%(reg, )
         ARCH_BODY += "data_out => reg_%i_out\n"%(reg, )
@@ -160,8 +160,8 @@ def gen_reads():
 
     reg_interface, reg_name = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_force"  : False,
+            "has_sync_force"   : False,
             "has_enable"    : CONFIG["stallable"]
         },
         OUTPUT_PATH,
@@ -181,16 +181,16 @@ def gen_reads():
                 "direction" : "in"
             },
             {
-                "name" : "read_%i_data_word_0"%(read, ),
+                "name" : "read_%i_data"%(read, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "out"
             }
         ]
 
         # Generate output buffers
-        ARCH_HEAD += "signal read_%i_word_0_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+        ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
 
-        ARCH_BODY += "read_%i_word_0_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+        ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
 
         ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
 
@@ -199,13 +199,13 @@ def gen_reads():
         if CONFIG["stallable"]:
             ARCH_BODY += "enable  => not stall,\n"
 
-        ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => read_%i_word_0_buffer_in,\n"%(read, )
-        ARCH_BODY += "data_out => read_%i_data_word_0\n"%(read, )
+        ARCH_BODY += "clock => clock,\n"
+        ARCH_BODY += "data_in  => read_%i_buffer_in,\n"%(read, )
+        ARCH_BODY += "data_out => read_%i_data\n"%(read, )
 
         ARCH_BODY += "\<);\n\<"
 
-        ARCH_BODY += "read_%i_word_0_buffer_in <=\>"%(read, )
+        ARCH_BODY += "read_%i_buffer_in <=\>"%(read, )
         for reg in range(CONFIG["depth"]):
             ARCH_BODY += "reg_%i_out when read_%i_addr = \"%s\"\nelse "%(reg, read, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
         ARCH_BODY += "(others => 'X');\n\<"
@@ -225,7 +225,7 @@ def gen_writes():
                 "direction" : "in"
             },
             {
-                "name" : "write_%i_data_word_0"%(write, ),
+                "name" : "write_%i_data"%(write, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "in"
             },
@@ -238,7 +238,7 @@ def gen_writes():
 
     if CONFIG["writes"] == 1:
         for reg in range(CONFIG["depth"]):
-            ARCH_BODY += "reg_%i_in <= write_0_data_word_0;\n"%(reg, )
+            ARCH_BODY += "reg_%i_in <= write_0_data;\n"%(reg, )
             if CONFIG["stallable"]:
                 ARCH_BODY += "reg_%i_enable <= write_0_enable and not stall when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(CONFIG["addr_width"], "0"))
             else:

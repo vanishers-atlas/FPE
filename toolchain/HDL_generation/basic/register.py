@@ -17,11 +17,20 @@ def preprocess_config(config_in):
     assert(type(config_in["has_enable"]) == type(True))
     config_out["has_enable"] = config_in["has_enable"]
 
-    assert(config_in["async_forces"] >= 0 )
-    config_out["async_forces"] = config_in["async_forces"]
+    assert(type(config_in["has_async_force"]) == type(True))
+    assert(type(config_in["has_sync_force"]) == type(True))
 
-    assert(config_in["sync_forces"] >= 0 )
-    config_out["sync_forces"] = config_in["sync_forces"]
+    if   config_in["has_async_force"] == False and config_in["has_sync_force"] == False:
+        config_out["force_type"] = "NONE"
+    elif config_in["has_async_force"] == False and config_in["has_sync_force"] == True :
+        config_out["force_type"] = "SYNC"
+    elif config_in["has_async_force"] == True  and config_in["has_sync_force"] == False:
+        config_out["force_type"] = "ASYNC"
+    elif config_in["has_async_force"] == True  and config_in["has_sync_force"] == True :
+        raise ValueError(" ".join([
+            "Only a sync focce xor an async force is supposted, not both together.",
+            "If both forces are to the same value async only will have the same affact as both together"
+        ]) )
 
     return config_out
 
@@ -34,8 +43,13 @@ def handle_module_name(module_name, config, generate_name):
         if config["has_enable"] == True:
             generated_name += "_e"
 
-        # Handle forces
-        generated_name += "_%ia_%is"%(config["async_forces"], config["sync_forces"])
+        # Handle force
+        if   config["force_type"] == "NONE":
+            generated_name += "_n"
+        elif config["force_type"] == "SYNC":
+            generated_name += "_s"
+        elif config["force_type"] == "ASYNC":
+            generated_name += "_a"
 
         return generated_name
     else:
@@ -67,7 +81,13 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         INTERFACE = { "ports" : [], "generics" : [] }
 
         # Include extremely commom libs
-        IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
+        IMPORTS += [
+            {
+                "library" : "ieee",
+                "package" : "std_logic_1164",
+                "parts" : "all"
+            }
+        ]
 
         # Declare common ports and generics
         INTERFACE["generics"] += [
@@ -76,10 +96,25 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
                 "type" : "integer",
             }
         ]
+        if CONFIG["force_type"] != "NONE":
+            IMPORTS += [
+                {
+                    "library" : "ieee",
+                    "package" : "numeric_std",
+                    "parts" : "all"
+                }
+            ]
+
+            INTERFACE["generics"] += [
+                {
+                    "name" : "force_value",
+                    "type" : "integer",
+                }
+            ]
 
         INTERFACE["ports"] += [
             {
-                "name" : "trigger",
+                "name" : "clock",
                 "type" : "std_logic",
                 "direction" : "in"
             },
@@ -94,78 +129,6 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
                 "direction" : "out"
             }
         ]
-
-        # Generate process start
-        ARCH_BODY += "process (trigger"
-        if CONFIG["async_forces"] != 0:
-            asyn_sel = tc_utils.unsigned.width(CONFIG["async_forces"])
-
-            INTERFACE["ports"] += [
-                {
-                    "name" : "asyn_reset_sel",
-                    "type" : "std_logic_vector(%i downto 0)"%(asyn_sel - 1),
-                    "direction" : "in"
-                }
-            ]
-
-            ARCH_BODY += ", asyn_reset_sel"
-
-        ARCH_BODY += ")\nbegin\n\>"
-
-        # Handle asynchronous forces
-        if CONFIG["async_forces"] != 0:
-            if not any([
-                imp["library"] == "ieee" and imp["package"] == "numeric_std" and imp["parts"] == "all"
-                for imp in IMPORTS
-            ]):
-                IMPORTS += [ {"library" : "ieee", "package" : "numeric_std", "parts" : "all"} ]
-
-            for i in range(CONFIG["async_forces"]):
-                INTERFACE["generics"] += [
-                    {
-                        "name" : "asyn_%i_value"%(i),
-                        "type" : "integer",
-                    }
-                ]
-
-                ARCH_BODY += "if asyn_reset_sel = \"%s\" then\n\>"%(tc_utils.unsigned.encode(i + 1, asyn_sel))
-                ARCH_BODY += "data_out <= std_logic_vector(to_unsigned(asyn_%i_value, data_out'length));\n"%(i)
-                ARCH_BODY += "\<els"
-
-        # Handle synchronous check
-        ARCH_BODY += "if rising_edge(trigger) then\n\>"
-
-        # Handle synchronous forces
-        if CONFIG["sync_forces"] != 0:
-            syn_sel = tc_utils.unsigned.width(CONFIG["sync_forces"])
-
-            INTERFACE["ports"] += [
-                {
-                    "name" : "syn_reset_sel",
-                    "type" : "std_logic_vector(%i downto 0)"%(syn_sel - 1),
-                    "direction" : "in"
-                }
-            ]
-
-            if not any([
-                imp["library"] == "ieee" and imp["package"] == "numeric_std" and imp["parts"] == "all"
-                for imp in IMPORTS
-            ]):
-                IMPORTS += [ {"library" : "ieee", "package" : "numeric_std", "parts" : "all"} ]
-
-            for i in range(CONFIG["sync_forces"]):
-                INTERFACE["generics"] += [
-                    {
-                        "name" : "syn_%i_value"%(i),
-                        "type" : "integer",
-                    }
-                ]
-
-                ARCH_BODY += "if syn_reset_sel = \"%s\" then\n\>"%(tc_utils.unsigned.encode(i + 1, syn_sel))
-                ARCH_BODY += "data_out <= std_logic_vector(to_unsigned(syn_%i_value, data_out'length));\n"%(i)
-                ARCH_BODY += "\<els"
-
-        # Handle enable
         if CONFIG["has_enable"]:
             INTERFACE["ports"] += [
                 {
@@ -174,13 +137,49 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
                     "direction" : "in"
                 }
             ]
+        if CONFIG["force_type"] != "NONE":
+            INTERFACE["ports"] += [
+                {
+                    "name" : "force",
+                    "type" : "std_logic",
+                    "direction" : "in"
+                }
+            ]
+
+        # Generate process start
+        if CONFIG["force_type"] == "ASYNC":
+            ARCH_BODY += "process (clock, force)\>\n"
+        else:
+            ARCH_BODY += "process (clock)\>\n"
+        ARCH_BODY += "\<begin\n\>"
+
+        # Handle ASYNC force
+        if CONFIG["force_type"] == "ASYNC":
+            ARCH_BODY += "if force = '1' then\n\>"
+            ARCH_BODY += "data_out <= std_logic_vector(to_unsigned(force_value, data_out'length));\n"
+            ARCH_BODY += "\<els"
+
+        ARCH_BODY += "if rising_edge(clock) then\n\>"
+
+        # Handle SYNC force
+        if CONFIG["force_type"] == "SYNC":
+            ARCH_BODY += "if force = '1' then\n\>"
+            ARCH_BODY += "data_out <= std_logic_vector(to_unsigned(force_value, data_out'length));\n"
+
+            if CONFIG["has_enable"]:
+                ARCH_BODY += "\<els"
+            else:
+                ARCH_BODY += "\<else\>\n"
+
+        # Handle enable
+        if CONFIG["has_enable"]:
             ARCH_BODY += "if enable = '1' then\n\>"
 
-        # Preform read and store
+        # Handle registoring the input value
         ARCH_BODY += "data_out <= data_in;\n"
 
-        # Close enable if
-        if CONFIG["has_enable"]:
+        # Close extra if
+        if CONFIG["force_type"] == "ASYNC" or CONFIG["has_enable"]:
             ARCH_BODY += "\<end if;\n"
 
         ARCH_BODY += "\<end if;\n"

@@ -29,8 +29,8 @@ def determine_require_generics(interface):
     for generic in interface["generics"]:
         # Skipped handled generics
         if generic["name"] in [
-            "IMM_mem_file",
-            "PM_mem_file",
+            "IMM_init_mif",
+            "PM_init_mif",
             "PC_end_value",
         ]:
             pass
@@ -125,7 +125,7 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
 
         write_mif_file(output_path + "\\" + imm_file, config["data_memories"]["IMM"]["depth"], config["data_memories"]["IMM"]["data_width"], imm_data)
 
-        generics["IMM_mem_file"] = imm_file
+        generics["IMM_init_mif"] = imm_file
     else:
         program_context["IMM_addr_map"] = {}
 
@@ -142,7 +142,7 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
         program
     )
 
-    generics["PM_mem_file"]  = pm_file
+    generics["PM_init_mif"]  = pm_file
     generics["PC_end_value"] = program_end
 
     # Handle ZOL values

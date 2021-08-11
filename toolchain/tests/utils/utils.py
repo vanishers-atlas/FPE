@@ -99,16 +99,16 @@ def run_simulation(files, simulate_dir, part, design_top, sim_top, time):
     return 0
 
 def run_sweep_leaf(
-    path,
-    test_name,
-    processor_name="test_FPE",
-    program_file="test_program.fpea",
-    parameters_file="test_parameters.json",
-    generics_file="test_generics.json",
-    part="xc7k160tiffv676-2L",
-    sim_top="testbench",
-    time="100us"
-):
+        path,
+        test_name,
+        processor_name="test_FPE",
+        program_file="test_program.fpea",
+        parameters_file="test_parameters.json",
+        generics_file="test_generics.json",
+        part="xc7k160tiffv676-2L",
+        sim_top="testbench",
+        time="100us"
+    ):
     print("#####################################################")
     print("Running %s test"%(test_name, ) )
     print("#####################################################\n")
@@ -125,6 +125,8 @@ def run_sweep_leaf(
         False,
         True
     )
+
+    #exit()
 
     # Symulate testbench
     vhdl_files = [
