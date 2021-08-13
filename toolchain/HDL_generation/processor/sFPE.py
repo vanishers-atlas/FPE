@@ -539,7 +539,6 @@ def gen_non_pipelined_signals():
     # Create and pull down stall signal
     if CONFIG["program_flow"]["stallable"]:
         ARCH_HEAD += "signal stall : std_logic;\n"
-        ARCH_BODY += "stall <= 'L';\n"
 
 #####################################################################
 
@@ -578,10 +577,10 @@ def mux_signals(lane, dst_sig, dst_width, srcs, signal_padding):
 
 #####################################################################
 
-exe_predeclared_ports = [
-    "clock",
-    "stall"
-]
+exe_predeclared_ports = {
+    "clock" : "clock" ,
+    "stall" : "stall"
+}
 
 exe_lib_lookup = {
     "ALU" : ALU,
@@ -629,18 +628,19 @@ def gen_execute_units():
                 [
                     port
                     for port in interface["ports"]
-                    if port["name"] in exe_predeclared_ports
+                    if port["name"] in exe_predeclared_ports.keys()
                 ],
                 key=lambda d : d["name"]
             ):
-                ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+                ARCH_BODY += "%s => %s,\n"%(port["name"], exe_predeclared_ports[port["name"]])
 
-            # Handle prefixed ports
+
+            # Handle non-predeclared ports
             for port in sorted(
                 [
                     port
                     for port in interface["ports"]
-                    if port["name"] not in exe_predeclared_ports
+                    if port["name"] not in exe_predeclared_ports.keys()
                 ],
                 key=lambda d : d["name"]
             ):
@@ -671,10 +671,10 @@ mem_lib_lookup = {
     "ROM_B" : ROM,
 }
 
-mem_predeclared_ports = [
-    "clock",
-    "stall"
-]
+mem_predeclared_ports = {
+    "clock" : "clock" ,
+    "stall" : "stall"
+}
 
 def inst_data_memory(lane, mem, config, comp, interface):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -702,23 +702,23 @@ def inst_data_memory(lane, mem, config, comp, interface):
 
     ARCH_BODY += "port map (\>\n"
 
-    # Handle non prefixed ports
+    # Handle predeclared ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] in mem_predeclared_ports
+            if port["name"] in mem_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports[port["name"]])
 
-    # Handle prefixed ports
+    # Handle non-predeclared ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] not in mem_predeclared_ports
+            if port["name"] not in mem_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
@@ -796,10 +796,10 @@ def gen_data_memories():
 
 #####################################################################
 
-addr_sources_predeclared_ports = [
-    "clock",
-    "stall"
-]
+addr_sources_predeclared_ports = {
+    "clock" : "clock" ,
+    "stall" : "stall"
+}
 
 def gen_addr_sources():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -842,17 +842,17 @@ def gen_addr_sources():
         for port in sorted(
             [
                 port for port in interface["ports"]
-                if port["name"] in addr_sources_predeclared_ports
+                if port["name"] in addr_sources_predeclared_ports.keys()
             ],
             key=lambda p : p["name"]
         ):
-            ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+            ARCH_BODY += "%s => %s,\n"%(port["name"], addr_sources_predeclared_ports[port["name"]])
 
         # Handle non predeclared ports
         for port in sorted(
             [
                 port for port in interface["ports"]
-                if port["name"] not in addr_sources_predeclared_ports
+                if port["name"] not in addr_sources_predeclared_ports.keys()
             ],
             key=lambda p : p["name"]
         ):
@@ -886,13 +886,13 @@ def gen_program_fetch():
         gen_zero_overhead_loop()
     gen_program_memory()
 
-PC_predeclared_ports = [
-    "clock",
-    "kickoff",
-    "stall",
-    "ZOL_value",
-    "ZOL_overwrite",
-]
+PC_predeclared_ports = {
+    "clock" : "clock",
+    "kickoff" : "kickoff",
+    "ZOL_value" : "ZOL_value",
+    "ZOL_overwrite" : "ZOL_overwrite",
+    "stall" : "stall"
+}
 
 def gen_program_counter():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -931,19 +931,19 @@ def gen_program_counter():
 
     ARCH_BODY += "port map (\>\n"
 
-    # Handle predefined ports
+    # Handle predeclared ports
     for port in [
         port
         for port in interface["ports"]
-        if port["name"] in PC_predeclared_ports
+        if port["name"] in PC_predeclared_ports.keys()
     ]:
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], PC_predeclared_ports[port["name"]])
 
-    # Handle non predefined ports
+    # Handle non predeclared ports
     for port in [
         port
         for port in interface["ports"]
-        if port["name"] not in PC_predeclared_ports
+        if port["name"] not in PC_predeclared_ports.keys()
     ]:
         ARCH_HEAD += "signal PC_%s : %s;\n"%(port["name"], port["type"])
         ARCH_BODY += "%s => PC_%s,\n"%(port["name"], port["name"])
@@ -1019,14 +1019,14 @@ def gen_program_counter():
     ARCH_BODY += "data_out(0) => PC_running_2\n"
     ARCH_BODY += "\<);\<\n\n"
 
-ZOL_predeclared_ports = [
-    "clock",
-    "PC_running",
-    "PC_value",
-    "overwrite",
-    "overwrite_value",
-    "stall",
-]
+ZOL_predeclared_ports = {
+    "clock" : "clock",
+    "PC_running" : "PC_running_1",
+    "PC_value" : "PC_value",
+    "overwrite" : "ZOL_overwrite",
+    "overwrite_value" : "ZOL_value",
+    "stall" : "stall"
+}
 
 def gen_zero_overhead_loop():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -1071,19 +1071,18 @@ def gen_zero_overhead_loop():
 
 
             # Handle predeclared ports
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "stall => stall,\n"
-            ARCH_BODY += "clock => clock,\n"
-            ARCH_BODY += "PC_running => PC_running_1,\n"
-            ARCH_BODY += "PC_value   => PC_value,\n"
-            ARCH_BODY += "overwrite  => ZOL_overwrite,\n"
-            ARCH_BODY += "overwrite_value  => ZOL_value,\n"
+            for port in [
+                port
+                for port in interface["ports"]
+                if port["name"] in ZOL_predeclared_ports.keys()
+            ]:
+                ARCH_BODY += "%s => %s,\n"%(port["name"], ZOL_predeclared_ports[port["name"]])
 
             # Handle declared ports
             declared_ports = [
                 port
                 for port in interface["ports"]
-                if port["name"] not in ZOL_predeclared_ports
+                if port["name"] not in ZOL_predeclared_ports.keys()
             ]
             for port in declared_ports:
                 ARCH_HEAD += "signal %s_%s : %s;\n"%(ZOL_name, port["name"], port["type"])
@@ -1155,10 +1154,10 @@ def gen_program_memory():
 
 #####################################################################
 
-ID_predeclared_ports = [
-    "clock",
-    "stall"
-]
+ID_predeclared_ports = {
+    "clock" : "clock",
+    "stall" : "stall"
+}
 
 ID_non_fanout_ports = [
     "instr",
@@ -1188,18 +1187,18 @@ def gen_instr_decoder():
         [
             port
             for port in interface["ports"]
-            if port["name"] in ID_predeclared_ports
+            if port["name"] in ID_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], ID_predeclared_ports[port["name"]])
 
     # Handle prefixed ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] not in ID_predeclared_ports
+            if port["name"] not in ID_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
@@ -1234,7 +1233,7 @@ def gen_instr_decoder():
             port
             for port in interface["ports"]
             if (
-                port["name"] not in ID_predeclared_ports
+                port["name"] not in ID_predeclared_ports.keys()
                 and port["name"] not in ID_non_fanout_ports
                 and not port["name"].startswith("addr_")
                 and not port["name"].startswith("jump_")

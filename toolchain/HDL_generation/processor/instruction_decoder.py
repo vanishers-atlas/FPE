@@ -86,6 +86,9 @@ def preprocess_config(config_in):
             assert(config_in["data_memories"][mem]["FIFOs"] > 0)
             config_out["data_memories"][mem]["FIFOs"] = config_in["data_memories"][mem]["FIFOs"]
 
+            assert(type(config_in["data_memories"][mem]["FIFO_handshakes"]) == type(True))
+            config_out["data_memories"][mem]["FIFO_handshakes"] = config_in["data_memories"][mem]["FIFO_handshakes"]
+
         # Check depth for container memories
         if mem in ["IMM", "RAM", "REG"]:
             assert(config_in["data_memories"][mem]["depth"] > 0)
@@ -538,10 +541,11 @@ def generate_fetch_signals():
     # Compute then buffer controls based on opcode
     ####################################################################
 
-    # Handle COMM GET's adv signal
     if "GET" in CONFIG["data_memories"]:
         mem = "GET"
         config = CONFIG["data_memories"][mem]
+
+        # Handle COMM GET's adv signal
         for read in range(len(config["reads"])):
             sig_name = "GET_read_%i_adv"%(read,)
 
@@ -566,13 +570,10 @@ def generate_fetch_signals():
             if len(value_opcode_table) > 1:
                 generate_std_logic_signal(sig_name, value_opcode_table)
 
-    # Handle COMM GET's enable signal, only needed when stalling is possible
-    if CONFIG["program_flow"]["stallable"]:
-        if "GET" in CONFIG["data_memories"]:
-            mem = "GET"
-            config = CONFIG["data_memories"][mem]
+        # Handle COMM GET's enable signal, only needed when stalling is possible
+        if config["FIFO_handshakes"]:
             for read in range(len(config["reads"])):
-                sig_name = "GET_read_%i_adv"%(read,)
+                sig_name = "GET_read_%i_enable"%(read,)
 
                 value_opcode_table = { "1" : [], "0" : []}
                 for instr_id, instr_val in CONFIG["instr_set"].items():

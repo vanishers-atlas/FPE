@@ -170,7 +170,7 @@ def gen_wordwise_distributed_ROM():
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
         if CONFIG["stallable"]:
-            raise NotImplemenetedError("Add stable for using the enable pin to stall the ROM prim")
+            ARCH_BODY += "read_enable => not stall,\n"
         ARCH_BODY += ",\n".join([
             "read_%i_addr => read_%i_addr,\nread_%i_data => read_%i_data"%(
                 read, read, read, read,
