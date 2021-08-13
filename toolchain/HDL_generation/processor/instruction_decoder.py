@@ -13,8 +13,8 @@ from FPE.toolchain import FPE_assembly as asm_utils
 
 from FPE.toolchain.HDL_generation.processor import alu_dsp48e1
 
-from FPE.toolchain.HDL_generation.memory import delay
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import delay
+from FPE.toolchain.HDL_generation.basic import register
 
 import itertools as it
 import copy
@@ -85,6 +85,9 @@ def preprocess_config(config_in):
         if mem in ["GET", "PUT"]:
             assert(config_in["data_memories"][mem]["FIFOs"] > 0)
             config_out["data_memories"][mem]["FIFOs"] = config_in["data_memories"][mem]["FIFOs"]
+
+            assert(type(config_in["data_memories"][mem]["FIFO_handshakes"]) == type(True))
+            config_out["data_memories"][mem]["FIFO_handshakes"] = config_in["data_memories"][mem]["FIFO_handshakes"]
 
         # Check depth for container memories
         if mem in ["IMM", "RAM", "REG"]:
@@ -228,8 +231,8 @@ def generate_std_logic_signal(sig_name, value_opcode_table):
     # Buffer port
     interface, reg = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_force"  : False,
+            "has_sync_force"   : False,
             "has_enable"    : CONFIG["program_flow"]["stallable"]
         },
         OUTPUT_PATH,
@@ -249,7 +252,7 @@ def generate_std_logic_signal(sig_name, value_opcode_table):
     if CONFIG["program_flow"]["stallable"]:
         ARCH_BODY += "enable => not stall,\n"
 
-    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in(0)  => pre_%s,\n"%(sig_name, )
     ARCH_BODY += "data_out(0) => %s\n"%(sig_name, )
 
@@ -307,8 +310,8 @@ def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
     # Buffer port
     interface, reg = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_force"  : False,
+            "has_sync_force"   : False,
             "has_enable"    : CONFIG["program_flow"]["stallable"]
         },
         OUTPUT_PATH,
@@ -328,7 +331,7 @@ def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
     if CONFIG["program_flow"]["stallable"]:
         ARCH_BODY += "enable => not stall,\n"
 
-    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => pre_%s,\n"%(sig_name, )
     ARCH_BODY += "data_out => %s\n"%(sig_name, )
 
@@ -538,10 +541,11 @@ def generate_fetch_signals():
     # Compute then buffer controls based on opcode
     ####################################################################
 
-    # Handle COMM GET's adv signal
     if "GET" in CONFIG["data_memories"]:
         mem = "GET"
         config = CONFIG["data_memories"][mem]
+
+        # Handle COMM GET's adv signal
         for read in range(len(config["reads"])):
             sig_name = "GET_read_%i_adv"%(read,)
 
@@ -566,13 +570,10 @@ def generate_fetch_signals():
             if len(value_opcode_table) > 1:
                 generate_std_logic_signal(sig_name, value_opcode_table)
 
-    # Handle COMM GET's enable signal, only needed when stalling is possible
-    if CONFIG["program_flow"]["stallable"]:
-        if "GET" in CONFIG["data_memories"]:
-            mem = "GET"
-            config = CONFIG["data_memories"][mem]
+        # Handle COMM GET's enable signal, only needed when stalling is possible
+        if config["FIFO_handshakes"]:
             for read in range(len(config["reads"])):
-                sig_name = "GET_read_%i_adv"%(read,)
+                sig_name = "GET_read_%i_enable"%(read,)
 
                 value_opcode_table = { "1" : [], "0" : []}
                 for instr_id, instr_val in CONFIG["instr_set"].items():
@@ -822,7 +823,8 @@ def generate_exe_signals():
     for exe, config in CONFIG["execute_units"].items():
         for input, channals in enumerate(config["inputs"]):
             for word, srcs in enumerate(channals["data"]):
-                sel_sig = "%s_in_%i_word_%i_sel"%(exe, input, word,)
+                assert(word == 0)
+                sel_sig = "%s_in_%i_sel"%(exe, input, )
                 sel_width = tc_utils.unsigned.width(len(srcs) - 1)
 
                 value_opcode_table = {}

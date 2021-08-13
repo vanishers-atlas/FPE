@@ -9,7 +9,7 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import register
 
 #####################################################################
 
@@ -140,9 +140,10 @@ def generate_data_ports():
 
     for input, words in enumerate(CONFIG["inputs"]):
         for word in range(words):
+            assert(word == 0)
             INTERFACE["ports"] += [
                 {
-                    "name" : "in_%i_word_%i"%(input, word,),
+                    "name" : "in_%i"%(input, ),
                     "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
                     "direction" : "in"
                 }
@@ -214,8 +215,8 @@ def generate_value_register():
 
     reg_interface, reg_name = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 1,
+            "has_async_force"  : False,
+            "has_sync_force"   : True,
             "has_enable"    : True
         },
         OUTPUT_PATH,
@@ -228,13 +229,13 @@ def generate_value_register():
 
     ARCH_BODY += "generic map (\n\>"
     ARCH_BODY += "data_width => %i,\n"%(CONFIG["PC_width"], )
-    ARCH_BODY += "syn_0_value => 0"
+    ARCH_BODY += "force_value => 0"
     ARCH_BODY += "\<)\n"
 
     ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "enable  => internal_running,\n"
-    ARCH_BODY += "syn_reset_sel(0) => value_reg_reset,\n"
+    ARCH_BODY += "force => value_reg_reset,\n"
     ARCH_BODY += "data_in  => next_value,\n"
     ARCH_BODY += "data_out => internal_value\n"
     ARCH_BODY += "\<);\n"
@@ -301,8 +302,8 @@ def generate_jumping():
     # Handle condional_jumps
     reg_interface, reg_name = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_force"  : False,
+            "has_sync_force"   : False,
             "has_enable"    : True
         },
         OUTPUT_PATH,
@@ -327,7 +328,7 @@ def generate_jumping():
         ARCH_BODY += "generic map ( data_width => %i )\n"%(len(signals))
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "enable => update_%s_statuses,\n"%(exe)
-        ARCH_BODY += "trigger => clock,\n"
+        ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "data_in  => %s_statuses_in,\n"%(exe)
         ARCH_BODY += "data_out => %s_statuses_out\n"%(exe)
         ARCH_BODY += "\<);\n"
@@ -394,6 +395,6 @@ def generate_next_value():
         ARCH_BODY += "ZOL_value when ZOL_overwrite = '1'\nelse "
 
     if CONFIG["jumping_enabled"]:
-        ARCH_BODY += "in_0_word_0 when jump_occured = '1'\nelse "
+        ARCH_BODY += "in_0 when jump_occured = '1'\nelse "
 
     ARCH_BODY += "std_logic_vector(to_unsigned(to_integer(unsigned(internal_value)) + 1, next_value'length));\n\<"

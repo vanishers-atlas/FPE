@@ -9,7 +9,7 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import register, mux
 
 #####################################################################
 
@@ -17,15 +17,16 @@ def preprocess_config(config_in):
     config_out = {}
 
     # Stalling parameters
-    assert(type(config_in["can_stall"]) == type(True))
+    assert(type(config_in["FIFO_handshakes"]) == type(True))
+    config_out["FIFO_handshakes"] = config_in["FIFO_handshakes"]
     assert(type(config_in["stallable"]) == type(True))
-    if config_in["can_stall"] == True:
-        config_out["stalling"] = "ACTIVE"
-    elif config_in["stallable"] == True:
-        config_out["stalling"] = "PASSIVE"
+    config_out["stallable"] = config_in["stallable"]
+    if   config_in["FIFO_handshakes"]:
+        config_out["stall_type"] = "ACTIVE"
+    elif config_in["stallable"]:
+        config_out["stall_type"] = "PASSIVE"
     else:
-        config_out["stalling"] = "NONE"
-
+        config_out["stall_type"] = "NONE"
 
     # Data pori parameters
     assert(config_in["reads"] >= 1)
@@ -46,10 +47,11 @@ def handle_module_name(module_name, config, generate_name):
         generated_name = "GET"
 
         # Denote Data width, writes, and FIFOs parameters
-        generated_name += "_%ird"%(config["reads"], )
+        generated_name += "_%ir"%(config["reads"], )
         generated_name += "_%if"%(config["FIFOs"], )
         generated_name += "_%iw"%(config["data_width"], )
-        generated_name += "_%ss"%(config["stalling"][0], )
+        generated_name += "_%s"%(config["stall_type"][0], )
+
 
         return generated_name
     else:
@@ -95,10 +97,10 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         ]
 
         # Generation Module Code
-        gen_general_ports()
-        gen_FIFO_ports ()
-        gen_read_ports()
-        gen_read_logic()
+        gen_ports()
+        gen_stalling_logic()
+        gen_FIFO_adv_logic()
+        gen_read_data_logic()
 
         # Save code to file
         gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
@@ -107,11 +109,11 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 
 #####################################################################
 
-def gen_general_ports():
+def gen_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # handle clock port
+    # Handle clock port
     INTERFACE["ports"] += [
         {
             "name" : "clock",
@@ -120,44 +122,8 @@ def gen_general_ports():
         }
     ]
 
-    if CONFIG["stalling"] == "ACTIVE":
-        INTERFACE["ports"] += [
-            {
-                "name" : "stall",
-                "type" : "std_logic",
-                "direction" : "inout"
-            }
-        ]
-    elif CONFIG["stalling"] == "PASSIVE":
-        INTERFACE["ports"] += [
-            {
-                "name" : "stall",
-                "type" : "std_logic",
-                "direction" : "in"
-            }
-        ]
-
-def gen_FIFO_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    ARCH_HEAD += "-- FIFO ports buffers\n"
-    ARCH_BODY += "-- FIFO ports buffers\n"
-
-    reg_interface, reg_name = register.generate_HDL(
-        {
-        "async_forces"  : 0,
-        "sync_forces"   : 0,
-        "has_enable"    : False
-        },
-        OUTPUT_PATH,
-        "register",
-        True,
-        False
-    )
-
+    # Handle FIFO ports
     for FIFO in range(CONFIG["FIFOs"]):
-        # Declare ports
         INTERFACE["ports"] += [
             {
                 "name" : "FIFO_%i_data"%(FIFO, ),
@@ -165,56 +131,22 @@ def gen_FIFO_ports():
                 "direction" : "in"
             },
             {
-                "name" : "FIFO_%i_red"%(FIFO, ),
+                "name" : "FIFO_%i_adv"%(FIFO, ),
                 "type" : "std_logic",
                 "direction" : "out"
             }
         ]
-
-        if CONFIG["stalling"] == "ACTIVE":
+        if CONFIG["FIFO_handshakes"]:
             INTERFACE["ports"] += [
                 {
-                    "name" : "FIFO_%i_ready"%(FIFO, ),
+                    "name" : "FIFO_%i_valid"%(FIFO, ),
                     "type" : "std_logic",
                     "direction" : "in"
                 }
             ]
 
-        # Generate FIFO red buffer
-        ARCH_HEAD += "signal FIFO_%i_red_buffer_in : std_logic;\n"%(FIFO,)
-
-        ARCH_BODY += "FIFO_%i_red_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
-
-        ARCH_BODY += "generic map (data_width => 1)\n"
-
-        ARCH_BODY += "port map (\n\>"
-
-        ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in(0) => FIFO_%i_red_buffer_in,\n"%(FIFO, )
-        ARCH_BODY += "data_out(0) => FIFO_%i_red\n"%(FIFO, )
-
-        ARCH_BODY += "\<);\n\<\n"
-
-def gen_read_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    reg_interface, reg_name = register.generate_HDL(
-        {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
-            "has_enable"    : CONFIG["stalling"] != "NONE"
-        },
-        OUTPUT_PATH,
-        "register",
-        True,
-        False
-    )
-
-    # Handle reads with advance
-    ARCH_BODY += "\n-- Output Buffers\n"
+    # Handle read ports
     for read in range(CONFIG["reads"]):
-        # Declare port
         INTERFACE["ports"] += [
             {
                 "name" : "read_%i_addr"%(read, ),
@@ -222,7 +154,7 @@ def gen_read_ports():
                 "direction" : "in"
             },
             {
-                "name" : "read_%i_data_word_0"%(read, ),
+                "name" : "read_%i_data"%(read, ),
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
                 "direction" : "out"
             },
@@ -232,20 +164,7 @@ def gen_read_ports():
                 "direction" : "in"
             }
         ]
-
-        ARCH_HEAD += "signal read_%i_addr_int : integer;\n"%(read)
-        ARCH_BODY += "read_%i_addr_int <= to_integer(unsigned(read_%i_addr));\n\n"%(read, read)
-
-        # Generate output buffers
-        ARCH_HEAD += "signal read_%i_data_word_0_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
-
-        ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
-
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
-
-        ARCH_BODY += "port map (\n\>"
-
-        if CONFIG["stalling"] != "NONE":
+        if CONFIG["FIFO_handshakes"]:
             INTERFACE["ports"] += [
                 {
                     "name" : "read_%i_enable"%(read, ),
@@ -253,62 +172,227 @@ def gen_read_ports():
                     "direction" : "in"
                 },
             ]
-            ARCH_BODY += "enable => read_%i_enable and not stall,\n"%(read, )
-        ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => read_%i_data_word_0_buffer_in,\n"%(read, )
-        ARCH_BODY += "data_out => read_%i_data_word_0\n"%(read, )
 
-        ARCH_BODY += "\<);\n\<\n"
+    # Handle stalling ports
+    if   CONFIG["stall_type"] == "ACTIVE":
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "inout"
+            }
+        ]
+    elif CONFIG["stall_type"] == "PASSIVE":
+        INTERFACE["ports"] += [
+            {
+                "name" : "stall",
+                "type" : "std_logic",
+                "direction" : "in"
+            }
+        ]
 
-def gen_read_logic():
+def gen_stalling_logic():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Datapath logic
-    ARCH_BODY += "\n-- Data Path\n"
+    if CONFIG["FIFO_handshakes"] :
+        ARCH_BODY += "-- FIFO_handshakes stall logic\n"
+
+        ARCH_HEAD += "signal FIFO_handshake_stall : std_logic;\n"
+        ARCH_BODY += "stall <= '1' when FIFO_handshake_stall = '1' else 'L';\n"
+
+        if CONFIG["FIFOs"] == 1:
+            # This code may need reworking, depending on how vivado handles many termed logic expressions
+            ARCH_BODY += "FIFO_handshake_stall <= %s;\n"%(
+                " or ".join([
+                    "(read_%i_enable and not FIFO_0_valid)"%(i, )
+                    for i in range(CONFIG["reads"])
+                ]),
+            )
+        else:#CONFIG["FIFOs"] >  1:
+            mux_interface, mux_name = mux.generate_HDL(
+                {
+                    "inputs" : CONFIG["FIFOs"]
+                },
+                OUTPUT_PATH,
+                "mux",
+                True,
+                False
+            )
+
+            for read in range(CONFIG["reads"]):
+                ARCH_HEAD += "signal read_%i_FIFO_valid : std_logic;\n"%(read, )
+
+                ARCH_BODY += "read_%i_FIFO_valid_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
+
+                ARCH_BODY += "generic map (data_width => 1)\n"
+
+                ARCH_BODY += "port map (\n\>"
+                ARCH_BODY += "sel => read_%i_addr,\n"%(read, )
+                for i in range(0, CONFIG["FIFOs"]):
+                    ARCH_BODY += "data_in_%i(0) => FIFO_%i_valid,\n"%(i, i, )
+                for i in range(CONFIG["FIFOs"], mux_interface["number_inputs"]):
+                    ARCH_BODY += "data_in_%i(0) => '0',\n"%(i, )
+                ARCH_BODY += "data_out(0) => read_%i_FIFO_valid\n"%(read, )
+
+                ARCH_BODY += "\<);\n\<\n"
+
+            # This code may need reworking, depending on how vivado handles many termed logic expressions
+            ARCH_BODY += "FIFO_handshake_stall <= %s;\n"%(
+                " or ".join([
+                    "(read_%i_enable and not read_%i_FIFO_valid)"%(i, i, )
+                    for i in range(CONFIG["reads"])
+                ]),
+            )
+
+def gen_FIFO_adv_logic():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    # Generate FIFO_adv buffer
+    reg_interface, reg_name = register.generate_HDL(
+        {
+            "has_async_force" : False,
+            "has_sync_force" : False,
+            "has_enable"    : False
+        },
+        OUTPUT_PATH,
+        "register",
+        True,
+        False
+    )
+
+    # instance FIFO_adv buffers
+    ARCH_HEAD += "\n-- FIFO advance signals\n"
+    ARCH_BODY += "\n-- FIFO advance buffers\n"
+    for FIFO in range(CONFIG["FIFOs"]):
+        ARCH_HEAD += "signal FIFO_%i_adv_buffer_in : std_logic;\n"%(FIFO, )
+
+        ARCH_BODY += "FIFO_%i_adv_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
+
+        ARCH_BODY += "generic map (data_width => 1)\n"
+
+        ARCH_BODY += "port map (\n\>"
+        ARCH_BODY += "clock => clock,\n"
+        ARCH_BODY += "data_in(0) => FIFO_%i_adv_buffer_in,\n"%(FIFO, )
+        ARCH_BODY += "data_out(0) => FIFO_%i_adv\n"%(FIFO, )
+        ARCH_BODY += "\<);\n\<\n"
+
+    # FIFO_adv logic
+    ARCH_BODY += "\n-- FIFO advance logic\n"
+    if CONFIG["FIFOs"] == 1:
+        if CONFIG["stall_type"] != "NONE":
+            # This code may need reworking, depending on how vivado handles many termed logic expressions
+            ARCH_BODY += "FIFO_0_adv_buffer_in <= (not stall) and %s;\n"%(
+                " or ".join([
+                    "read_%i_adv"%(i, )
+                    for i in range(CONFIG["reads"])
+                ]),
+            )
+        else:
+            # This code may need reworking, depending on how vivado handles many termed logic expressions
+            ARCH_BODY += "FIFO_0_adv_buffer_in <= %s;\n"%(
+                " or ".join([
+                    "read_%i_adv"%(i, )
+                    for i in range(CONFIG["reads"])
+                ]),
+            )
+    else:#CONFIG["FIFOs"] >  1:
+        if CONFIG["stall_type"] != "NONE":
+            for FIFO in range(CONFIG["FIFOs"]):
+                ARCH_BODY += "FIFO_%i_adv_buffer_in <= (not stall) and %s;\n"%(
+                    FIFO,
+                    " or ".join([
+                        "(read_%i_adv and %s)"%(
+                            read,
+                            " and ".join([
+                                "read_%i_addr(%i)"%(read, bit, ) if FIFO&2**bit
+                                else "(not read_%i_addr(%i))"%(read, bit, )
+                                for bit in range(CONFIG["addr_width"])
+                            ])
+                        )
+                        for read in range(CONFIG["reads"])
+                    ]),
+                )
+        else:
+            for FIFO in range(CONFIG["FIFOs"]):
+                ARCH_BODY += "FIFO_%i_adv_buffer_in <= %s;\n"%(
+                    FIFO,
+                    " or ".join([
+                        "(read_%i_adv and %s)"%(
+                            read,
+                            " and ".join([
+                                "read_%i_addr(%i)"%(read, bit, ) if FIFO&2**bit
+                                else "(not read_%i_addr(%i))"%(read, bit, )
+                                for bit in range(CONFIG["addr_width"])
+                            ])
+                        )
+                        for read in range(CONFIG["reads"])
+                    ]),
+                )
+
+def gen_read_data_logic():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    # Generate read_data buffer
+    reg_interface, reg_name = register.generate_HDL(
+        {
+            "has_async_force" : False,
+            "has_sync_force" : False,
+            "has_enable"   : CONFIG["stall_type"] != "NONE"
+        },
+        OUTPUT_PATH,
+        "register",
+        True,
+        False
+    )
+
+    # Generate read_data buffers
+    ARCH_HEAD += "\n-- read data signals\n"
+    ARCH_BODY += "\n-- read data buffers\n"
+    for read in range(CONFIG["reads"]):
+        ARCH_HEAD += "signal read_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+
+        ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+
+        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+
+        ARCH_BODY += "port map (\n\>"
+        ARCH_BODY += "clock => clock,\n"
+        if CONFIG["stall_type"] != "NONE":
+            ARCH_BODY += "enable => not stall,\n"
+        ARCH_BODY += "data_in  => read_%i_data_buffer_in,\n"%(read, )
+        ARCH_BODY += "data_out => read_%i_data\n"%(read, )
+        ARCH_BODY += "\<);\n\<\n"
+
+    # read_data assignment logic
+    ARCH_BODY += "\n-- read_data assignment logic\n"
     if CONFIG["FIFOs"] == 1:
         for read in range(CONFIG["reads"]):
-            ARCH_BODY += "read_%i_data_word_0_buffer_in <= FIFO_0_data;\n"%(read, )
-    else:
+            ARCH_BODY += "read_%i_data_buffer_in <= FIFO_0_data;\n"%(read, )
+    else:#CONFIG["FIFOs"] >  1:
+        mux_interface, mux_name = mux.generate_HDL(
+            {
+                "inputs" : CONFIG["FIFOs"]
+            },
+            OUTPUT_PATH,
+            "mux",
+            True,
+            False
+        )
+
         for read in range(CONFIG["reads"]):
-            ARCH_BODY += "read_%i_data_buffer_word_0_in <= \>"%(read, )
-            for addr in range(CONFIG["FIFOs"]):
-                ARCH_BODY += "FIFO_%i_data when read_%i_addr_int = %i\nelse "%(
-                    addr, read, addr
-                )
-            ARCH_BODY += "(others => 'U');\<\n"
+            ARCH_BODY += "read_%i_data_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
 
-    # Advance logic
-    for FIFO in range(CONFIG["FIFOs"]):
-        ARCH_BODY += "FIFO_%i_red_buffer_in <= \>"%(FIFO, )
+            ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
 
-        if CONFIG["stalling"] != "NONE":
-            ARCH_BODY += "'0' when stall = '1'\nelse "
+            ARCH_BODY += "port map (\n\>"
+            ARCH_BODY += "sel => read_%i_addr,\n"%(read, )
+            for i in range(0, CONFIG["FIFOs"]):
+                ARCH_BODY += "data_in_%i => FIFO_%i_data,\n"%(i, i, )
+            for i in range(CONFIG["FIFOs"], mux_interface["number_inputs"]):
+                ARCH_BODY += "data_in_%i => (others => '0'),\n"%(i, )
+            ARCH_BODY += "data_out => read_%i_data_buffer_in\n"%(read, )
 
-        for port in range(CONFIG["reads"]):
-            ARCH_BODY += "'1' when read_%i_adv = '1' and read_%i_addr = \"%s\"\nelse "%(
-                    port,
-                    port,
-                    tc_utils.unsigned.encode(FIFO, CONFIG["addr_width"])
-                )
-        ARCH_BODY += "\<'0';\n"
-
-    # Stall logic
-    if CONFIG["stalling"] == "ACTIVE":
-        # Get teady for each read's FIFO
-        for read in range(CONFIG["reads"]):
-            ARCH_HEAD += "signal read_%i_ready : std_logic;\n"%(read, )
-
-            if CONFIG["FIFOs"] == 1:
-                ARCH_BODY += "read_%i_ready <= FIFO_0_ready;\n"%(read, )
-            else:
-                ARCH_BODY += "read_%i_ready <= \>"%(read, )
-                for addr in range(CONFIG["FIFOs"]):
-                    ARCH_BODY += "FIFO_%i_ready when read_%i_addr_int = %i\nelse "%(
-                        addr, read, addr
-                    )
-                ARCH_BODY += "'1';\<\n"
-
-        # Convert ready into stall
-        for read in range(CONFIG["reads"]):
-            ARCH_BODY += "stall <= '1' when read_%i_ready /= '1' and read_%i_enable = '1' else 'Z';\n"%(read, read,)
+            ARCH_BODY += "\<);\n\<\n"

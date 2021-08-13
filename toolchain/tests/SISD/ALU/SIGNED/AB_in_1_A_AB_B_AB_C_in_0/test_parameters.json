@@ -7,7 +7,7 @@
         "IMM": {},
         "PUT": {
             "FIFOs": 1,
-            "can_stall": false,
+            "FIFO_handshakes": false,
             "data_width": 32
         }
     },

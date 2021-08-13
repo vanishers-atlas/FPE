@@ -9,6 +9,8 @@ from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation import utils as gen_utils
 
+from FPE.toolchain.HDL_generation.basic import register
+
 #####################################################################
 
 def preprocess_config(config_in):
@@ -110,13 +112,10 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             ARCH_BODY += "data_out <= data_in;\n"
         # Delay of depth 1, is a registor
         elif CONFIG["depth"] == 1:
-
-            from FPE.toolchain.HDL_generation.memory import register
-
             reg_interface, reg_name = register.generate_HDL(
                 {
-                    "async_forces"  : 0,
-                    "sync_forces"   : 0,
+                    "has_async_force"  : False,
+                    "has_sync_force"   : False,
                     "has_enable"    : CONFIG["stallable"]
                 },
                 OUTPUT_PATH,
@@ -128,7 +127,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             ARCH_BODY += "delay_reg : entity work.%s(arch)\>\n"%(reg_name)
             ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["width"])
             ARCH_BODY += "port map (\n\>"
-            ARCH_BODY += "trigger => clock,\n"
+            ARCH_BODY += "clock => clock,\n"
             if CONFIG["stallable"]:
                 ARCH_BODY += "enable => not stall,\n"
             ARCH_BODY += "data_in  => data_in,\n"

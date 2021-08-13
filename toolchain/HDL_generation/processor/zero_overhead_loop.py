@@ -10,7 +10,7 @@ import math
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 from FPE.toolchain import utils as tc_utils
 
-from FPE.toolchain.HDL_generation.memory import register
+from FPE.toolchain.HDL_generation.basic import register
 
 def preprocess_config(config_in):
     config_out = {}
@@ -189,12 +189,12 @@ def generate_PC_interface():
         # ZOL is seekable, ie start/end values are variable, therefore use registors and ports
         INTERFACE["ports"] += [
             {
-                "name" : "in_0_word_0",
+                "name" : "in_0",
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
                 "direction" : "in"
             },
             {
-                "name" : "in_1_word_0",
+                "name" : "in_1",
                 "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
                 "direction" : "in"
             },
@@ -207,8 +207,8 @@ def generate_PC_interface():
 
         interface, reg = register.generate_HDL(
             {
-                "async_forces"  : 0,
-                "sync_forces"   : 0,
+                "has_async_forces"  : False,
+                "has_sync_forces"   : False,
                 "has_enable"    : True
             },
             OUTPUT_PATH,
@@ -230,8 +230,8 @@ def generate_PC_interface():
         else:
             ARCH_BODY += "enable => seek and not stall,\n"
 
-        ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => in_0_word_0(%i downto 0),\n"%(CONFIG["PC_width"] - 1, )
+        ARCH_BODY += "clock => clock,\n"
+        ARCH_BODY += "data_in  => in_0(%i downto 0),\n"%(CONFIG["PC_width"] - 1, )
         ARCH_BODY += "data_out => start_value_int\n"
 
         ARCH_BODY += "\<);\n\<\n"
@@ -251,7 +251,7 @@ def generate_PC_interface():
             ARCH_BODY += "enable => seek and not stall,\n"
 
         ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => in_1_word_0(%i downto 0),\n"%(CONFIG["PC_width"] - 1, )
+        ARCH_BODY += "data_in  => in_1(%i downto 0),\n"%(CONFIG["PC_width"] - 1, )
         ARCH_BODY += "data_out => end_value_int\n"
 
         ARCH_BODY += "\<);\n\<\n"
@@ -507,8 +507,8 @@ def generate_tracker_counter():
 
     interface, reg = register.generate_HDL(
         {
-            "async_forces"  : 0,
-            "sync_forces"   : 0,
+            "has_async_forces"  : False,
+            "has_sync_forces"   : False,
             "has_enable"    : True
         },
         OUTPUT_PATH,
@@ -533,7 +533,7 @@ def generate_tracker_counter():
     else:
         ARCH_BODY += "enable => end_found and not stall,\n"
 
-    ARCH_BODY += "trigger => clock,\n"
+    ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => count_reg_in,\n"
     ARCH_BODY += "data_out => count_reg_out\n"
 
@@ -556,7 +556,7 @@ def generate_tracker_counter():
             },
         ]
         # Check in in_0 has already been been declared
-        in_0 = [port for port in INTERFACE["ports"] if port["name"] == "in_0_word_0"]
+        in_0 = [port for port in INTERFACE["ports"] if port["name"] == "in_0"]
         assert(len(in_0) < 2)
         # In_o not declared so declare as normal
         if len(in_0) == 0:
@@ -588,7 +588,7 @@ def generate_tracker_counter():
             ARCH_BODY += "enable => set and not stall,\n"
 
         ARCH_BODY += "trigger => clock,\n"
-        ARCH_BODY += "data_in  => in_0_word_0(%i downto 0),\n"%(CONFIG["tracker_bits"] - 1, )
+        ARCH_BODY += "data_in  => in_0(%i downto 0),\n"%(CONFIG["tracker_bits"] - 1, )
         ARCH_BODY += "data_out => iterations\n"
 
         ARCH_BODY += "\<);\n\<\n"

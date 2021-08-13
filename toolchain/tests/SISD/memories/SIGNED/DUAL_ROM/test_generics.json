@@ -1,4 +1,4 @@
 {
-    "ROM_A_mem_file": "..\\ROM_A.mem",
-    "ROM_B_mem_file": "..\\ROM_B.mem"
+    "ROM_A_init_mif": "..\\ROM_A.mem",
+    "ROM_B_init_mif": "..\\ROM_B.mem"
 }

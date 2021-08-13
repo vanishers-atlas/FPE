@@ -11,7 +11,7 @@ architecture arch of testbench is
 	signal	running : std_logic;
 
 	signal	GET_FIFO_0_data : std_logic_vector(3 downto 0);
-	signal	GET_FIFO_0_red  : std_logic;
+	signal	GET_FIFO_0_adv  : std_logic;
 	signal  GET_FIFO_0_index : integer := 0;
 	type  GET_FIFO_0_data_array is array (0 to 15) of std_logic_vector(3 downto 0);
 	constant GET_FIFO_0_test_data : GET_FIFO_0_data_array :=
@@ -34,7 +34,7 @@ begin
   UUT : entity work.test_FPE_inst(arch)
 		port map (
 			GET_FIFO_0_data => GET_FIFO_0_data,
-			GET_FIFO_0_red  => GET_FIFO_0_red,
+			GET_FIFO_0_adv  => GET_FIFO_0_adv,
 			PUT_FIFO_0_data  => PUT_FIFO_0_data,
 			PUT_FIFO_0_write => PUT_FIFO_0_write,
 			clock => clock,
@@ -57,7 +57,7 @@ begin
 	-- Provide input
 	process (clock)
 	begin
-		if falling_edge(clock) and GET_FIFO_0_red = '1' then
+		if falling_edge(clock) and GET_FIFO_0_adv = '1' then
 			-- Check has input
 			assert(0 <= GET_FIFO_0_index and GET_FIFO_0_index < GET_FIFO_0_test_data'Length)
 				report "Trying to take extra input"

@@ -6,12 +6,12 @@
     "data_memories": {
         "GET": {
             "FIFOs": 1,
-            "can_stall": false,
+            "FIFO_handshakes": false,
             "data_width": 4
         },
         "PUT": {
             "FIFOs": 1,
-            "can_stall": false,
+            "FIFO_handshakes": false,
             "data_width": 4
         }
     },

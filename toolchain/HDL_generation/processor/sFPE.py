@@ -11,18 +11,18 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain import FPE_assembly as asm_utils
 
-from FPE.toolchain.HDL_generation.processor import alu_dsp48e1
-from FPE.toolchain.HDL_generation.processor import comm_get
-from FPE.toolchain.HDL_generation.processor import comm_put
-from FPE.toolchain.HDL_generation.processor import reg_file
-from FPE.toolchain.HDL_generation.processor import BAM
-from FPE.toolchain.HDL_generation.processor import instr_decoder
-from FPE.toolchain.HDL_generation.processor import program_counter
-from FPE.toolchain.HDL_generation.processor import ZOL
+from FPE.toolchain.HDL_generation.processor import alu_dsp48e1 as ALU
+from FPE.toolchain.HDL_generation.processor import comm_get as GET
+from FPE.toolchain.HDL_generation.processor import comm_put as PUT
+from FPE.toolchain.HDL_generation.processor import mem_regfile as REG
+from FPE.toolchain.HDL_generation.processor import mem_RAM as RAM
+from FPE.toolchain.HDL_generation.processor import mem_ROM as ROM
+from FPE.toolchain.HDL_generation.processor import block_access_manager as BAM
+from FPE.toolchain.HDL_generation.processor import instruction_decoder as ID
+from FPE.toolchain.HDL_generation.processor import program_counter as PC
+from FPE.toolchain.HDL_generation.processor import zero_overhead_loop as ZOL
 
-from FPE.toolchain.HDL_generation.memory import RAM
-from FPE.toolchain.HDL_generation.memory import ROM
-from FPE.toolchain.HDL_generation.memory import delay
+from FPE.toolchain.HDL_generation.basic import delay, mux, dist_ROM
 
 import itertools as it
 import copy
@@ -86,9 +86,9 @@ def precheck_config(config_in):
         assert(config_in["data_memories"][mem]["addr_width"] > 0)
         assert(config_in["data_memories"][mem]["data_width"] > 0)
 
-        # Check can_stall of comm memories
+        # Check FIFO_handshakes of comm memories
         if mem in ["GET", "PUT"]:
-            assert(type(config_in["data_memories"][mem]["can_stall"]) == type(True))
+            assert(type(config_in["data_memories"][mem]["FIFO_handshakes"]) == type(True))
 
     # Handle execute_units section of config
     config_out["execute_units"] = {}
@@ -181,7 +181,8 @@ def preprocess_mem_data_datapath(config, mem):
                 input_datapath[write].append( [] )
 
             for word in range(words):
-                data_signal = "%s_out_%i_word_%i"%(exe_unit, index, word)
+                assert(word == 0)
+                data_signal = "%s_out_%i"%(exe_unit, index, )
 
                 if not any([
                     data_signal == scr["signal"]
@@ -261,7 +262,8 @@ def preprocess_exe_input_datapath(config, exe):
                     input_datapath[input].append( [] )
 
                 for word in range(words):
-                    data_signal = "%s_read_%i_data_word_%i"%(fetch_mem, fetch_read, word)
+                    assert(word == 0)
+                    data_signal = "%s_read_%i_data"%(fetch_mem, fetch_read, )
 
                     if not any([
                         data_signal == scr["signal"]
@@ -373,7 +375,7 @@ def preprocess_config(config_in):
     for mem in config_out["data_memories"].keys():
         # Check for stall sources
         if mem in ["GET", "PUT"]:
-            if config_out["data_memories"][mem]["can_stall"] == True:
+            if config_out["data_memories"][mem]["FIFO_handshakes"] == True:
                 config_out["program_flow"]["stallable"] = True
 
         # Work out read blocks
@@ -537,7 +539,6 @@ def gen_non_pipelined_signals():
     # Create and pull down stall signal
     if CONFIG["program_flow"]["stallable"]:
         ARCH_HEAD += "signal stall : std_logic;\n"
-        ARCH_BODY += "stall <= 'L';\n"
 
 #####################################################################
 
@@ -576,13 +577,13 @@ def mux_signals(lane, dst_sig, dst_width, srcs, signal_padding):
 
 #####################################################################
 
-exe_predeclared_ports = [
-    "clock",
-    "stall"
-]
+exe_predeclared_ports = {
+    "clock" : "clock" ,
+    "stall" : "stall"
+}
 
 exe_lib_lookup = {
-    "ALU" : alu_dsp48e1,
+    "ALU" : ALU,
 }
 
 def gen_execute_units():
@@ -627,18 +628,19 @@ def gen_execute_units():
                 [
                     port
                     for port in interface["ports"]
-                    if port["name"] in exe_predeclared_ports
+                    if port["name"] in exe_predeclared_ports.keys()
                 ],
                 key=lambda d : d["name"]
             ):
-                ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+                ARCH_BODY += "%s => %s,\n"%(port["name"], exe_predeclared_ports[port["name"]])
 
-            # Handle prefixed ports
+
+            # Handle non-predeclared ports
             for port in sorted(
                 [
                     port
                     for port in interface["ports"]
-                    if port["name"] not in exe_predeclared_ports
+                    if port["name"] not in exe_predeclared_ports.keys()
                 ],
                 key=lambda d : d["name"]
             ):
@@ -652,26 +654,27 @@ def gen_execute_units():
         # Create input port muxes
         for input, channels in enumerate(config["inputs"]):
             for word, srcs  in enumerate(channels["data"]):
-                dst_sig = "%s%s_in_%i_word_%i"%(lane, exe, input, word)
+                assert(word == 0)
+                dst_sig = "%s%s_in_%i"%(lane, exe, input, )
                 mux_signals(lane, dst_sig, config["data_width"], srcs, CONFIG["signal_padding"])
 
 
 #####################################################################
 
 mem_lib_lookup = {
-    "GET" : comm_get,
-    "PUT" : comm_put,
-    "REG" : reg_file,
+    "GET" : GET,
+    "PUT" : PUT,
+    "REG" : REG,
     "RAM" : RAM,
     "IMM" : ROM,
     "ROM_A" : ROM,
     "ROM_B" : ROM,
 }
 
-mem_predeclared_ports = [
-    "clock",
-    "stall"
-]
+mem_predeclared_ports = {
+    "clock" : "clock" ,
+    "stall" : "stall"
+}
 
 def inst_data_memory(lane, mem, config, comp, interface):
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -699,23 +702,23 @@ def inst_data_memory(lane, mem, config, comp, interface):
 
     ARCH_BODY += "port map (\>\n"
 
-    # Handle non prefixed ports
+    # Handle predeclared ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] in mem_predeclared_ports
+            if port["name"] in mem_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports[port["name"]])
 
-    # Handle prefixed ports
+    # Handle non-predeclared ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] not in mem_predeclared_ports
+            if port["name"] not in mem_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
@@ -752,7 +755,8 @@ def inst_data_memory(lane, mem, config, comp, interface):
 
         # Data port
         for word, details in enumerate(signals["data"]):
-            dst_sig = inst + "_write_%i_data_word_%i"%(write,word)
+            assert(word == 0)
+            dst_sig = inst + "_write_%i_data"%(write, )
             mux_signals(lane, dst_sig, config["data_width"], details, CONFIG["signal_padding"])
 
 def gen_data_memories():
@@ -792,10 +796,10 @@ def gen_data_memories():
 
 #####################################################################
 
-addr_sources_predeclared_ports = [
-    "clock",
-    "stall"
-]
+addr_sources_predeclared_ports = {
+    "clock" : "clock" ,
+    "stall" : "stall"
+}
 
 def gen_addr_sources():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -838,17 +842,17 @@ def gen_addr_sources():
         for port in sorted(
             [
                 port for port in interface["ports"]
-                if port["name"] in addr_sources_predeclared_ports
+                if port["name"] in addr_sources_predeclared_ports.keys()
             ],
             key=lambda p : p["name"]
         ):
-            ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+            ARCH_BODY += "%s => %s,\n"%(port["name"], addr_sources_predeclared_ports[port["name"]])
 
         # Handle non predeclared ports
         for port in sorted(
             [
                 port for port in interface["ports"]
-                if port["name"] not in addr_sources_predeclared_ports
+                if port["name"] not in addr_sources_predeclared_ports.keys()
             ],
             key=lambda p : p["name"]
         ):
@@ -864,7 +868,8 @@ def gen_addr_sources():
         # Create input port muxes
         for input, channels in enumerate(config["inputs"]):
             for word, srcs  in enumerate(channels["data"]):
-                dst_sig = "%s_in_%i_word_%i"%(bam, input, word)
+                assert(word == 0)
+                dst_sig = "%s_in_%i"%(bam, input, )
                 # Only use lane 0 as BAM as shared across lanes
                 mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, config["step_width"], srcs, "unsigned")
 
@@ -881,19 +886,19 @@ def gen_program_fetch():
         gen_zero_overhead_loop()
     gen_program_memory()
 
-PC_predeclared_ports = [
-    "clock",
-    "kickoff",
-    "stall",
-    "ZOL_value",
-    "ZOL_overwrite",
-]
+PC_predeclared_ports = {
+    "clock" : "clock",
+    "kickoff" : "kickoff",
+    "ZOL_value" : "ZOL_value",
+    "ZOL_overwrite" : "ZOL_overwrite",
+    "stall" : "stall"
+}
 
 def gen_program_counter():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    interface, name = program_counter.generate_HDL(
+    interface, name = PC.generate_HDL(
         {
             **CONFIG["program_flow"],
             "statuses"  : {
@@ -926,19 +931,19 @@ def gen_program_counter():
 
     ARCH_BODY += "port map (\>\n"
 
-    # Handle predefined ports
+    # Handle predeclared ports
     for port in [
         port
         for port in interface["ports"]
-        if port["name"] in PC_predeclared_ports
+        if port["name"] in PC_predeclared_ports.keys()
     ]:
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], PC_predeclared_ports[port["name"]])
 
-    # Handle non predefined ports
+    # Handle non predeclared ports
     for port in [
         port
         for port in interface["ports"]
-        if port["name"] not in PC_predeclared_ports
+        if port["name"] not in PC_predeclared_ports.keys()
     ]:
         ARCH_HEAD += "signal PC_%s : %s;\n"%(port["name"], port["type"])
         ARCH_BODY += "%s => PC_%s,\n"%(port["name"], port["name"])
@@ -970,7 +975,8 @@ def gen_program_counter():
     # Create input port muxes
     for input, channels in enumerate(CONFIG["program_flow"]["inputs"]):
         for word, srcs  in enumerate(channels["data"]):
-            dst_sig = "%s_in_%i_word_%i"%("PC", input, word)
+            assert(word == 0)
+            dst_sig = "%s_in_%i"%("PC", input, )
             mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, CONFIG["program_flow"]["PC_width"], srcs, "unsigned")
 
     # Handle jump status ports
@@ -1013,14 +1019,14 @@ def gen_program_counter():
     ARCH_BODY += "data_out(0) => PC_running_2\n"
     ARCH_BODY += "\<);\<\n\n"
 
-ZOL_predeclared_ports = [
-    "clock",
-    "PC_running",
-    "PC_value",
-    "overwrite",
-    "overwrite_value",
-    "stall",
-]
+ZOL_predeclared_ports = {
+    "clock" : "clock",
+    "PC_running" : "PC_running_1",
+    "PC_value" : "PC_value",
+    "overwrite" : "ZOL_overwrite",
+    "overwrite_value" : "ZOL_value",
+    "stall" : "stall"
+}
 
 def gen_zero_overhead_loop():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
@@ -1065,19 +1071,18 @@ def gen_zero_overhead_loop():
 
 
             # Handle predeclared ports
-            if CONFIG["program_flow"]["stallable"]:
-                ARCH_BODY += "stall => stall,\n"
-            ARCH_BODY += "clock => clock,\n"
-            ARCH_BODY += "PC_running => PC_running_1,\n"
-            ARCH_BODY += "PC_value   => PC_value,\n"
-            ARCH_BODY += "overwrite  => ZOL_overwrite,\n"
-            ARCH_BODY += "overwrite_value  => ZOL_value,\n"
+            for port in [
+                port
+                for port in interface["ports"]
+                if port["name"] in ZOL_predeclared_ports.keys()
+            ]:
+                ARCH_BODY += "%s => %s,\n"%(port["name"], ZOL_predeclared_ports[port["name"]])
 
             # Handle declared ports
             declared_ports = [
                 port
                 for port in interface["ports"]
-                if port["name"] not in ZOL_predeclared_ports
+                if port["name"] not in ZOL_predeclared_ports.keys()
             ]
             for port in declared_ports:
                 ARCH_HEAD += "signal %s_%s : %s;\n"%(ZOL_name, port["name"], port["type"])
@@ -1091,8 +1096,9 @@ def gen_zero_overhead_loop():
             # Create input port muxes
             for input, channels in enumerate(ZOL_details["inputs"]):
                 for word, srcs  in enumerate(channels["data"]):
+                    assert(word == 0)
                     # Put port width from interface
-                    port_name = "in_%i_word_%i"%(input, word)
+                    port_name = "in_%i"%(input, )
                     port = [port for port in interface["ports"] if port["name"] == port_name]
                     assert(len(port) == 1)
                     port_width = int(port[0]["type"].split("(")[1].split("downto")[0]) + 1
@@ -1123,12 +1129,12 @@ def gen_program_memory():
 
     INTERFACE["generics"] += [
         {
-            "name" : "PM_mem_file",
+            "name" : "PM_init_mif",
             "type" : "string"
         }
     ]
     ARCH_BODY += "generic map (\>\n"
-    ARCH_BODY += "mem_file => PM_mem_file\n"
+    ARCH_BODY += "init_mif => PM_init_mif\n"
     ARCH_BODY += "\<)\n"
 
     ARCH_HEAD += "signal PM_addr : std_logic_vector(%i downto 0);\n"%( CONFIG["program_flow"]["PC_width"] - 1)
@@ -1139,7 +1145,7 @@ def gen_program_memory():
     if CONFIG["program_flow"]["stallable"]:
         ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "read_0_addr => PM_addr,\n"
-    ARCH_BODY += "read_0_data_word_0 => PM_data\n"
+    ARCH_BODY += "read_0_data => PM_data\n"
     ARCH_BODY += "\<);\n"
 
     ARCH_BODY += "\<\n"
@@ -1148,10 +1154,10 @@ def gen_program_memory():
 
 #####################################################################
 
-ID_predeclared_ports = [
-    "clock",
-    "stall"
-]
+ID_predeclared_ports = {
+    "clock" : "clock",
+    "stall" : "stall"
+}
 
 ID_non_fanout_ports = [
     "instr",
@@ -1162,7 +1168,7 @@ def gen_instr_decoder():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    interface, name = instr_decoder.generate_HDL(
+    interface, name = ID.generate_HDL(
         {
             **CONFIG,
         },
@@ -1181,18 +1187,18 @@ def gen_instr_decoder():
         [
             port
             for port in interface["ports"]
-            if port["name"] in ID_predeclared_ports
+            if port["name"] in ID_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], ID_predeclared_ports[port["name"]])
 
     # Handle prefixed ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] not in ID_predeclared_ports
+            if port["name"] not in ID_predeclared_ports.keys()
         ],
         key=lambda d : d["name"]
     ):
@@ -1227,7 +1233,7 @@ def gen_instr_decoder():
             port
             for port in interface["ports"]
             if (
-                port["name"] not in ID_predeclared_ports
+                port["name"] not in ID_predeclared_ports.keys()
                 and port["name"] not in ID_non_fanout_ports
                 and not port["name"].startswith("addr_")
                 and not port["name"].startswith("jump_")
