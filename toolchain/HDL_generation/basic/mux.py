@@ -104,11 +104,12 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         ARCH_BODY += "\<begin\>\n"
 
         ARCH_BODY += "case sel is\>\n"
-        for i in range(CONFIG["inputs"]):
+        for i in range(CONFIG["inputs"] - 1):
             ARCH_BODY += "when \"%s\" =>\n\> data_out <= data_in_%i;\<\n"%(
                 tc_utils.unsigned.encode(i, CONFIG["sel_width"]),
                 i,
             )
+        ARCH_BODY += "when others =>\n\> data_out <= data_in_%i;\<\n"%(CONFIG["inputs"] - 1, )
         ARCH_BODY += "\<end case;\n"
 
         ARCH_BODY += "\<end process;\n"
