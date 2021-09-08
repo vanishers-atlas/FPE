@@ -335,12 +335,15 @@ def gen_wordwise_distributed_RAM():
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
         if CONFIG["stallable"]:
-            raise NotImplemenetedError("Add stable for using the enable pin to stall the ROM prim")
+            ARCH_BODY += "read_enable => not stall,\n"
         ARCH_BODY += "read_addr => read_0_addr,\n"
         ARCH_BODY += "read_data => read_0_data,\n"
         ARCH_BODY += "write_addr => write_0_addr,\n"
         ARCH_BODY += "write_data => write_0_data,\n"
-        ARCH_BODY += "write_enable => write_0_enable\n"
+        if CONFIG["stallable"]:
+            ARCH_BODY += "write_enable => write_0_enable and not stall\n"
+        else:
+            ARCH_BODY += "write_enable => write_0_enable\n"
         ARCH_BODY += "\<);\n\<\n"
 
     elif CONFIG["writes"] == 1 and CONFIG["reads"] <= 3:
@@ -371,14 +374,17 @@ def gen_wordwise_distributed_RAM():
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
         if CONFIG["stallable"]:
-            raise NotImplemenetedError("Add stable for using the enable pin to stall the ROM prim")
+            ARCH_BODY += "read_enable => not stall,\n"
         for read in range(0, reads):
             ARCH_BODY += "read_%i_addr => read_%i_addr,\n"%(read, read, )
             ARCH_BODY += "read_%i_data => read_%i_data,\n"%(read, read, )
         for read in range(reads, 3):
             ARCH_BODY += "write_addr => write_0_addr,\n"
             ARCH_BODY += "write_data => write_0_data,\n"
-        ARCH_BODY += "write_enable => write_0_enable\n"
+        if CONFIG["stallable"]:
+            ARCH_BODY += "write_enable => write_0_enable and not stall\n"
+        else:
+            ARCH_BODY += "write_enable => write_0_enable\n"
         ARCH_BODY += "\<);\n\<\n"
     elif CONFIG["writes"] < 1:
         raise NotIMplementedError("Support for 2+ writes needs adding")

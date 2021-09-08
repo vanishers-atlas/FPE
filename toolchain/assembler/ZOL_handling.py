@@ -26,6 +26,7 @@ class handler(ParseTreeListener):
         this.ZOL_id += 1
 
         interations = asm_utils.evaluate_expr(ctx.expr(), this.program_context) - 1
+
         if   this.iterations_encodings[ZOL_name]["type"] == "biased_tally":
             iterations_encoded = '"' + tc_utils.biased_tally.encode(
                 interations,

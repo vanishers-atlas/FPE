@@ -36,9 +36,9 @@ def evaluate_expr(ctx, program_context):
             raise NotImplementedError("Const_exprContext with an unhandled multiplicative operation, %s"%(operation) )
     # Handle bracket wrapper const_expr
     elif (   len(ctx.children) == 3
-        and ctx.ORB() != None
-        and ctx.expr()!= None
-        and ctx.CRB() != None
+        and asm_utils.token_to_text(ctx.children[0]) == "("
+        and type(ctx.children[1] == FPE_assemblyParser.ExprContext )
+        and asm_utils.token_to_text(ctx.children[2]) == ")"
     ):
         return evaluate_expr(ctx.children[1], program_context)
     # Catch un new/handled rules
@@ -63,8 +63,8 @@ def evaluate_expr_operand(ctx, program_context):
     elif ctx.HEX_NUM() != None:
         operand = asm_utils.token_to_text(ctx.HEX_NUM())
         return int(operand[2:], 16)
-    elif ctx.IDENTIFER() != None:
-        operand = asm_utils.token_to_text(ctx.IDENTIFER())
+    elif ctx.ident_ref() != None:
+        operand = asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())
         return program_context["constants"][operand]
     else:
         raise NotImplementedError("ConstantContext using an unknown rule")

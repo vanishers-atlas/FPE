@@ -76,6 +76,7 @@ def handle_module_name(module_name, config, generate_name):
 
 
         # Include delay type and max inter
+        generated_name += "_" + str(config["PC_width"])
         generated_name += "_" + config["tracker_type"]
         generated_name += "_" + str(config["iterations"])
 
@@ -272,7 +273,12 @@ def generate_PC_interface():
 
     ARCH_BODY += "-- Check if PC matches end Value\n"
     ARCH_HEAD += "signal end_found : std_logic;\n"
-    ARCH_BODY += "end_found <= '1' when PC_running = '1' and PC_value = end_value_int else '0';\n\n"
+
+    if not CONFIG["stallable"]:
+        ARCH_BODY += "end_found <= '1' when PC_running = '1' and PC_value = end_value_int else '0';\n\n"
+    else:
+        ARCH_BODY += "end_found <= '1' when stall /= '1' and PC_running = '1' and PC_value = end_value_int else '0';\n\n"
+
 
     # Handle PC_overwrite
     INTERFACE["ports"] += [

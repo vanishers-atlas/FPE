@@ -90,6 +90,10 @@ def precheck_config(config_in):
         if mem in ["GET", "PUT"]:
             assert(type(config_in["data_memories"][mem]["FIFO_handshakes"]) == type(True))
 
+        # Check type of ROM and RAM memories
+        if mem in ["ROM_A", "ROM_B", "RAM"]:
+            assert(type(config_in["data_memories"][mem]["type"]) == type(""))
+
     # Handle execute_units section of config
     config_out["execute_units"] = {}
     config_out["execute_units"] = copy.deepcopy(config_in["execute_units"])
@@ -320,6 +324,9 @@ def preprocess_config(config_in):
     # Process copied Config
     #####################################################################
 
+    # Include standard pipeline stages
+    config_out["pipeline_stage"] = ["PC", "PM", "ID", "FETCH", "EXE", "STORE"]
+
     # Handle SIMD section of config
     if config_out["SIMD"]["lanes"] == 1:
         config_out["SIMD"]["lanes_names"] = [""]
@@ -515,6 +522,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         gen_addr_sources()
         gen_program_fetch()
         gen_instr_decoder()
+        gen_running_delays()
 
         # Save code to file
         gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
@@ -539,6 +547,7 @@ def gen_non_pipelined_signals():
     # Create and pull down stall signal
     if CONFIG["program_flow"]["stallable"]:
         ARCH_HEAD += "signal stall : std_logic;\n"
+
 
 #####################################################################
 
@@ -671,9 +680,23 @@ mem_lib_lookup = {
     "ROM_B" : ROM,
 }
 
-mem_predeclared_ports = {
-    "clock" : "clock" ,
-    "stall" : "stall"
+mem_predeclared_ports_all_mems = {
+    "clock" : "clock",
+    "stall" : "stall",
+}
+
+mem_predeclared_ports_per_mem = {
+    "GET" : {
+        "running" : "running_FETCH",
+    },
+    "PUT" : {
+        "running" : "running_STORE",
+    },
+    "REG" : { },
+    "RAM" : { },
+    "IMM" : { },
+    "ROM_A" : { },
+    "ROM_B" : { },
 }
 
 def inst_data_memory(lane, mem, config, comp, interface):
@@ -702,23 +725,34 @@ def inst_data_memory(lane, mem, config, comp, interface):
 
     ARCH_BODY += "port map (\>\n"
 
-    # Handle predeclared ports
+    # Handle predeclared common to all mems ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] in mem_predeclared_ports.keys()
+            if port["name"] in mem_predeclared_ports_all_mems.keys()
         ],
         key=lambda d : d["name"]
     ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports[port["name"]])
+        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports_all_mems[port["name"]])
+
+    # Handle predeclared for spific mem ports
+    for port in sorted(
+        [
+            port
+            for port in interface["ports"]
+            if port["name"] in mem_predeclared_ports_per_mem[mem].keys()
+        ],
+        key=lambda d : d["name"]
+    ):
+        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports_per_mem[mem][port["name"]])
 
     # Handle non-predeclared ports
     for port in sorted(
         [
             port
             for port in interface["ports"]
-            if port["name"] not in mem_predeclared_ports.keys()
+            if port["name"] not in mem_predeclared_ports_all_mems.keys() and port["name"] not in mem_predeclared_ports_per_mem[mem].keys()
         ],
         key=lambda d : d["name"]
     ):
@@ -891,7 +925,8 @@ PC_predeclared_ports = {
     "kickoff" : "kickoff",
     "ZOL_value" : "ZOL_value",
     "ZOL_overwrite" : "ZOL_overwrite",
-    "stall" : "stall"
+    "stall" : "stall",
+    "running" : "running_PC",
 }
 
 def gen_program_counter():
@@ -962,16 +997,6 @@ def gen_program_counter():
         }
     ]
 
-    # Handle running output
-    INTERFACE["ports"] += [
-        {
-            "name" : "running",
-            "type" : "std_logic",
-            "direction" : "out"
-        }
-    ]
-    ARCH_BODY += "running <= PC_running;\n\n"
-
     # Create input port muxes
     for input, channels in enumerate(CONFIG["program_flow"]["inputs"]):
         for word, srcs  in enumerate(channels["data"]):
@@ -983,45 +1008,9 @@ def gen_program_counter():
     for port in [port for port in interface["ports"] if "_status_" in port["name"] ]:
         ARCH_BODY += "PC_%s <= %s;\n"%(port["name"], port["name"])
 
-    # delay PC'c running signal to act as ID enable
-    DELAY_INTERFACE, DELAY_NAME = delay.generate_HDL(
-        {
-            "width" : 1,
-            # delay of 1 for PC's setup cycle
-            "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
-        OUTPUT_PATH,
-        "delay",
-        True,
-        False
-    )
-
-    ARCH_HEAD += "signal PC_running_1, PC_running_2 : std_logic;\n"
-
-    ARCH_BODY += "PC_running_delay_0 : entity work.%s(arch)\>\n"%(DELAY_NAME)
-
-    ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "clock => clock,\n"
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-    ARCH_BODY += "data_in (0) => PC_running,\n"
-    ARCH_BODY += "data_out(0) => PC_running_1\n"
-    ARCH_BODY += "\<);\<\n\n"
-
-    ARCH_BODY += "PC_running_delay_1 : entity work.%s(arch)\>\n"%(DELAY_NAME)
-
-    ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "clock => clock,\n"
-    if CONFIG["program_flow"]["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
-    ARCH_BODY += "data_in (0) => PC_running_1,\n"
-    ARCH_BODY += "data_out(0) => PC_running_2\n"
-    ARCH_BODY += "\<);\<\n\n"
-
 ZOL_predeclared_ports = {
     "clock" : "clock",
-    "PC_running" : "PC_running_1",
+    "PC_running" : "running_PC",
     "PC_value" : "PC_value",
     "overwrite" : "ZOL_overwrite",
     "overwrite_value" : "ZOL_value",
@@ -1116,6 +1105,7 @@ def gen_program_memory():
             "addr_width" : CONFIG["program_flow"]["PC_width"],
             "data_width" : CONFIG["instr_decoder"]["instr_width"],
             "read_blocks" : [1],
+            "type" : "DIST",
             "reads" : 1,
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
@@ -1211,7 +1201,7 @@ def gen_instr_decoder():
     ARCH_BODY += "\<\n"
 
     ARCH_BODY += "ID_instr <= PM_data;\n"
-    ARCH_BODY += "ID_enable <= PC_running_2;\n"
+    ARCH_BODY += "ID_enable <= running_ID;\n"
 
     # Handle PC control signals
     for port in sorted(
@@ -1244,3 +1234,47 @@ def gen_instr_decoder():
     ):
         for lane in CONFIG["SIMD"]["lanes_names"]:
             ARCH_BODY += "%s%s <= ID_%s;\n"%(lane, port["name"], port["name"])
+
+#####################################################################
+
+
+def gen_running_delays():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+
+    # Declare each stage's running signal
+    for stage in CONFIG["pipeline_stage"]:
+        ARCH_HEAD += "signal running_%s : std_logic;\n"%(stage, )
+
+    DELAY_INTERFACE, DELAY_NAME = delay.generate_HDL(
+        {
+            "width" : 1,
+            "depth" : 1,
+            "stallable" : CONFIG["program_flow"]["stallable"],
+        },
+        OUTPUT_PATH,
+        "delay",
+        True,
+        False
+    )
+
+    for i, (stage_in, stage_out) in enumerate(zip(CONFIG["pipeline_stage"][:-1], CONFIG["pipeline_stage"][1:])):
+        ARCH_BODY += "running_delay_%i : entity work.%s(arch)\>\n"%(i, DELAY_NAME, )
+
+        ARCH_BODY += "port map (\n\>"
+        ARCH_BODY += "clock => clock,\n"
+        if CONFIG["program_flow"]["stallable"]:
+            ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "data_in (0) => running_%s,\n"%(stage_in, )
+        ARCH_BODY += "data_out(0) => running_%s\n"%(stage_out, )
+        ARCH_BODY += "\<);\<\n\n"
+
+    # Handle running output
+    INTERFACE["ports"] += [
+        {
+            "name" : "running",
+            "type" : "std_logic",
+            "direction" : "out"
+        }
+    ]
+    ARCH_BODY += "running <= running_PC;\n\n"

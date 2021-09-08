@@ -156,6 +156,11 @@ class extractor(ParseTreeListener):
         if mem not in this.para_file["data_memories"]:
             this.para_file["data_memories"][mem] = {}
 
+        # Handle ROM and RAM type parameter
+        if mem in ["ROM_A", "ROM_B", "RAM"]:
+            if "type" not in this.para_file["data_memories"][mem]:
+                this.para_file["data_memories"][mem]["type"] = None
+
         # Ensure required para_file are in mem
         if "data_width" not in this.para_file["data_memories"][mem]:
             this.para_file["data_memories"][mem]["data_width" ] = None

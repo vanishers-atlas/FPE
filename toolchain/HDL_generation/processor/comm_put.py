@@ -107,13 +107,18 @@ def gen_ports():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    # Handle clock port
+    # Decalre clock and runnning ports
     INTERFACE["ports"] += [
         {
             "name" : "clock",
             "type" : "std_logic",
             "direction" : "in"
-        }
+        },
+        {
+            "name" : "running",
+            "type" : "std_logic",
+            "direction" : "in"
+        },
     ]
 
     # Handle FIFO ports
@@ -270,14 +275,14 @@ def gen_FIFO_write_logic():
     if CONFIG["writes"] == 1:
         if CONFIG["FIFOs"] == 1:
             if CONFIG["stall_type"] != "NONE":
-                ARCH_BODY += "FIFO_0_write_buffer_in <= (not stall) and write_0_enable;\n"
+                ARCH_BODY += "FIFO_0_write_buffer_in <= (not stall) and running and write_0_enable;\n"
             else:
-                ARCH_BODY += "FIFO_0_write_buffer_in <= write_0_enable;\n"
+                ARCH_BODY += "FIFO_0_write_buffer_in <= running and write_0_enable;\n"
         else:#CONFIG["FIFOs"] >= 2:
             if CONFIG["stall_type"] != "NONE":
                 for FIFO in range(CONFIG["FIFOs"]):
                     # This code may need reworking, depending on how vivado handles many termed logic expressions
-                    ARCH_BODY += "FIFO_%i_write_buffer_in <= (not stall) and FIFO_%i_ready and write_0_enable and %s;\n"%(
+                    ARCH_BODY += "FIFO_%i_write_buffer_in <= (not stall) and running and FIFO_%i_ready and write_0_enable and %s;\n"%(
                         FIFO, FIFO,
                         " and ".join([
                             "write_0_addr(%i)"%(bit, ) if FIFO&2**bit
@@ -288,7 +293,7 @@ def gen_FIFO_write_logic():
             else:
                 for FIFO in range(CONFIG["FIFOs"]):
                     # This code may need reworking, depending on how vivado handles many termed logic expressions
-                    ARCH_BODY += "FIFO_%i_write_buffer_in <= FIFO_%i_ready and write_0_enable and %s;\n"%(
+                    ARCH_BODY += "FIFO_%i_write_buffer_in <= running and FIFO_%i_ready and write_0_enable and %s;\n"%(
                         FIFO, FIFO,
                         " and ".join([
                             "write_0_addr(%i)"%(bit, ) if FIFO&2**bit

@@ -31,7 +31,7 @@ def preprocess_config(config_in):
 
     assert(type(config_in["enabled_reads"]) == type(True))
     config_out["enabled_reads"] = config_in["enabled_reads"]
-    
+
     assert(type(config_in["init_type"]) == type(""))
     assert(config_in["init_type"] in ["NONE", "MIF", "GENERICS"])
     config_out["init_type"] = config_in["init_type"]
@@ -181,14 +181,6 @@ def gen_generate_ports():
                 "direction" : "out"
             }
         ]
-        if CONFIG["enabled_reads"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "read_enable",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
     else:
         raise ValueError("Unknown ports_config, %s"%(CONFIG["ports_config"]))
 
@@ -210,14 +202,6 @@ def gen_generate_ports():
                 "direction" : "out"
             }
         ]
-        if CONFIG["enabled_reads"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "read_enable",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
     # Declare 3 read-only port for QUAD configs
     elif CONFIG["ports_config"] in ["QUAD", ]:
         INTERFACE["ports"] += [

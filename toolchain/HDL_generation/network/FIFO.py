@@ -95,7 +95,6 @@ def generate_FIFOs():
     # Include normal ports
     INTERFACE["ports"] += [
         {   "name" : "clock",   "type" : "std_logic",   "direction" : "in" },
-        {   "name" : "clear",   "type" : "std_logic",   "direction" : "in" },
         {   "name" : "data_in",     "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1, ),    "direction" : "in"  },
         {   "name" : "data_out",    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["width"] - 1, ),    "direction" : "out"     },
         {   "name" : "data_write",  "type" : "std_logic",   "direction" : "in"  },

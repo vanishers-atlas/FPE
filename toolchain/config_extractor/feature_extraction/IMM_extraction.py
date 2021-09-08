@@ -19,6 +19,7 @@ class extractor(ParseTreeListener):
     def get_updated_config(this):
         if len(this.values) > 0:
             this.config["data_memories"]["IMM"] = {}
+            this.config["data_memories"]["IMM"]["type"] = "DIST"
             this.config["data_memories"]["IMM"]["depth"] = len(this.values)
             this.config["data_memories"]["IMM"]["data_width"] = this.data_width
             this.config["data_memories"]["IMM"]["addr_width"] = tc_utils.unsigned.width(this.config["data_memories"]["IMM"]["depth"] - 1)
@@ -27,7 +28,7 @@ class extractor(ParseTreeListener):
 
     def enterOp_pc_jump(this, ctx):
         jump_label = asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())
-        
+
         this.values.add(this.program_context["jump_labels"][jump_label])
 
         this.data_width = max(

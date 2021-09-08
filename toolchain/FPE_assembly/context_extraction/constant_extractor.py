@@ -16,7 +16,7 @@ class extractor(ParseTreeListener):
 
 
 	def enterState_constant(this, ctx):
-		const_name = asm_utils.token_to_text(ctx.ident_dec())
+		const_name = asm_utils.token_to_text(ctx.ident_dec().IDENTIFER())
 
 		assert(const_name not in this.program_context["constants"].keys())
 		this.program_context["constants"][const_name] = asm_utils.evaluate_expr(ctx.expr(), this.program_context)
