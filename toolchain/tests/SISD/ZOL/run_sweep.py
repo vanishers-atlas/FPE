@@ -21,6 +21,7 @@ else:
 test_sets = [
     ripple,
     cascade,
+    counter
 ]
 
 

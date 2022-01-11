@@ -40,14 +40,15 @@ def preprocess_config(config_in):
         }
         config_out["iterations"] = 32*config_out["tracker_ripples"]
     elif config_in["tracker_type"] == "cascade":
-        config_out["tracker_cascades"] = math.ceil(math.log(config_in["iterations"], 32))
+        config_out["tracker_cascades"] = max(1, math.ceil(math.log(config_in["iterations"], 32)))
+
         config_out["iterations_encoding"] = {
             "type"  : "unsigned",
             "width" : 5*config_out["tracker_cascades"]
         }
         config_out["iterations"] = 32**(config_out["tracker_cascades"]) - 1
     elif config_in["tracker_type"] == "counter":
-        config_out["tracker_bits"] = math.ceil(math.log(config_in["iterations"], 2))
+        config_out["tracker_bits"] = max(1, math.ceil(math.log(config_in["iterations"], 2)))
         config_out["iterations_encoding"] = {
             "type"  : "unsigned",
             "width" : config_out["tracker_bits"]

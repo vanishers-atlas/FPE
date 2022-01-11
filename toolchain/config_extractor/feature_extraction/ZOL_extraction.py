@@ -50,12 +50,12 @@ class extractor(ParseTreeListener):
                     "iterations"  : interations,
                     "seekable"     : False,
                 }
-        elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "interationser":
+        elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "counter":
             this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
-                "tracker_type" : "interationser",
+                "tracker_type" : "counter",
                 "iterations"   : interations,
                 "seekable"     : False,
-                "dynamic"      : False,
+                "settable"     : False,
             }
 
         # unknown type scheme

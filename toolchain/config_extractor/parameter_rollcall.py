@@ -186,4 +186,5 @@ class extractor(ParseTreeListener):
     #################################################################################
 
     def enterState_zol(this, ctx):
-        this.para_file["program_flow"]["bound_ZOL_tracker_type"] = "dynamic"
+        this.para_file["program_flow"]["bound_ZOL_tracker_type"] = None
+        this.para_file["program_flow"]["pune_single_iteration_bound_ZOLs"] = None

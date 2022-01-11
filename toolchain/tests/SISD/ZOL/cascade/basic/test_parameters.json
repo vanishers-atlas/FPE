@@ -6,7 +6,7 @@
     },
 
     "program_flow": {
-        "bound_ZOL_tracker_type"  : "counter",
+        "bound_ZOL_tracker_type"  : "cascade",
         "pune_single_iteration_bound_ZOLs" : "false",
         "ZOLs": { }
     },

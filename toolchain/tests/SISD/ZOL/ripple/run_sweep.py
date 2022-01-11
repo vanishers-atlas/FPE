@@ -8,10 +8,23 @@ if __name__ == "__main__":
 import os
 from FPE.toolchain.tests import utils
 
-def run_sweep(path="."):
-    test_name = __file__.split("\\")[-2]
+if __name__ == "__main__":
+    import basic
+    import single_iteration_retain
+else:
+    from . import basic
+    from . import single_iteration_retain
 
-    return utils.run_sweep_leaf(path, test_name)
+
+test_sets = [
+    basic,
+    single_iteration_retain,
+]
+
+
+def run_sweep(path="."):
+
+    return utils.run_sweep_branch(__file__.split("\\")[-2], path, test_sets)
 
 if __name__ == "__main__":
-    exit(run_sweep())
+    exit( run_sweep() )
