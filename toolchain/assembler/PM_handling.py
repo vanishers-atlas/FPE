@@ -58,7 +58,6 @@ class handler(ParseTreeListener):
         values = this.program_context["loop_labels"][asm_utils.token_to_text(ctx.loop_label.IDENTIFER())]
         start_imm_addr = this.program_context["IMM_addr_map"][values["start"]]
         end_imm_addr   = this.program_context["IMM_addr_map"][values["end"]]
-        print(asm_utils.token_to_text(ctx.loop_label.IDENTIFER()), values, start_imm_addr, end_imm_addr)
         this.addresses.append(start_imm_addr)
         this.addresses.append(end_imm_addr)
 

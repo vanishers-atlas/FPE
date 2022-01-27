@@ -11,11 +11,13 @@
         },
         "ROM_A": {
             "data_width": 4,
-            "depth": 16
+            "depth": 16,
+            "type": "DIST"
         },
         "ROM_B": {
             "data_width": 3,
-            "depth": 8
+            "depth": 8,
+            "type": "DIST"
         }
     },
     "execute_units": {

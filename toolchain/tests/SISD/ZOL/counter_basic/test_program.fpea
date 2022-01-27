@@ -20,14 +20,14 @@
   ZOL (30)
   {
     MOV (0b0100, PUT[0]);
-    MOV (0b0110, PUT[0]);
+    MOV (0b0101, PUT[0]);
   }
   NOP;
   NOP;
 
   ZOL (60)
   {
-    MOV (0b0101, PUT[0]);
+    MOV (0b0110, PUT[0]);
     MOV (0b0111, PUT[0]);
   }
 
@@ -57,14 +57,14 @@
     ZOL (30)
     {
       MOV (0b1100, PUT[0]);
-      MOV (0b1110, PUT[0]);
+      MOV (0b1101, PUT[0]);
     }
     NOP;
     NOP;
 
     ZOL (60)
     {
-      MOV (0b1101, PUT[0]);
+      MOV (0b1110, PUT[0]);
       MOV (0b1111, PUT[0]);
     }
     NOP;

@@ -62,7 +62,7 @@ def handle_parameter_file(parameter_file, pare_from_file):
     except FileNotFoundError:
         # Create blank parameter file
         with open("required_parameters.json", "w") as f:
-            f.write(json.dumps(required_parameters, sort_keys=True, indent=4))
+            f.write(json.dumps(pare_from_file, sort_keys=True, indent=4))
         raise ValueError("No parameter file given, a blank one was created, please replace the nulls")
 
     # Generate config from from parameter file

@@ -8,16 +8,16 @@ if __name__ == "__main__":
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import SIGNED
     import UNSIGNED
+    import SIGNED
 else:
-    from . import SIGNED
     from . import UNSIGNED
+    from . import SIGNED
 
 
 test_sets = [
+    UNSIGNED,
     SIGNED,
-    UNSIGNED
 ]
 
 

@@ -2,13 +2,7 @@ from FPE.toolchain.HDL_generation.utils import indented_string as inStr
 
 import json, zlib
 
-def handle_module_name(module_name, config, name_append_hash):
-    if name_append_hash:
-        return "%s_%s"%(module_name, str(hex(zlib.adler32(json.dumps(config, sort_keys=True).encode('utf-8'))).lstrip("0x").zfill(8)))
-    else:
-        return module_name
 
-###################################################################
 class FilesInvalid (Exception):
     pass
 
@@ -54,16 +48,41 @@ def generate_files(output_path, module_name, imports, arch_head, arch_body, inte
     # Handle generics
     if len(interface["generics"]) != 0:
         text += "generic (\n\>"
-        for generic in interface["generics"]:
-            text += "%s : %s;\n"%(generic["name"], generic["type"])
+
+        # Handle old list style generics
+        if type(interface["generics"]) == list:
+            for generic in interface["generics"]:
+                try:
+                    text += "%s : %s(%i downto 0);\n"%(generic["name"], generic["type"], generic["width"] - 1, )
+                except Exception as e:
+                    text += "%s : %s;\n"%(generic["name"], generic["type"], )
+        # Handle new dict style generics
+        if type(interface["generics"]) == dict:
+            for generic, details in interface["generics"].items():
+                try:
+                    text += "%s : %s(%i downto 0);\n"%(generic, details["type"], details["width"] - 1, )
+                except Exception as e:
+                    text += "%s : %s;\n"%(generic, details["type"], )
         text.drop_last_X(2)
         text += "\n\<);\n"
 
     # Handle ports
     if len(interface["ports"]) != 0:
         text += "port (\n\>"
-        for port in interface["ports"]:
-            text += "%s : %s %s;\n"%(port["name"], port["direction"], port["type"])
+        # Handle old list style ports
+        if type(interface["ports"]) == list:
+            for port in interface["ports"]:
+                try:
+                    text += "%s : %s %s(%i downto 0);\n"%(port["name"], port["direction"], port["type"], port["width"] - 1, )
+                except Exception as e:
+                    text += "%s : %s %s;\n"%(port["name"], port["direction"], port["type"], )
+        # Handle new dict style ports
+        if type(interface["ports"]) == dict:
+            for port, details in interface["ports"].items():
+                try:
+                    text += "%s : %s %s(%i downto 0);\n"%(port, details["direction"], details["type"], details["width"] - 1, )
+                except Exception as e:
+                    text += "%s : %s %s;\n"%(port, details["direction"], details["type"], )
         text.drop_last_X(2)
         text += "\n\<);"
 

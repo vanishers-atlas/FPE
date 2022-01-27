@@ -10,9 +10,9 @@ from FPE.toolchain.HDL_generation import utils  as gen_utils
 
 class handler(ParseTreeListener):
 
-    def __init__(this, program_context, iterations_encodings):
+    def __init__(this, program_context, overwrites_encoding):
         this.program_context = program_context
-        this.iterations_encodings = iterations_encodings
+        this.overwrites_encoding = overwrites_encoding
 
         this.PC = 0
         this.ZOL_id = 0
@@ -39,20 +39,20 @@ class handler(ParseTreeListener):
             overwrites = 1
 
         # Work out encoded value of overwrite based of ZOL type
-        if this.iterations_encodings[ZOL_name]["type"] == "biased_tally":
-            overwrites_encoded = '"' + tc_utils.biased_tally.encode(
+        if this.overwrites_encoding[ZOL_name]["type"] == "biased_tally":
+            overwrites_encoded = tc_utils.biased_tally.encode(
                 overwrites,
-                this.iterations_encodings[ZOL_name]["tallies"],
-                this.iterations_encodings[ZOL_name]["bias"],
-                this.iterations_encodings[ZOL_name]["range"]
-            ) + '"'
-        elif this.iterations_encodings[ZOL_name]["type"] == "unsigned":
-            overwrites_encoded = '"' + tc_utils.unsigned.encode(
+                this.overwrites_encoding[ZOL_name]["tallies"],
+                this.overwrites_encoding[ZOL_name]["bias"],
+                this.overwrites_encoding[ZOL_name]["range"]
+            )
+        elif this.overwrites_encoding[ZOL_name]["type"] == "unsigned":
+            overwrites_encoded = tc_utils.unsigned.encode(
                 overwrites,
-                this.iterations_encodings[ZOL_name]["width"]
-            ) + '"'
+                this.overwrites_encoding[ZOL_name]["width"]
+            )
         else:
-            raise ValueError("unknown encoding type, " + this.iterations_encodings[ZOL_name]["type"])
+            raise ValueError("unknown encoding type, " + this.overwrites_encoding[ZOL_name]["type"])
 
         # Handle specail case of a single iteretion
         # marking the PC overwrite value to be set to the instruction just after the loop
@@ -60,9 +60,9 @@ class handler(ParseTreeListener):
             this.unfinished_ZOLs.append((
                 ZOL_name,
                 {
-                    "start" : None,
-                    "end"   : None,
-                    "iterations" : overwrites_encoded,
+                    "overwrite_value" : None,
+                    "check_value"   : None,
+                    "overwrites" : overwrites_encoded,
                 },
             ))
         # Handle general case
@@ -71,9 +71,9 @@ class handler(ParseTreeListener):
             this.unfinished_ZOLs.append((
                 ZOL_name,
                 {
-                    "start" : this.PC,
-                    "end"   : None,
-                    "iterations" : overwrites_encoded,
+                    "overwrite_value" : this.PC,
+                    "check_value"   : None,
+                    "overwrites" : overwrites_encoded,
                 },
             ))
 
@@ -81,12 +81,12 @@ class handler(ParseTreeListener):
         ZOL_name, ZOL_details = this.unfinished_ZOLs.pop()
 
         # Set marked PC overwrite values to the current PC, ie the first instruction after the loop
-        if ZOL_details["start"] == None:
-            ZOL_details["start"] = this.PC
+        if ZOL_details["overwrite_value"] == None:
+            ZOL_details["overwrite_value"] = this.PC
 
         # Set the end value to the loop, to PC - 1, ie the last instruction in the loop
         # - 1 as this.PC is incremented on entering an operation
-        ZOL_details["end"] = this.PC - 1
+        ZOL_details["check_value"] = this.PC - 1
 
         this.finished_ZOLs[ZOL_name] = ZOL_details
 

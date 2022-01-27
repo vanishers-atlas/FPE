@@ -5,11 +5,12 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import itertools as it
+import copy
+
 from FPE.toolchain import utils as tc_utils
-
-from FPE.toolchain.HDL_generation  import utils as gen_utils
-
 from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.processor import alu_dsp48e1 as ALU
 from FPE.toolchain.HDL_generation.processor import comm_get as GET
@@ -22,10 +23,8 @@ from FPE.toolchain.HDL_generation.processor import instruction_decoder as ID
 from FPE.toolchain.HDL_generation.processor import program_counter as PC
 from FPE.toolchain.HDL_generation.processor import zero_overhead_loop as ZOL
 
-from FPE.toolchain.HDL_generation.basic import delay, mux, dist_ROM
-
-import itertools as it
-import copy
+from FPE.toolchain.HDL_generation.basic import delay
+from FPE.toolchain.HDL_generation.basic import mux
 
 #####################################################################
 
@@ -103,7 +102,6 @@ def precheck_config(config_in):
         assert(config_in["execute_units"][exe]["data_width"] > 0)
 
     return config_out
-
 
 #####################################################################
 
@@ -315,6 +313,7 @@ def preprocess_exe_output_datapath(config, exe):
 
     return output_datapaths
 
+
 #####################################################################
 
 def preprocess_config(config_in):
@@ -470,8 +469,8 @@ def preprocess_config(config_in):
 
     return config_out
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
 
         generated_name = ""
 
@@ -483,14 +482,22 @@ def handle_module_name(module_name, config, generate_name):
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-existing file if allowed and can
@@ -498,13 +505,18 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
     except gen_utils.FilesInvalid:
         # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+        global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
         # Init generation and return varables
         IMPORTS   = []
+        DATAPATHS = gen_utils.init_datapaths()
+        CONTROLS = gen_utils.init_controls()
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        INTERFACE = {
+            "ports" : { },
+            "generics" : { },
+        }
 
         # Include extremely commom libs
         IMPORTS += [
@@ -520,7 +532,8 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         gen_execute_units()
         gen_data_memories()
         gen_addr_sources()
-        gen_program_fetch()
+        gen_predecode_pipeline()
+        gen_datapath_muxes()
         gen_instr_decoder()
         gen_running_delays()
 
@@ -532,140 +545,95 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 #####################################################################
 
 def gen_non_pipelined_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
     # Create global clock
-    INTERFACE["ports"] += [
-        {
-            "name" : "clock",
-            "type" : "std_logic",
-            "direction" : "in"
-        }
-    ]
+    INTERFACE["ports"]["clock"] = {
+        "direction" : "in",
+        "type" : "std_logic",
+    }
 
     # Create and pull down stall signal
     if CONFIG["program_flow"]["stallable"]:
         ARCH_HEAD += "signal stall : std_logic;\n"
 
-
 #####################################################################
-
-def mux_signals(lane, dst_sig, dst_width, srcs, signal_padding):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    # Handle case of only 1 source, ie an unmuxed connection
-    if len(srcs) == 1:
-        ARCH_BODY += "%s <= %s;\n"%(
-            dst_sig,
-            gen_utils.connect_signals(
-                srcs[0]["signal"],
-                srcs[0]["width"],
-                dst_width,
-                signal_padding
-            )
-        )
-    # Handle case of multiple sources, ie a muxed connection
-    else:
-        # Determine mux sel port width
-        # - 1 to go from number of inputs to largest sel value
-        sel_width = tc_utils.unsigned.width(len(srcs) - 1)
-        sel_sig = dst_sig + "_sel"
-        ARCH_HEAD += "signal %s : std_logic_vector(%i downto 0);\n"%(sel_sig, sel_width - 1)
-
-        # Imply mux via VHDL condissional assignment of input signal
-        ARCH_BODY += "%s <=\>"%(dst_sig, )
-        for sel_val, src in enumerate( sorted( srcs, key=lambda d : d["signal"] ) ):
-            ARCH_BODY += "%s when %s = \"%s\"\nelse "%(
-                gen_utils.connect_signals(lane + src["signal"], src["width"], dst_width, signal_padding),
-                sel_sig,
-                tc_utils.unsigned.encode(sel_val, sel_width),
-            )
-        ARCH_BODY += "(others => 'U');\<\n"
-
-#####################################################################
-
-exe_predeclared_ports = {
-    "clock" : "clock" ,
-    "stall" : "stall"
-}
 
 exe_lib_lookup = {
     "ALU" : ALU,
 }
 
+exe_predeclared_ports = {
+    "clock" : "clock",
+    "stall" : "stall",
+}
+
 def gen_execute_units():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Exe components\n"
-
-    CONFIG["exe_stages"] = 0
 
     # Loinstr over all exe components
     for exe, config in CONFIG["execute_units"].items():
 
-        # Generate exe code
-        interface, name = exe_lib_lookup[exe].generate_HDL(
-            {
-                **config,
-                "inputs" : len(config["inputs"]),
-                "outputs" : len(config["outputs"]),
-                "oper_set" : config["oper_set"],
-                "stallable" : CONFIG["program_flow"]["stallable"],
-            },
-            OUTPUT_PATH,
-            exe,
-            True,
-            FORCE_GENERATION
-        )
-
-        # Store exe details
-        config["controls"] = copy.deepcopy(interface["controls"])
-
         # instantiate exe for each lane
         for lane in CONFIG["SIMD"]["lanes_names"]:
             inst = lane + exe
+
+            # Generate exe code
+            if CONCAT_NAMING:
+                module_name = MODULE_NAME + "_" + lane + exe
+            else:
+                module_name = None
+
+            config = exe_lib_lookup[exe].add_inst_config(
+                inst,
+                CONFIG["instr_set"],
+                {
+                    **config,
+                    "signal_padding" : CONFIG["signal_padding"],
+                    "stallable" : CONFIG["program_flow"]["stallable"],
+                }
+            )
+            interface, name = exe_lib_lookup[exe].generate_HDL(
+                config,
+                OUTPUT_PATH,
+                module_name=module_name,
+                concat_naming=CONCAT_NAMING,
+                force_generation=FORCE_GENERATION
+            )
+
+            # OLd way of handling controls, remove once ALU updated to new way
+            CONFIG["execute_units"][exe]["controls"] = copy.deepcopy(interface["controls"])
 
             ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, name)
 
             ARCH_BODY += "port map (\>\n"
 
             # Handle predeclared ports
-            for port in sorted(
-                [
-                    port
-                    for port in interface["ports"]
-                    if port["name"] in exe_predeclared_ports.keys()
-                ],
-                key=lambda d : d["name"]
-            ):
-                ARCH_BODY += "%s => %s,\n"%(port["name"], exe_predeclared_ports[port["name"]])
-
+            for port, signal in exe_predeclared_ports.items():
+                if port in interface["ports"]:
+                    ARCH_BODY += "%s => %s,\n"%(port, signal, )
 
             # Handle non-predeclared ports
-            for port in sorted(
-                [
-                    port
-                    for port in interface["ports"]
-                    if port["name"] not in exe_predeclared_ports.keys()
-                ],
-                key=lambda d : d["name"]
-            ):
-                ARCH_HEAD += "signal %s_%s : %s;\n"%(inst, port["name"], port["type"])
-                ARCH_BODY += "%s => %s_%s,\n"%(port["name"], inst, port["name"])
+            for port in sorted(interface["ports"].keys()):
+                if port not in exe_predeclared_ports.keys():
+                    detail = interface["ports"][port]
+                    try:
+                        ARCH_HEAD += "signal %s_%s : %s(%i downto 0);\n"%(inst, port, detail["type"], detail["width"] -1, )
+                    except KeyError:
+                        ARCH_HEAD += "signal %s_%s : %s;\n"%(inst, port, detail["type"])
+                    ARCH_BODY += "%s => %s_%s,\n"%(port, inst, port)
 
             ARCH_BODY.drop_last_X(2)
             ARCH_BODY += "\<\n);\n"
             ARCH_BODY += "\<\n"
 
-        # Create input port muxes
-        for input, channels in enumerate(config["inputs"]):
-            for word, srcs  in enumerate(channels["data"]):
-                assert(word == 0)
-                dst_sig = "%s%s_in_%i"%(lane, exe, input, )
-                mux_signals(lane, dst_sig, config["data_width"], srcs, CONFIG["signal_padding"])
+            # Handle pathways and controls
+            DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, exe_lib_lookup[exe].get_inst_pathways(exe, inst + "_", CONFIG["instr_set"], interface, config, lane) )
+            CONTROLS = gen_utils.merge_controls( CONTROLS, exe_lib_lookup[exe].get_inst_controls(exe, inst + "_", CONFIG["instr_set"], interface, config) )
 
 
 #####################################################################
@@ -699,134 +667,92 @@ mem_predeclared_ports_per_mem = {
     "ROM_B" : { },
 }
 
-def inst_data_memory(lane, mem, config, comp, interface):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    inst = lane + mem
-
-    # instantiate memory
-    ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, comp)
-
-    if len(interface["generics"]) != 0:
-        ARCH_BODY += "generic map (\>\n"
-
-        for generic in sorted(interface["generics"]):
-            INTERFACE["generics"] += [
-                {
-                    "name" : inst + "_" + generic["name"],
-                    "type" : generic["type"]
-                }
-            ]
-            ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], inst, generic["name"])
-
-        ARCH_BODY.drop_last_X(2)
-        ARCH_BODY += "\<\n)\n"
-
-    ARCH_BODY += "port map (\>\n"
-
-    # Handle predeclared common to all mems ports
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if port["name"] in mem_predeclared_ports_all_mems.keys()
-        ],
-        key=lambda d : d["name"]
-    ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports_all_mems[port["name"]])
-
-    # Handle predeclared for spific mem ports
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if port["name"] in mem_predeclared_ports_per_mem[mem].keys()
-        ],
-        key=lambda d : d["name"]
-    ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], mem_predeclared_ports_per_mem[mem][port["name"]])
-
-    # Handle non-predeclared ports
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if port["name"] not in mem_predeclared_ports_all_mems.keys() and port["name"] not in mem_predeclared_ports_per_mem[mem].keys()
-        ],
-        key=lambda d : d["name"]
-    ):
-        if port["name"].startswith("FIFO_"):
-            # Handle rippliing FIFO ports to tinstr level:
-            INTERFACE["ports"] += [
-                {
-                    "name" : inst + "_" + port["name"],
-                    "type" : port["type"],
-                    "direction" : port["direction"]
-                }
-            ]
-        else:
-            # handle ports useding internal to FPE
-            ARCH_HEAD += "signal %s_%s : %s;\n"%(inst, port["name"], port["type"])
-        # Connect prt
-        ARCH_BODY += "%s => %s_%s,\n"%(port["name"], inst, port["name"])
-
-    ARCH_BODY.drop_last_X(2)
-    ARCH_BODY += "\<\n);\n"
-
-    ARCH_BODY += "\<\n"
-    # Create read addr port muxes
-    for read, signals in enumerate(config["reads"]):
-        # Handle Addr signals
-        dst_sig = inst + "_read_%i_addr"%(read,)
-        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], "unsigned")
-
-    # Create write port muxes
-    for write, signals in enumerate(config["writes"]):
-        # Handle Addr signals
-        dst_sig = inst + "_write_%i_addr"%(write,)
-        mux_signals(lane, dst_sig, config["addr_width"], signals["addr"], "unsigned")
-
-        # Data port
-        for word, details in enumerate(signals["data"]):
-            assert(word == 0)
-            dst_sig = inst + "_write_%i_data"%(write, )
-            mux_signals(lane, dst_sig, config["data_width"], details, CONFIG["signal_padding"])
 
 def gen_data_memories():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Memories components\n"
     # loinstr over all data memories
     for mem, config in CONFIG["data_memories"].items():
+        for lane in CONFIG["SIMD"]["lanes_names"]:
+            # Generate memory code
+            if CONCAT_NAMING:
+                module_name = MODULE_NAME + "_" + lane + mem
+            else:
+                module_name = None
 
-        # Generate memory code
-        interface, name = mem_lib_lookup[mem].generate_HDL(
-            {
-                **config,
-                "reads" : len(config["reads"]),
-                "writes" : len(config["writes"]),
-                "stallable" : CONFIG["program_flow"]["stallable"],
-            },
-            OUTPUT_PATH,
-            mem,
-            True,
-            FORCE_GENERATION
-        )
+            inst = lane + mem
 
-        # Handle shared (across lanes) memories
-        if mem in ["IMM"]:
-            inst_data_memory("", mem, config, name, interface)
+            config = mem_lib_lookup[mem].add_inst_config(
+                mem,
+                CONFIG["instr_set"],
+                {
+                    **config,
+                    "signal_padding" : CONFIG["signal_padding"],
+                    "stallable" : CONFIG["program_flow"]["stallable"],
+                }
+            )
+            sub_interface, sub_name = mem_lib_lookup[mem].generate_HDL(
+                config,
+                OUTPUT_PATH,
+                module_name=module_name,
+                concat_naming=CONCAT_NAMING,
+                force_generation=FORCE_GENERATION
+            )
 
-            # Fan read data signals to each lane
-            if len(CONFIG["SIMD"]["lanes_names"]) < 1:
-                raise NotImplementedError()
-        # Handle private (to each lane) memories
-        else:
-            # Repeat instantiation for each lane
-            for lane in CONFIG["SIMD"]["lanes_names"]:
-                inst_data_memory(lane, mem, config, name, interface)
+            # instantiate memory
+            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, sub_name)
+
+            if len(sub_interface["generics"]) != 0:
+                ARCH_BODY += "generic map (\>\n"
+
+                for generic in sorted(sub_interface["generics"]):
+                    details = sub_interface["generics"][generic]
+                    INTERFACE["generics"][inst + "_" + generic] = {
+                        "type" : details["type"]
+                    }
+                    ARCH_BODY += "%s => %s_%s,\n"%(generic, inst, generic)
+
+                ARCH_BODY.drop_last_X(2)
+                ARCH_BODY += "\<\n)\n"
+
+            ARCH_BODY += "port map (\>\n"
+
+            # Handle predeclared common to all mems ports
+            for port, signal in mem_predeclared_ports_all_mems.items():
+                if port in sub_interface["ports"]:
+                    ARCH_BODY += "%s => %s,\n"%(port, signal, )
+
+            # Handle predeclared for spific mem ports
+            for port, signal in mem_predeclared_ports_per_mem[mem].items():
+                if port in sub_interface["ports"]:
+                    ARCH_BODY += "%s => %s,\n"%(port, signal, )
+
+            # Handle non-predeclared ports
+            for port in sorted(sub_interface["ports"].keys()):
+                if port not in mem_predeclared_ports_all_mems.keys() and port not in mem_predeclared_ports_per_mem[mem].keys():
+                    detail = sub_interface["ports"][port]
+                    if port.startswith("FIFO_"):
+                        # Handle rippliing FIFO ports:
+                        INTERFACE["ports"][inst + "_" + port] = detail
+                    else:
+                        # handle ports useding internal to FPE
+                        try:
+                            ARCH_HEAD += "signal %s_%s : %s(%i downto 0);\n"%(inst, port, detail["type"], detail["width"] - 1, )
+                        except KeyError:
+                            ARCH_HEAD += "signal %s_%s : %s;\n"%(inst, port, detail["type"])
+                    # Connect prt
+                    ARCH_BODY += "%s => %s_%s,\n"%(port, inst, port)
+
+            ARCH_BODY.drop_last_X(2)
+            ARCH_BODY += "\<\n);\n"
+
+            ARCH_BODY += "\<\n"
+
+            # Handle pathways and controls
+            DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, mem_lib_lookup[mem].get_inst_pathways(mem, inst + "_", CONFIG["instr_set"], sub_interface, config, lane))
+            CONTROLS = gen_utils.merge_controls( CONTROLS, mem_lib_lookup[mem].get_inst_controls(mem, inst + "_", CONFIG["instr_set"], sub_interface, config) )
 
 #####################################################################
 
@@ -836,102 +762,123 @@ addr_sources_predeclared_ports = {
 }
 
 def gen_addr_sources():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
+
+    # Declare data paths for ID addrs
+    # needs to happen before ID is generated so ID can be passed the mux controls
+    for instr in CONFIG["instr_set"]:
+        ID_addr = 0
+        for read, access in enumerate(asm_utils.instr_srcs(instr)):
+            if asm_utils.addr_com(asm_utils.access_addr(access)) == "ID":
+                for lane in CONFIG["SIMD"]["lanes_names"]:
+                    gen_utils.add_datapath(DATAPATHS, "%sfetch_addr_%i"%(lane, read), "fetch", True, instr, "ID_addr_%i_fetch"%(ID_addr, ), "unsigned",  CONFIG["instr_decoder"]["addr_widths"][ID_addr])
+                ID_addr += 1
+
+        for write, access in enumerate(asm_utils.instr_dests(instr)):
+            if asm_utils.addr_com(asm_utils.access_addr(access)) == "ID":
+                for lane in CONFIG["SIMD"]["lanes_names"]:
+                    gen_utils.add_datapath(DATAPATHS, "%sstore_addr_%i"%(lane, write), "store", True, instr, "ID_addr_%i_store"%(ID_addr, ), "unsigned",  CONFIG["instr_decoder"]["addr_widths"][ID_addr])
+                ID_addr += 1
 
     ARCH_BODY += "\n-- Address components\n"
     for bam, config in CONFIG["address_sources"].items():
-        interface, name = BAM.generate_HDL(
-            {
-                **config,
-                "inputs" : [len(words) for words in config["inputs"]],
-                "stallable" : CONFIG["program_flow"]["stallable"],
-            },
-            OUTPUT_PATH,
-            "BAM",
-            True,
-            FORCE_GENERATION
-        )
+        for lane in CONFIG["SIMD"]["lanes_names"]:
+            inst = lane + bam
 
-        ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(bam, name)
+            if CONCAT_NAMING:
+                module_name = MODULE_NAME + "_" + lane + bam
+            else:
+                module_name = None
+            config = BAM.add_inst_config(
+                bam,
+                CONFIG["instr_set"],
+                {
+                    **config,
+                    "signal_padding" : CONFIG["signal_padding"],
+                    "stallable" : CONFIG["program_flow"]["stallable"],
+                }
+            )
+            interface, name = BAM.generate_HDL(
+                config,
+                OUTPUT_PATH,
+                module_name=module_name,
+                concat_naming=CONCAT_NAMING,
+                force_generation=FORCE_GENERATION
+            )
 
-        if len(interface["generics"]) != 0:
-            ARCH_BODY += "generic map (\>\n"
 
-            for generic in sorted(interface["generics"], key=lambda p : p["name"]):
-                INTERFACE["generics"] += [
-                    {
-                        "name" : bam + "_" + generic["name"],
-                        "type" : generic["type"]
-                    }
-                ]
-                ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], bam, generic["name"])
+            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, name)
+
+            if len(interface["generics"]) != 0:
+                ARCH_BODY += "generic map (\>\n"
+
+                for generic in sorted(interface["generics"]):
+                    details = interface["generics"][generic]
+                    INTERFACE["generics"][bam + "_" + generic] = details
+                    ARCH_BODY += "%s => %s_%s,\n"%(generic, bam, generic)
+
+                ARCH_BODY.drop_last_X(2)
+                ARCH_BODY += "\<\n)\n"
+
+            ARCH_BODY += "port map (\>\n"
+
+            # Handle predeclared ports
+            for port, signal in addr_sources_predeclared_ports.items():
+                if port in interface["ports"].keys():
+                    ARCH_BODY += "%s => %s,\n"%(port, signal)
+
+            # Handle non predeclared ports
+            for port in sorted(interface["ports"].keys()):
+                if port not in addr_sources_predeclared_ports.keys():
+                    details = interface["ports"][port]
+                    try:
+                        ARCH_HEAD += "signal %s_%s : %s(%i downto 0);\n"%(bam, port, details["type"], details["width"] - 1, )
+                    except KeyError:
+                        ARCH_HEAD += "signal %s_%s : %s;\n"%(bam, port, details["type"], )
+
+                    ARCH_BODY += "%s => %s_%s,\n"%(port, bam, port, )
 
             ARCH_BODY.drop_last_X(2)
-            ARCH_BODY += "\<\n)\n"
+            ARCH_BODY += "\<\n);\n"
 
-        ARCH_BODY += "port map (\>\n"
+            ARCH_BODY += "\<\n"
 
-        # Handle predeclared ports
-        for port in sorted(
-            [
-                port for port in interface["ports"]
-                if port["name"] in addr_sources_predeclared_ports.keys()
-            ],
-            key=lambda p : p["name"]
-        ):
-            ARCH_BODY += "%s => %s,\n"%(port["name"], addr_sources_predeclared_ports[port["name"]])
-
-        # Handle non predeclared ports
-        for port in sorted(
-            [
-                port for port in interface["ports"]
-                if port["name"] not in addr_sources_predeclared_ports.keys()
-            ],
-            key=lambda p : p["name"]
-        ):
-            ARCH_HEAD += "signal %s_%s : %s;\n"%(bam, port["name"], port["type"])
-            ARCH_BODY += "%s => %s_%s,\n"%(port["name"], bam, port["name"])
-
-        ARCH_BODY.drop_last_X(2)
-        ARCH_BODY += "\<\n);\n"
-
-        ARCH_BODY += "\<\n"
+            # Handle pathways and controls
+            DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, BAM.get_inst_pathways(bam, inst + "_", CONFIG["instr_set"], interface, config, lane) )
+            CONTROLS = gen_utils.merge_controls( CONTROLS, BAM.get_inst_controls(bam, inst + "_", CONFIG["instr_set"], interface, config) )
 
 
-        # Create input port muxes
-        for input, channels in enumerate(config["inputs"]):
-            for word, srcs  in enumerate(channels["data"]):
-                assert(word == 0)
-                dst_sig = "%s_in_%i"%(bam, input, )
-                # Only use lane 0 as BAM as shared across lanes
-                mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, config["step_width"], srcs, "unsigned")
 
 #####################################################################
 
-def gen_program_fetch():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+def gen_predecode_pipeline():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- Program fetch components\n"
 
     gen_program_counter()
-    if len( CONFIG["program_flow"]["ZOLs"]) != 0:
-        gen_zero_overhead_loop()
+    gen_zero_overhead_loops()
     gen_program_memory()
 
 PC_predeclared_ports = {
     "clock" : "clock",
     "kickoff" : "kickoff",
-    "ZOL_value" : "ZOL_value",
-    "ZOL_overwrite" : "ZOL_overwrite",
+    "ZOL_value" : "overwrite_PC_value_bus",
+    "ZOL_overwrite" : "overwrite_PC_enable_bus",
     "stall" : "stall",
     "running" : "running_PC",
 }
 
 def gen_program_counter():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
+
+    if CONCAT_NAMING:
+        module_name = MODULE_NAME + "_PC"
+    else:
+        module_name = None
 
     interface, name = PC.generate_HDL(
         {
@@ -942,13 +889,27 @@ def gen_program_counter():
                 if "statuses" in config and len(config["statuses"]) != 0
             },
             "inputs" : [len(words) for words in CONFIG["program_flow"]["inputs"]],
+            "signal_padding" : CONFIG["signal_padding"],
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
-        MODULE_NAME + "_PC",
-        True,
-        FORCE_GENERATION
+        module_name=module_name,
+        concat_naming=CONCAT_NAMING,
+        force_generation=FORCE_GENERATION
     )
+
+    # Work around for old list versions of interface
+    if type(interface["ports"]) == list:
+        interface["ports"] = {
+            port["name"] : port
+            for port in interface["ports"]
+        }
+    if type(interface["generics"]) == list:
+        interface["generics"] = {
+            generic["name"] : generic
+            for generic in interface["generics"]
+        }
+
 
     CONFIG["program_flow"]["PC_width"] = interface["PC_width"]
 
@@ -957,9 +918,10 @@ def gen_program_counter():
     if len(interface["generics"]) != 0:
         ARCH_BODY += "generic map (\>\n"
 
-        for generic in sorted(interface["generics"], key=lambda p : p["name"]):
-            INTERFACE["generics"] += [ { "name" : "PC_" + generic["name"], "type" : generic["type"] } ]
-            ARCH_BODY += "%s => PC_%s,\n"%(generic["name"], generic["name"])
+        for generic in sorted(interface["generics"].keys()):
+            details = interface["generics"][generic]
+            INTERFACE["generics"]["PC_" + generic] = details
+            ARCH_BODY += "%s => PC_%s,\n"%(generic, generic)
 
         ARCH_BODY.drop_last_X(2)
         ARCH_BODY += "\<\n)\n"
@@ -967,21 +929,16 @@ def gen_program_counter():
     ARCH_BODY += "port map (\>\n"
 
     # Handle predeclared ports
-    for port in [
-        port
-        for port in interface["ports"]
-        if port["name"] in PC_predeclared_ports.keys()
-    ]:
-        ARCH_BODY += "%s => %s,\n"%(port["name"], PC_predeclared_ports[port["name"]])
+    for port, signal in PC_predeclared_ports.items():
+        if port in interface["ports"]:
+            ARCH_BODY += "%s => %s,\n"%(port, signal)
 
     # Handle non predeclared ports
-    for port in [
-        port
-        for port in interface["ports"]
-        if port["name"] not in PC_predeclared_ports.keys()
-    ]:
-        ARCH_HEAD += "signal PC_%s : %s;\n"%(port["name"], port["type"])
-        ARCH_BODY += "%s => PC_%s,\n"%(port["name"], port["name"])
+    for port in interface["ports"]:
+        if port not in PC_predeclared_ports.keys():
+            details = interface["ports"][port]
+            ARCH_HEAD += "signal PC_%s : %s;\n"%(port, details["type"])
+            ARCH_BODY += "%s => PC_%s,\n"%(port, port)
 
     ARCH_BODY.drop_last_X(2)
     ARCH_BODY += "\<\n);\n"
@@ -989,115 +946,118 @@ def gen_program_counter():
     ARCH_BODY += "\<\n\n"
 
     # Handle kickoff input
-    INTERFACE["ports"] += [
-        {
-            "name" : "kickoff",
-            "type" : "std_logic",
-            "direction" : "in"
-        }
-    ]
-
-    # Create input port muxes
-    for input, channels in enumerate(CONFIG["program_flow"]["inputs"]):
-        for word, srcs  in enumerate(channels["data"]):
-            assert(word == 0)
-            dst_sig = "%s_in_%i"%("PC", input, )
-            mux_signals(CONFIG["SIMD"]["lanes_names"][0], dst_sig, CONFIG["program_flow"]["PC_width"], srcs, "unsigned")
+    INTERFACE["ports"]["kickoff"] = {
+        "type" : "std_logic",
+        "direction" : "in"
+    }
 
     # Handle jump status ports
-    for port in [port for port in interface["ports"] if "_status_" in port["name"] ]:
-        ARCH_BODY += "PC_%s <= %s;\n"%(port["name"], port["name"])
+    for port in interface["ports"]:
+        if "_status_" in port:
+            ARCH_BODY += "PC_%s <= %s;\n"%(port, port)
 
+# Key is port name, value signal name
 ZOL_predeclared_ports = {
     "clock" : "clock",
-    "PC_running" : "running_PC",
+    "stall" : "stall",
     "PC_value" : "PC_value",
-    "overwrite" : "ZOL_overwrite",
-    "overwrite_value" : "ZOL_value",
-    "stall" : "stall"
+    "PC_running" : "running_PC",
+    "overwrite_PC_enable" : "overwrite_PC_enable_bus",
+    "overwrite_PC_value" : "overwrite_PC_value_bus",
 }
 
-def gen_zero_overhead_loop():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+ZOL_declared_ports = [
+    "seek_check_value", "seek_overwrite_value", "seek_enable",
+    "set_overwrites", "set_enable",
+]
+
+def gen_zero_overhead_loops():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
     if len(CONFIG["program_flow"]["ZOLs"]) != 0:
-        INTERFACE["ZOL_iterations_encoding"] = {}
+        INTERFACE["ZOL_overwrites_encoding"] = {}
 
         # Pull ZOL bused to defauly values
-        ARCH_HEAD += "signal ZOL_value : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
-        ARCH_HEAD += "signal ZOL_overwrite : std_logic := 'L';\n"
+        ARCH_HEAD += "signal overwrite_PC_value_bus  : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
+        ARCH_HEAD += "signal overwrite_PC_enable_bus : std_logic := 'L';\n"
 
-        # Generate ZOL hardward
-        for ZOL_name, ZOL_details in CONFIG["program_flow"]["ZOLs"].items():
-            interface, name = ZOL.generate_HDL(
-                {
-                    **ZOL_details,
-                    "PC_width"  : CONFIG["program_flow"]["PC_width"],
-                    "stallable" : CONFIG["program_flow"]["stallable"],
-                },
-                OUTPUT_PATH,
-                MODULE_NAME + ZOL_name,
-                True,
-                FORCE_GENERATION
-            )
+    # Generate ZOL hardward
+    for ZOL_name, ZOL_details in CONFIG["program_flow"]["ZOLs"].items():
+        if CONCAT_NAMING:
+            module_name = MODULE_NAME + "_" + ZOL_name
+        else:
+            module_name = None
 
-            INTERFACE["ZOL_iterations_encoding"][ZOL_name] = interface["iterations_encoding"]
-
-            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(ZOL_name, name)
-
-            if len(interface["generics"]) != 0:
-                ARCH_BODY += "generic map (\>\n"
-
-                for generic in sorted(interface["generics"], key=lambda p : p["name"]):
-                    INTERFACE["generics"] += [ { "name" : "%s_%s"%(ZOL_name, generic["name"]), "type" : generic["type"] } ]
-                    ARCH_BODY += "%s => %s_%s,\n"%(generic["name"], ZOL_name, generic["name"])
-
-                ARCH_BODY.drop_last_X(2)
-                ARCH_BODY += "\<\n)\n"
-
-            ARCH_BODY += "port map (\>\n"
+        ZOL_details = ZOL.add_inst_config(ZOL_name, CONFIG["instr_set"], ZOL_details)
+        interface, name = ZOL.generate_HDL(
+            {
+                **ZOL_details,
+                "PC_width"  : CONFIG["program_flow"]["PC_width"],
+                "signal_padding" : CONFIG["signal_padding"],
+                "stallable" : CONFIG["program_flow"]["stallable"],
+            },
+            OUTPUT_PATH,
+            module_name=module_name,
+            concat_naming=CONCAT_NAMING,
+            force_generation=FORCE_GENERATION
+        )
+        INTERFACE["ZOL_overwrites_encoding"][ZOL_name] = interface["overwrites_encoding"]
 
 
-            # Handle predeclared ports
-            for port in [
-                port
-                for port in interface["ports"]
-                if port["name"] in ZOL_predeclared_ports.keys()
-            ]:
-                ARCH_BODY += "%s => %s,\n"%(port["name"], ZOL_predeclared_ports[port["name"]])
+        ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(ZOL_name, name)
 
-            # Handle declared ports
-            declared_ports = [
-                port
-                for port in interface["ports"]
-                if port["name"] not in ZOL_predeclared_ports.keys()
-            ]
-            for port in declared_ports:
-                ARCH_HEAD += "signal %s_%s : %s;\n"%(ZOL_name, port["name"], port["type"])
-                ARCH_BODY += "%s => %s_%s,\n"%(port["name"], ZOL_name, port["name"])
+        if len(interface["generics"]) != 0:
+            ARCH_BODY += "generic map (\>\n"
+
+            for generic in sorted(interface["generics"].keys()):
+                details = interface["generics"][generic]
+                INTERFACE["generics"][ZOL_name + "_" + generic] = details
+                ARCH_BODY += "%s => %s_%s,\n"%(generic, ZOL_name, generic)
 
             ARCH_BODY.drop_last_X(2)
-            ARCH_BODY += "\<\n);\n"
+            ARCH_BODY += "\<\n)\n"
 
-            ARCH_BODY += "\<\n\n"
+        ARCH_BODY += "port map (\>\n"
 
-            # Create input port muxes
-            for input, channels in enumerate(ZOL_details["inputs"]):
-                for word, srcs  in enumerate(channels["data"]):
-                    assert(word == 0)
-                    # Put port width from interface
-                    port_name = "in_%i"%(input, )
-                    port = [port for port in interface["ports"] if port["name"] == port_name]
-                    assert(len(port) == 1)
-                    port_width = int(port[0]["type"].split("(")[1].split("downto")[0]) + 1
+        if __debug__:
+            for port in interface["ports"]:
+                assert (    port in ZOL_predeclared_ports.keys()
+                        or  port in ZOL_declared_ports
+                    ), "Unknown Port, " + port
 
-                    dst_sig = "%s_%s"%(ZOL_name, port_name)
-                    mux_signals("", dst_sig, port_width, srcs, CONFIG["signal_padding"])
+        # Handle predeclared ports
+        for port, signal in ZOL_predeclared_ports.items():
+            if port in interface["ports"]:
+                ARCH_BODY += "%s => %s,\n"%(port, signal)
+
+        # Handle declared ports
+        for port in ZOL_declared_ports:
+            if port in interface["ports"]:
+                details = interface["ports"][port]
+                try:
+                    ARCH_HEAD += "signal %s_%s : %s(%i downto 0);\n"%(ZOL_name, port, details["type"], details["width"] - 1, )
+                except KeyError:
+                    ARCH_HEAD += "signal %s_%s : %s;\n"%(ZOL_name, port, details["type"])
+                ARCH_BODY += "%s => %s_%s,\n"%(port, ZOL_name, port)
+
+        ARCH_BODY.drop_last_X(2)
+        ARCH_BODY += "\<\n);\n"
+
+        ARCH_BODY += "\<\n\n"
+
+        # Handle pathways and controls
+        DATAPATHS = gen_utils.merge_datapaths(DATAPATHS,ZOL.get_inst_pathways(ZOL_name, ZOL_name + "_", CONFIG["instr_set"], interface, ZOL_details, CONFIG["SIMD"]["lanes_names"][0]))
+        CONTROLS = gen_utils.merge_controls( CONTROLS, ZOL.get_inst_controls(ZOL_name, ZOL_name + "_", CONFIG["instr_set"], interface, ZOL_details) )
 
 def gen_program_memory():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
+
+    if CONCAT_NAMING:
+        module_name = MODULE_NAME + "_PM"
+    else:
+        module_name = None
 
     interface, name = ROM.generate_HDL(
         {
@@ -1110,19 +1070,17 @@ def gen_program_memory():
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
-        MODULE_NAME + "_PM",
-        True,
-        True
+        module_name=module_name,
+        concat_naming=CONCAT_NAMING,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "\nPM : entity work.%s(arch)\>\n"%(name)
 
-    INTERFACE["generics"] += [
-        {
-            "name" : "PM_init_mif",
-            "type" : "string"
-        }
-    ]
+    INTERFACE["generics"]["PM_init_mif"] = {
+        "type" : "string"
+    }
+
     ARCH_BODY += "generic map (\>\n"
     ARCH_BODY += "init_mif => PM_init_mif\n"
     ARCH_BODY += "\<)\n"
@@ -1144,6 +1102,15 @@ def gen_program_memory():
 
 #####################################################################
 
+def gen_datapath_muxes():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
+
+    mux_controls, ARCH_HEAD, ARCH_BODY = gen_utils.gen_datapath_muxes(DATAPATHS, OUTPUT_PATH, FORCE_GENERATION, ARCH_HEAD, ARCH_BODY)
+    CONTROLS = gen_utils.merge_controls(CONTROLS, mux_controls)
+
+#####################################################################
+
 ID_predeclared_ports = {
     "clock" : "clock",
     "stall" : "stall"
@@ -1155,17 +1122,24 @@ ID_non_fanout_ports = [
 ]
 
 def gen_instr_decoder():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
+    global CONTROLS
+
+    if CONCAT_NAMING:
+        module_name = MODULE_NAME + "_ID"
+    else:
+        module_name = None
 
     interface, name = ID.generate_HDL(
         {
             **CONFIG,
+            "controls" : CONTROLS
         },
         OUTPUT_PATH,
-        MODULE_NAME + "_ID",
-        GENERATE_NAME,
-        FORCE_GENERATION
+        module_name=module_name,
+        concat_naming=CONCAT_NAMING,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "\nID : entity work.%s(arch)\>\n"%(name, )
@@ -1237,10 +1211,9 @@ def gen_instr_decoder():
 
 #####################################################################
 
-
 def gen_running_delays():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
     # Declare each stage's running signal
     for stage in CONFIG["pipeline_stage"]:
@@ -1253,9 +1226,9 @@ def gen_running_delays():
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
-        "delay",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     for i, (stage_in, stage_out) in enumerate(zip(CONFIG["pipeline_stage"][:-1], CONFIG["pipeline_stage"][1:])):
@@ -1270,11 +1243,8 @@ def gen_running_delays():
         ARCH_BODY += "\<);\<\n\n"
 
     # Handle running output
-    INTERFACE["ports"] += [
-        {
-            "name" : "running",
-            "type" : "std_logic",
-            "direction" : "out"
-        }
-    ]
+    INTERFACE["ports"]["running"] = {
+        "type" : "std_logic",
+        "direction" : "out"
+    }
     ARCH_BODY += "running <= running_PC;\n\n"

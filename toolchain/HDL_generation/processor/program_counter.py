@@ -5,15 +5,31 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
-from FPE.toolchain import utils as tc_utils
+import copy
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
+from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation.basic import register
 
 #####################################################################
 
-import copy
+def add_inst_config(instr_id, instr_set, config):
+
+    return config
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = { }
+
+    return pathways
+
+def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
+    controls = {}
+
+    return controls
+
+
+#####################################################################
 
 def preprocess_config(config_in):
     config_out = {}
@@ -47,8 +63,8 @@ def preprocess_config(config_in):
 
 import zlib
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
 
         generated_name = "PC"
 
@@ -79,14 +95,23 @@ def handle_module_name(module_name, config, generate_name):
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
+
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-existing file if allowed and can
@@ -129,13 +154,13 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 #####################################################################
 
 def populate_interface():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["PC_width"] = CONFIG["PC_width"]
 
 def generate_data_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     for input, words in enumerate(CONFIG["inputs"]):
@@ -150,7 +175,7 @@ def generate_data_ports():
             ]
 
 def generate_state_management():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -179,7 +204,7 @@ def generate_state_management():
     ARCH_BODY += "else last_state;\n"
 
 def generate_generate_running():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -200,7 +225,7 @@ def generate_generate_running():
     ARCH_BODY += "else 'U';\<\n"
 
 def generate_value_register():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     INTERFACE["ports"] += [
@@ -217,12 +242,13 @@ def generate_value_register():
         {
             "has_async_force"  : False,
             "has_sync_force"   : True,
-            "has_enable"    : True
+            "has_enable"    : True,
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "value_reg : entity work.%s(arch)\>\n"%(reg_name)
@@ -255,7 +281,7 @@ def generate_value_register():
     ARCH_BODY += "value <= internal_value;\n"
 
 def generate_end_value_checking():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "\n-- End Value Checking\n"
@@ -272,7 +298,7 @@ def generate_end_value_checking():
     ARCH_BODY += "end_reached <= '1' when to_integer(unsigned(next_value)) = end_value else '0';\n"
 
 def generate_jumping():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Exit if no jumping
@@ -304,12 +330,13 @@ def generate_jumping():
         {
             "has_async_force"  : False,
             "has_sync_force"   : False,
-            "has_enable"    : True
+            "has_enable"    : True,
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     for exe, signals in CONFIG["statuses"].items():
@@ -363,7 +390,7 @@ def generate_jumping():
     ARCH_BODY += jump_occured
 
 def generate_next_value():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_BODY += "next_value <=\> "

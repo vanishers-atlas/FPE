@@ -11,9 +11,6 @@ from antlr4 import ParseTreeWalker
 # Import json for reading/writing json files
 import json
 
-# import regular expression library
-import re
-
 # Import utils libraries
 from FPE.toolchain import utils  as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
@@ -26,19 +23,15 @@ from FPE.toolchain.assembler import ZOL_handling
 
 def determine_require_generics(interface):
     generics = {}
-    for generic in interface["generics"]:
+    for generic in interface["generics"].keys():
         # Skipped handled generics
-        if generic["name"] in [
-            "IMM_init_mif",
-            "PM_init_mif",
-            "PC_end_value",
-        ]:
+        if generic in [ "IMM_init_mif", "PM_init_mif", "PC_end_value", ]:
             pass
         # Skipped handled ZOL generics
-        elif re.search(r"bound_ZOL_.+", generic["name"]) != None:
+        elif generic.startswith("bound_ZOL_"):
             pass
         else:
-            generics[generic["name"]] = None
+            generics[generic] = None
     return generics
 
 def merge_generics(required, given, config = None):
@@ -119,7 +112,7 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
             v : a
             for (a, v) in imm_data.items()
         }
-        # TEMP, pad imm_data to correct depth, should only trigger when a jump label and an imm operand share the same value
+        # pad imm_data to correct depth, should only trigger when a jump label and an imm operand share the same value
         for i in range(len(imm_data), config["data_memories"]["IMM"]["depth"]):
             imm_data[i] = 0
 
@@ -146,20 +139,20 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     generics["PC_end_value"] = program_end
 
     # Handle ZOL values
-    if "ZOL_iterations_encoding" in interface.keys():
-        handler = ZOL_handling.handler(program_context, interface["ZOL_iterations_encoding"])
+    if "ZOL_overwrites_encoding" in interface.keys():
+        handler = ZOL_handling.handler(program_context, interface["ZOL_overwrites_encoding"])
         walker.walk(handler, program_context["program_tree"])
 
         for ZOL_name, values in handler.get_output().items():
-            generics["%s_iterations" %(ZOL_name)] = values["iterations"]
-            generics["%s_start_value"%(ZOL_name)] = values["start"]
-            generics["%s_end_value"  %(ZOL_name)] = values["end"]
+            generics["%s_overwrites" %(ZOL_name)] = values["overwrites"]
+            generics["%s_check_value"%(ZOL_name)] = values["check_value"]
+            generics["%s_overwrite_value"  %(ZOL_name)] = values["overwrite_value"]
 
     # Generate testbench style file, with example instancation
     IMPORTS   = []
     ARCH_HEAD = gen_utils.indented_string()
     ARCH_BODY = gen_utils.indented_string()
-    INTERFACE = { "ports" : [], "generics" : [] }
+    INTERFACE = { "ports" : {}, "generics" : {} }
 
     # Include extremely commom libs
     IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
@@ -169,20 +162,22 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     if len(interface["generics"]) != 0:
         ARCH_BODY += "generic map (\>\n"
 
-        for generic in sorted(interface["generics"], key=lambda g : g["name"]):
-            if generic["type"] == "string":
-                ARCH_BODY += "%s => \"%s\",\n"%(generic["name"], generics[generic["name"]])
+        for generic in interface["generics"].keys():
+            details = interface["generics"][generic]
+            if details["type"] == "string" or details["type"].startswith("std_logic_vector"):
+                ARCH_BODY += "%s => \"%s\",\n"%(generic, generics[generic])
             else:
-                ARCH_BODY += "%s => %s,\n"%(generic["name"], generics[generic["name"]])
+                ARCH_BODY += "%s => %s,\n"%(generic, generics[generic])
 
         ARCH_BODY.drop_last_X(2)
         ARCH_BODY += "\<\n)\n"
 
     ARCH_BODY += "port map (\>\n"
 
-    for port in sorted(interface["ports"], key=lambda p : p["name"] ):
-        INTERFACE["ports"].append(port)
-        ARCH_BODY += "%s => %s,\n"%(port["name"], port["name"])
+    for port in interface["ports"].keys():
+        details = interface["ports"][port]
+        INTERFACE["ports"][port] = details
+        ARCH_BODY += "%s => %s,\n"%(port, port)
 
     ARCH_BODY.drop_last_X(2)
     ARCH_BODY += "\<\n);\n"
@@ -191,8 +186,3 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
 
     # Save code to file
     gen_utils.generate_files(output_path, processor_name + "_inst", IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
-
-if False:
-    for loop, details in program_context["loop_labels"].items():
-        print(loop, details)
-    exit()

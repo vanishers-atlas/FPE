@@ -3,11 +3,6 @@
         "lanes": 1
     },
 
-    "program_fetch": {},
-
-    "instruction_decoder": {},
-
-
     "address_sources": {
         "BAM_0": {
             "addr_max": 16,
@@ -24,7 +19,8 @@
         },
         "ROM_A": {
             "data_width": 4,
-            "depth": 16
+            "depth": 16,
+            "type": "DIST"
         }
     },
 

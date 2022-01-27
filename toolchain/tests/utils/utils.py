@@ -13,7 +13,7 @@ from FPE.toolchain.config_extractor   import config_extractor as extractor
 from FPE.toolchain.HDL_generation     import HDL_generator    as generator
 from FPE.toolchain.assembler          import assembler
 
-def run_toolchain(program, parameters, generics, output_dir, processor_name, generate_name, force_generation):
+def run_toolchain(program, parameters, generics, output_dir, processor_name, concat_naming, force_generation):
     config = "%s\\%s_config.json"%(output_dir, processor_name, )
 
     if not os.path.exists(output_dir):
@@ -32,7 +32,7 @@ def run_toolchain(program, parameters, generics, output_dir, processor_name, gen
         processor_name,
         config,
         output_dir,
-        generate_name = generate_name,
+        concat_naming = concat_naming,
         force_generation = force_generation
     )
 
@@ -122,11 +122,12 @@ def run_sweep_leaf(
         "\\".join([path, generics_file]),
         output_dir,
         processor_name,
-        False,
-        True
+        True,  # Enable concat_naming
+        True   # Force generation of all files, to make sure any changes are included
     )
 
-    #exit()
+    # print("TOOLCHAIN STOPPED BEFORE TESTING")
+    # exit()
 
     # Symulate testbench
     vhdl_files = [

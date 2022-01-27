@@ -5,19 +5,34 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import itertools as it
+import copy
+
 from FPE.toolchain import utils as tc_utils
-
-from FPE.toolchain.HDL_generation  import utils as gen_utils
-
 from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.processor import alu_dsp48e1
 
 from FPE.toolchain.HDL_generation.basic import delay
 from FPE.toolchain.HDL_generation.basic import register
 
-import itertools as it
-import copy
+#####################################################################
+
+def add_inst_config(instr_id, instr_set, config):
+
+    return config
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = { }
+
+    return pathways
+
+def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
+    controls = {}
+
+    return controls
+
 
 #####################################################################
 
@@ -147,10 +162,12 @@ def preprocess_config(config_in):
                 assert(type(value) == type(""))
                 config_out["execute_units"][exe]["controls"][control_name]["values"][op] = value
 
+    config_out["controls"] = config_in["controls"]
+
     return config_out
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
 
         generated_name = ""
 
@@ -162,14 +179,23 @@ def handle_module_name(module_name, config, generate_name):
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
+
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-existing file if allowed and can
@@ -215,7 +241,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 #####################################################################
 
 def generate_std_logic_signal(sig_name, value_opcode_table):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
@@ -233,12 +259,13 @@ def generate_std_logic_signal(sig_name, value_opcode_table):
         {
             "has_async_force"  : False,
             "has_sync_force"   : False,
-            "has_enable"    : CONFIG["program_flow"]["stallable"]
+            "has_enable"    : CONFIG["program_flow"]["stallable"],
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_HEAD += "signal pre_%s : std_logic;\n"%(sig_name, )
@@ -292,7 +319,7 @@ def generate_std_logic_signal(sig_name, value_opcode_table):
     ARCH_BODY += "pre_%s <= 'U' when %s /= '1' else %s_decode_table(%s);\n\n"%(sig_name, INPUT_SIGNALS["enable"], sig_name, INPUT_SIGNALS["OPCODE"])
 
 def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
@@ -312,12 +339,13 @@ def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
         {
             "has_async_force"  : False,
             "has_sync_force"   : False,
-            "has_enable"    : CONFIG["program_flow"]["stallable"]
+            "has_enable"    : CONFIG["program_flow"]["stallable"],
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_HEAD += "signal pre_%s : std_logic_vector(%i downto 0);\n"%(sig_name, vec_len - 1)
@@ -385,7 +413,7 @@ def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
     ARCH_BODY += "\n"
 
 def generate_input_signals_delay(stage):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
@@ -398,9 +426,9 @@ def generate_input_signals_delay(stage):
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
-        "delay",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "%s_instr_delay : entity work.%s(arch)\>\n"%(stage, name)
@@ -427,9 +455,9 @@ def generate_input_signals_delay(stage):
             "stallable" : CONFIG["program_flow"]["stallable"],
         },
         OUTPUT_PATH,
-        "delay",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "%s_enable_delay : entity work.%s(arch)\>\n"%(stage, name)
@@ -458,7 +486,7 @@ def generate_input_signals_delay(stage):
 #####################################################################
 
 def define_decode_table_type():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_HEAD += "type decode_table is array(0 to %i) of std_logic;\n\n"%(
@@ -466,7 +494,7 @@ def define_decode_table_type():
     )
 
 def compute_instr_sections():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global DELAY_INTERFACE, DELAY_NAME
     global INPUT_SIGNALS, INSTR_SECTIONS
@@ -490,7 +518,7 @@ def compute_instr_sections():
         addr_start -= width
 
 def generate_input_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
@@ -533,13 +561,33 @@ def generate_input_ports():
         ]
 
 def generate_fetch_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
     ####################################################################
     # Compute then buffer controls based on opcode
     ####################################################################
+
+    # Handle fetch signals defined using new control method
+    for control_signal, control_details in gen_utils.get_controls(CONFIG["controls"], "fetch").items():
+        # Extract control_details
+        control_values = control_details["values"]
+        control_type = control_details["type"]
+
+        value_opcode_table = {}
+        for value, instrs in control_values.items():
+            value_opcode_table[value] = [CONFIG["instr_set"][instr] for instr in instrs]
+
+        if   control_type == "std_logic":
+            generate_std_logic_signal(control_signal, value_opcode_table)
+        elif control_type == "std_logic_vector":
+            control_width = control_details["width"]
+            generate_std_logic_vector_signal(control_signal, control_width, value_opcode_table)
+        else:
+            raise ValueError("Unknown control_type, " + control_type)
+
+
 
     if "GET" in CONFIG["data_memories"]:
         mem = "GET"
@@ -595,46 +643,6 @@ def generate_fetch_signals():
                 }
                 if len(value_opcode_table) > 1:
                     generate_std_logic_signal(sig_name, value_opcode_table)
-
-    # Handle fetch addr muxes
-    for mem, config in CONFIG["data_memories"].items():
-        for read, read_details in enumerate(config["reads"]):
-            sel_sig = "%s_read_%i_addr_sel"%(mem, read)
-            sel_width = tc_utils.unsigned.width(len(read_details["addr"]) - 1)
-
-            value_opcode_table = {}
-            for mux_index, signal_details in enumerate(sorted(read_details["addr"], key=lambda x : x["signal"])):
-                sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
-                for instr_id, instr_val in CONFIG["instr_set"].items():
-                    fetches = asm_utils.instr_fetches(instr_id)
-                    fetch_mems = [asm_utils.access_mem(fetch) for fetch in fetches]
-                    fetch_addr_coms = [asm_utils.addr_com(asm_utils.access_addr(fetch)) for fetch in fetches]
-                    fetch_addr_ports = [asm_utils.addr_port(asm_utils.access_addr(fetch)) for fetch in fetches]
-
-                    read_indexes = [
-                        index
-                        for index, fetch_mem in enumerate(fetch_mems)
-                        if fetch_mem == mem
-                    ]
-
-                    if (
-                        len(read_indexes) > read
-                        and fetch_addr_coms[read_indexes[read]] == signal_details["com"]
-                        and str(fetch_addr_ports[read_indexes[read]]) == str(signal_details["port"])
-                    ):
-                        try:
-                            value_opcode_table[sel_val].append(instr_val)
-                        except KeyError:
-                            value_opcode_table[sel_val] = [instr_val, ]
-
-            # Check the signal varies
-            value_opcode_table = {
-                k : v
-                for k, v in value_opcode_table.items()
-                if len(v) > 0
-            }
-            if len(value_opcode_table) > 1:
-                generate_std_logic_vector_signal(sel_sig, sel_width, value_opcode_table)
 
     # Handle bam step generic forward signal
     for bam, config in CONFIG["address_sources"].items():
@@ -710,7 +718,6 @@ def generate_fetch_signals():
         if len(value_opcode_table) > 1:
             generate_std_logic_signal(sig_name, value_opcode_table)
 
-
     ####################################################################
     # Buffer INPUT_SIGNALS for next stage
     ####################################################################
@@ -768,13 +775,33 @@ exe_lib_lookup = {
 }
 
 def generate_exe_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
     ####################################################################
     # Compute then buffer controls based on opcode
     ####################################################################
+
+    # Handle exe signals defined using new control method
+    for control_signal, control_details in gen_utils.get_controls(CONFIG["controls"], "exe").items():
+        # Extract control_details
+        control_values = control_details["values"]
+        control_type = control_details["type"]
+
+        value_opcode_table = {}
+        for value, instrs in control_values.items():
+            value_opcode_table[value] = [CONFIG["instr_set"][instr] for instr in instrs]
+
+        if   control_type == "std_logic":
+            generate_std_logic_signal(control_signal, value_opcode_table)
+        elif control_type == "std_logic_vector":
+            control_width = control_details["width"]
+            generate_std_logic_vector_signal(control_signal, control_width, value_opcode_table)
+        else:
+            raise ValueError("Unknown control_type, " + control_type)
+
+
 
     # Handle exe enables
     for exe in CONFIG["execute_units"]:
@@ -818,41 +845,6 @@ def generate_exe_signals():
             }
             if len(value_opcode_table) > 1:
                 generate_std_logic_vector_signal(sig_name, config["width"], value_opcode_table)
-
-    # Handle exe input muxes
-    for exe, config in CONFIG["execute_units"].items():
-        for input, channals in enumerate(config["inputs"]):
-            for word, srcs in enumerate(channals["data"]):
-                assert(word == 0)
-                sel_sig = "%s_in_%i_sel"%(exe, input, )
-                sel_width = tc_utils.unsigned.width(len(srcs) - 1)
-
-                value_opcode_table = {}
-                for mux_index, src in enumerate(sorted(srcs, key=lambda d : d["signal"] )):
-                    sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
-                    for instr_id, instr_val in CONFIG["instr_set"].items():
-                        exe_unit =  asm_utils.instr_exe_unit(instr_id)
-                        fetches = asm_utils.instr_fetches(instr_id)
-                        fetch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
-
-                        if (
-                            exe_unit == exe
-                            and len(fetch_mems) > input
-                            and fetch_mems[input] == src["com"]
-                            and fetch_mems[:input].count(src["com"]) == src["port"]
-                        ):
-                            try:
-                                value_opcode_table[sel_val].append(instr_val)
-                            except KeyError:
-                                value_opcode_table[sel_val] = [instr_val, ]
-                # Check the signal varies
-                value_opcode_table = {
-                    k : v
-                    for k, v in value_opcode_table.items()
-                    if len(v) > 0
-                }
-                if len(value_opcode_table) > 1:
-                    generate_std_logic_vector_signal(sel_sig, sel_width, value_opcode_table)
 
     # Handle uncondional jumping signal
     if CONFIG["program_flow"]["uncondional_jump"]:
@@ -967,50 +959,6 @@ def generate_exe_signals():
         if len(value_opcode_table) > 1:
             generate_std_logic_signal(sig_name, value_opcode_table)
 
-    # Handle ZOL seek signals
-    for ZOL, config in CONFIG["program_flow"]["ZOLs"].items():
-        sig_name = "%s_seek"%(ZOL, )
-        value_opcode_table = { "1" : [], "0" : []}
-        for instr_id, instr_val in CONFIG["instr_set"].items():
-            if(
-                asm_utils.instr_exe_unit(instr_id) == ZOL
-                and asm_utils.instr_mnemonic(instr_id) == "ZOL_SEEK"
-            ):
-                value_opcode_table["1"].append(instr_val)
-            else:
-                value_opcode_table["0"].append(instr_val)
-
-        # Check the signal varies
-        value_opcode_table = {
-            k : v
-            for k, v in value_opcode_table.items()
-            if len(v) > 0
-        }
-        if len(value_opcode_table) > 1:
-            generate_std_logic_signal(sig_name, value_opcode_table)
-
-    # Handle ZOL set signals
-    for ZOL, config in CONFIG["program_flow"]["ZOLs"].items():
-        sig_name = "%s_set"%(ZOL, )
-        value_opcode_table = { "1" : [], "0" : []}
-        for instr_id, instr_val in CONFIG["instr_set"].items():
-            if(
-                asm_utils.instr_exe_unit(instr_id) == ZOL
-                and asm_utils.instr_mnemonic(instr_id) == "ZOL_SET"
-            ):
-                value_opcode_table["1"].append(instr_val)
-            else:
-                value_opcode_table["0"].append(instr_val)
-
-        # Check the signal varies
-        value_opcode_table = {
-            k : v
-            for k, v in value_opcode_table.items()
-            if len(v) > 0
-        }
-        if len(value_opcode_table) > 1:
-            generate_std_logic_signal(sig_name, value_opcode_table)
-
     ####################################################################
     # Buffer INPUT_SIGNALS for next stage
     ####################################################################
@@ -1025,7 +973,7 @@ exe_update_mnemonics_map = {
 }
 
 def generate_store_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
     global INPUT_SIGNALS, INSTR_SECTIONS
 
@@ -1033,7 +981,25 @@ def generate_store_signals():
     # Compute then buffer controls based on opcode
     ####################################################################
 
-    import json
+    # Handle exe signals defined using new control method
+    for control_signal, control_details in gen_utils.get_controls(CONFIG["controls"], "store").items():
+        # Extract control_details
+        control_values = control_details["values"]
+        control_type = control_details["type"]
+
+        value_opcode_table = {}
+        for value, instrs in control_values.items():
+            value_opcode_table[value] = [CONFIG["instr_set"][instr] for instr in instrs]
+
+        if   control_type == "std_logic":
+            generate_std_logic_signal(control_signal, value_opcode_table)
+        elif control_type == "std_logic_vector":
+            control_width = control_details["width"]
+            generate_std_logic_vector_signal(control_signal, control_width, value_opcode_table)
+        else:
+            raise ValueError("Unknown control_type, " + control_type)
+
+
     # Handle store enables
     for mem, config in CONFIG["data_memories"].items():
         for write in range(len(config["writes"])):
@@ -1057,54 +1023,6 @@ def generate_store_signals():
             }
             if len(value_opcode_table) > 1:
                 generate_std_logic_signal(sig_name, value_opcode_table)
-
-    # Handle store addr muxes
-    for mem, config in CONFIG["data_memories"].items():
-        for write, write_details in enumerate(config["writes"]):
-            sel_sig = "%s_write_%i_addr_sel"%(mem, write)
-            sel_width = tc_utils.unsigned.width(len(write_details["addr"]) - 1)
-
-            value_opcode_table = {}
-            for mux_index, signal_details in enumerate(sorted(write_details["addr"], key=lambda d : d["signal"])):
-                sel_val = tc_utils.unsigned.encode(mux_index, sel_width)
-                for instr_id, instr_val in CONFIG["instr_set"].items():
-                    stores = asm_utils.instr_stores(instr_id)
-                    store_mems = [asm_utils.access_mem(store) for store in stores]
-                    store_addr_coms = [asm_utils.addr_com(asm_utils.access_addr(store)) for store in stores]
-                    store_addr_ports = [asm_utils.addr_port(asm_utils.access_addr(store)) for store in stores]
-
-                    write_indexes = [
-                        index
-                        for index, store_mem in enumerate(store_mems)
-                        if store_mem == mem
-                    ]
-
-                    if (
-                        len(write_indexes) > write
-                        and store_addr_coms[write_indexes[write]] == signal_details["com"]
-                        and str(store_addr_ports[write_indexes[write]]) == str(signal_details["port"])
-                    ):
-                        try:
-                            value_opcode_table[sel_val].append(instr_val)
-                        except KeyError:
-                            value_opcode_table[sel_val] = [instr_val, ]
-
-            # Check the signal varies
-            value_opcode_table = {
-                k : v
-                for k, v in value_opcode_table.items()
-                if len(v) > 0
-            }
-
-            if len(value_opcode_table) > 1:
-                generate_std_logic_vector_signal(sel_sig, sel_width, value_opcode_table)
-
-    # Handle store data muxes
-    for mem, config in CONFIG["data_memories"].items():
-        for write, write_details in enumerate(config["writes"]):
-            for word, srcs in enumerate(write_details["data"]):
-                if len(srcs) > 1:
-                    raise NotImplementedError()
 
     # Handle statuses update signals
     for exe in CONFIG["program_flow"]["statuses"].keys():

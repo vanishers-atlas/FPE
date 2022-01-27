@@ -5,17 +5,60 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
-from FPE.toolchain import utils as tc_utils
+import warnings
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation.basic import register
 
-import warnings
 
 #####################################################################
 
-from FPE.toolchain import FPE_assembly as asm_utils
+def add_inst_config(instr_id, instr_set, config):
+
+    oper_set = []
+    inputs  = 0
+    outputs = 0
+
+    for instr in instr_set:
+        if asm_utils.instr_exe_unit(instr) == instr_id:
+            oper_set.append(instr_to_oper(instr))
+
+            inputs = max(inputs, len(asm_utils.instr_fetches(instr)))
+            outputs = max(outputs, len(asm_utils.instr_stores(instr)))
+
+    config["oper_set"] = oper_set
+    config["inputs"] = inputs
+    config["outputs"] = outputs
+
+    return config
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = { }
+
+    for instr in instr_set:
+        if asm_utils.instr_exe_unit(instr) == instr_id:
+
+            # Handle exe inputs
+            for input in range(len(asm_utils.instr_fetches(instr))):
+                gen_utils.add_datapath(pathways, "%sfetch_data_%i"%(lane, input), "exe", False, instr, "%sin_%i"%(instr_prefix, input, ), CONFIG["signal_padding"], config["data_width"])
+
+
+            # Handle exe outputs
+            for output in range(len(asm_utils.instr_stores(instr))):
+                gen_utils.add_datapath(pathways, "%sstore_data_%i"%(lane, output), "store", True, instr, "%sout_%i"%(instr_prefix, output, ), CONFIG["signal_padding"], config["data_width"])
+
+    return pathways
+
+def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
+    controls = {}
+
+    return controls
+
+
+#####################################################################
 
 internal_loctations = [ "acc" ]
 
@@ -111,8 +154,8 @@ def preprocess_config(config_in):
 
 import zlib
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
 
         #import json
         #print(json.dumps(config, indent=2, sort_keys=True))
@@ -130,23 +173,29 @@ def handle_module_name(module_name, config, generate_name):
         # Append data width
         generated_name += "_%sw"%config["data_width"]
 
-        #print(generated_name)
-        #exit()
-
         return generated_name
     else:
         return module_name
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
+
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-exiting file if allowed and can
@@ -160,13 +209,14 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        INTERFACE = { "ports" : { }, "generics" : { }, "controls" : { } }
+        # Flag number of clock cycles needed
+        #INTERFACE["cycles required"] = 1
 
         # Include extremely commom libs
         IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
 
         # Generation Module Code
-        populate_interface()
         handle_DSP()
         handle_shifter()
         generate_ports()
@@ -178,81 +228,56 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 
 #####################################################################
 
-def populate_interface():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    INTERFACE["controls"] = {}
-
-    # Flag number of clock cycles needed
-    INTERFACE["cycles required"] = 1
-
 def generate_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Generate common control
-    INTERFACE["ports"] += [
-        {
-            "name" : "clock",
-            "type" : "std_logic",
-            "direction" : "in"
-        },
-        {
-            "name" : "enable",
-            "type" : "std_logic",
-            "direction" : "in"
-        },
-    ]
+    INTERFACE["ports"]["clock"] = {
+        "type" : "std_logic",
+        "direction" : "in",
+    }
+    INTERFACE["ports"]["enable"] = {
+        "type" : "std_logic",
+        "direction" : "in",
+    }
 
-    INTERFACE["ports"] += [
-        {
-            "name" : control,
-            "type" : "std_logic_vector(%i downto 0)"%(interface["width"] - 1,),
+    for control, interface in INTERFACE["controls"].items():
+        INTERFACE["ports"][control] =  {
+            "type" : "std_logic_vector",
+            "width": interface["width"],
             "direction" : "in"
         }
-        for control, interface in INTERFACE["controls"].items()
-    ]
 
     if CONFIG["stallable"]:
         # Generate common control
-        INTERFACE["ports"] += [
-            {
-                "name" : "stall",
-                "type" : "std_logic",
-                "direction" : "in"
-            },
-        ]
+        INTERFACE["ports"]["stall"] = {
+            "type" : "std_logic",
+            "direction" : "in",
+        }
 
     # Generate data inputs
     for read in range(CONFIG["inputs"]):
-        INTERFACE["ports"] += [
-            {
-                "name" : "in_%i"%(read, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "in"
-            }
-        ]
+        INTERFACE["ports"]["in_%i"%(read, )] = {
+            "type" : "std_logic_vector",
+            "width": CONFIG["data_width"],
+            "direction" : "in",
+        }
 
     # Generate data outputs
     for write in range(CONFIG["outputs"]):
-        INTERFACE["ports"] += [
-            {
-                "name" : "out_%i"%(write, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "out"
-            }
-        ]
+        INTERFACE["ports"]["out_%i"%(write, )] = {
+            "type" : "std_logic_vector",
+            "width": CONFIG["data_width"],
+            "direction" : "out",
+        }
 
     # Generate status outputs
-    INTERFACE["ports"] += [
-        {
-            "name" : "status_%s"%(port, ),
+    for status in sorted(CONFIG["statuses"]):
+        INTERFACE["ports"][ "status_%s"%(status, )] = {
             "type" : "std_logic",
             "direction" : "out"
         }
-        for port in sorted(CONFIG["statuses"])
-    ]
 
 #####################################################################
 
@@ -753,7 +778,7 @@ def get_oper_details_DSP_slice(oper):
         raise NotImplementedError(oper)
 
 def handle_DSP():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Instancate DSP slice
@@ -1210,12 +1235,13 @@ def handle_DSP():
             {
                 "has_async_force"  : False,
                 "has_sync_force"   : False,
-                "has_enable"    : True
+                "has_enable"    : True,
+                "force_on_init" : False
             },
             OUTPUT_PATH,
-            "register",
-            True,
-            False
+            module_name=None,
+            concat_naming=False,
+            force_generation=FORCE_GENERATION
         )
 
 
@@ -1271,12 +1297,13 @@ def handle_DSP():
                 {
                     "has_async_force"  : False,
                     "has_sync_force"   : False,
-                    "has_enable"    : True
+                    "has_enable"    : True,
+                    "force_on_init" : False
                 },
                 OUTPUT_PATH,
-                "register",
-                True,
-                False
+                module_name=None,
+                concat_naming=False,
+                force_generation=FORCE_GENERATION
             )
 
 
@@ -1336,8 +1363,6 @@ def handle_DSP():
     for status in sorted(CONFIG["statuses"]):
         ARCH_BODY += "status_%s <= internal_%s;\n\n"%(status, status)
 
-
-
 #####################################################################
 
 def get_oper_details_shifter(oper):
@@ -1373,7 +1398,7 @@ def get_oper_details_shifter(oper):
         raise NotImplementedError(oper)
 
 def connect_LSH(bits):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     return "(%s, others => '0')"%(
@@ -1386,7 +1411,7 @@ def connect_LSH(bits):
     )
 
 def connect_LRL(bits):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     return "(%s)"%(
@@ -1399,7 +1424,7 @@ def connect_LRL(bits):
     )
 
 def connect_RSH(bits):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     return "(%s, others => '0')"%(
@@ -1412,7 +1437,7 @@ def connect_RSH(bits):
     )
 
 def connect_RRL(bits):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     return "(%s)"%(
@@ -1432,7 +1457,7 @@ shift_type_connect_map= {
 }
 
 def handle_shifter():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Collect all shifts from oper_set

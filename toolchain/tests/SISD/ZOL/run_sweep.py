@@ -9,19 +9,39 @@ import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import ripple
-    import cascade
-    import counter
-else:
-    from . import ripple
-    from . import cascade
-    from . import counter
+    import ripple_basic
+    import cascade_basic
+    import counter_basic
 
+    import seekable
+    import counter_seekable_settable
+
+    import ripple_single_iteration
+    import cascade_single_iteration
+    import counter_single_iteration
+else:
+    from . import ripple_basic
+    from . import cascade_basic
+    from . import counter_basic
+
+    from . import seekable
+    from . import counter_seekable_settable
+
+    from . import ripple_single_iteration
+    from . import cascade_single_iteration
+    from . import counter_single_iteration
 
 test_sets = [
-    ripple,
-    cascade,
-    counter
+    ripple_basic,
+    cascade_basic,
+    counter_basic,
+
+    seekable,
+    counter_seekable_settable,
+
+    ripple_single_iteration,
+    cascade_single_iteration,
+    counter_single_iteration,
 ]
 
 

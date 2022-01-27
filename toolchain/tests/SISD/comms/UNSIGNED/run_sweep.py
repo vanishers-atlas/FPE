@@ -29,12 +29,12 @@ else:
 
 test_sets = [
     put_single_channel,
-    put_single_channel_FIFO_handshakes,
+    #put_single_channel_FIFO_handshakes,
 
     get_single_channel,
-    get_single_channel_put_FIFO_handshakes,
-    get_single_channel_get_FIFO_handshakes,
-    get_single_channel_both_FIFO_handshakes,
+    #get_single_channel_put_FIFO_handshakes,
+    #get_single_channel_get_FIFO_handshakes,
+    #get_single_channel_both_FIFO_handshakes,
 ]
 
 def run_sweep(path="."):

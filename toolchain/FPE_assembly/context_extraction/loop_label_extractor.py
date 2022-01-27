@@ -27,7 +27,7 @@ class extractor(ParseTreeListener):
 		this.program_context["loop_labels"][loop_name] = {
 			"start" : this.PC_next,
 			"end" : None # Mark the end value as unset to debugging
-			}
+		}
 
 	# Capture PC_next - 1 on exiting a loop,
 	# PC_next - 1 as PC_next points to the operation just after the loop within this function

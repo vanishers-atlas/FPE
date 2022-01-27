@@ -11,7 +11,8 @@
         },
         "ROM_B": {
             "data_width": 4,
-            "depth": 16
+            "depth": 16,
+            "type": "DIST"
         }
     },
     "execute_units": {

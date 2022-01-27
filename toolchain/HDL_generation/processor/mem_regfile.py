@@ -6,15 +6,70 @@ if __name__ == "__main__":
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
 from FPE.toolchain import utils as tc_utils
-
+from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.basic import register
 
 #####################################################################
 
+def add_inst_config(instr_id, instr_set, config):
+
+    reads = 0
+    for instr in instr_set:
+        fetch_mems = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr) ]
+        reads = max(reads, fetch_mems.count(instr_id))
+    config["reads"] = reads
+
+    writes = 0
+    for instr in instr_set:
+        store_mems = [ asm_utils.access_mem(access) for access in asm_utils.instr_stores(instr) ]
+        writes = max(writes, store_mems.count(instr_id))
+    config["writes"] = writes
+
+    return config
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = { }
+
+    for instr in instr_set:
+        read = 0
+        for access in asm_utils.instr_fetches(instr):
+            if asm_utils.access_mem(access) == instr_id:
+                # Handle fetch addr
+                gen_utils.add_datapath(pathways, "%sfetch_addr_%i"%(lane, read), "fetch", False, instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+
+                # Handle fetch data
+                gen_utils.add_datapath(pathways, "%sfetch_data_%i"%(lane, read), "exe", True, instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+
+                read += 1
+
+        write = 0
+        for access in asm_utils.instr_stores(instr):
+            if asm_utils.access_mem(access) == instr_id:
+                # Handle store addr
+                gen_utils.add_datapath(pathways, "%sstore_addr_%i"%(lane, write), "store", False, instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+
+                # Handle store data
+                gen_utils.add_datapath(pathways, "%sstore_data_%i"%(lane, write), "store", False, instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
+
+                write += 1
+
+    return pathways
+
+def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
+    controls = {}
+
+    return controls
+
+
+#####################################################################
+
 def preprocess_config(config_in):
     config_out = {}
+
+    assert(config_in["reads"] >= 1)
+    config_out["reads"] = config_in["reads"]
 
     assert(config_in["reads"] >= 1)
     config_out["reads"] = config_in["reads"]
@@ -46,8 +101,8 @@ def preprocess_config(config_in):
 
     return config_out
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
 
         generated_name = "REG"
 
@@ -67,14 +122,23 @@ def handle_module_name(module_name, config, generate_name):
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
+
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-existing file if allowed and can
@@ -88,27 +152,21 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        INTERFACE = { "ports" : { }, "generics" : { }, }
 
         # Include extremely commom libs
         IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
 
         # Generation Module Code
-        INTERFACE["ports"] += [
-            {
-                "name" : "clock",
+        INTERFACE["ports"]["clock"] = {
+            "type" : "std_logic",
+            "direction" : "in"
+        }
+        if CONFIG["stallable"]:
+            INTERFACE["ports"]["stall"] = {
                 "type" : "std_logic",
                 "direction" : "in"
             }
-        ]
-        if CONFIG["stallable"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "stall",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
 
         gen_registers()
         gen_reads()
@@ -122,19 +180,20 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 #####################################################################
 
 def gen_registers():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force"  : False,
             "has_sync_force"   : False,
-            "has_enable"    : True
+            "has_enable"    : True,
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_HEAD += "-- Register signals\n"
@@ -155,37 +214,37 @@ def gen_registers():
         ARCH_BODY += "\<);\n\<\n"
 
 def gen_reads():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force"  : False,
             "has_sync_force"   : False,
-            "has_enable"    : CONFIG["stallable"]
+            "has_enable"    : CONFIG["stallable"],
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "-- Read buffers\n"
 
     for read in range(CONFIG["reads"]):
         # Declare port
-        INTERFACE["ports"] += [
-            {
-                "name" : "read_%i_addr"%(read, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
-                "direction" : "in"
-            },
-            {
-                "name" : "read_%i_data"%(read, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "out"
-            }
-        ]
+        INTERFACE["ports"]["read_%i_addr"%(read, )] = {
+                "type" : "std_logic_vector",
+                "width": CONFIG["addr_width"],
+                "direction" : "in",
+        }
+        INTERFACE["ports"]["read_%i_data"%(read, )] = {
+            "type" : "std_logic_vector",
+            "width": CONFIG["data_width"],
+            "direction" : "out",
+        }
+
 
         # Generate output buffers
         ARCH_HEAD += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
@@ -213,28 +272,25 @@ def gen_reads():
         ARCH_BODY += "\n"
 
 def gen_writes():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     for write in range(CONFIG["writes"]):
         # Declare port
-        INTERFACE["ports"] += [
-            {
-                "name" : "write_%i_addr"%(write, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
-                "direction" : "in"
-            },
-            {
-                "name" : "write_%i_data"%(write, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "in"
-            },
-            {
-                "name" : "write_%i_enable"%(write, ),
-                "type" : "std_logic",
-                "direction" : "in"
-            }
-        ]
+        INTERFACE["ports"]["write_%i_addr"%(write, )] = {
+            "type" : "std_logic_vector",
+            "width": CONFIG["addr_width"],
+            "direction" : "in",
+        }
+        INTERFACE["ports"]["write_%i_data"%(write, )] = {
+            "type" : "std_logic_vector",
+            "width": CONFIG["data_width"],
+            "direction" : "in",
+        }
+        INTERFACE["ports"]["write_%i_enable"%(write, )] = {
+            "type" : "std_logic",
+            "direction" : "in",
+        }
 
     if CONFIG["writes"] == 1:
         for reg in range(CONFIG["depth"]):

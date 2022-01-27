@@ -59,7 +59,7 @@ class extractor(ParseTreeListener):
         com_name = asm_utils.token_to_text(ctx.com_name.IDENTIFER())
 
         this.para_context["ZOLs"][com_name] = {
-            "iterations" : "int",
+            "overwrites" : "int",
             "seekable" : "bool",
         }
 
@@ -67,7 +67,7 @@ class extractor(ParseTreeListener):
         com_name = asm_utils.token_to_text(ctx.com_name.IDENTIFER())
 
         this.para_context["ZOLs"][com_name] = {
-            "iterations" : "int",
+            "overwrites" : "int",
             "seekable" : "bool",
         }
 
@@ -75,7 +75,7 @@ class extractor(ParseTreeListener):
         com_name = asm_utils.token_to_text(ctx.com_name.IDENTIFER())
 
         this.para_context["ZOLs"][com_name] = {
-            "iterations" : "int",
+            "overwrites" : "int",
             "seekable" : "bool",
             "settable" : "bool",
         }

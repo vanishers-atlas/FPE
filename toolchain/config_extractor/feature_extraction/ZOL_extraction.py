@@ -19,41 +19,41 @@ class extractor(ParseTreeListener):
 
 
     def enterState_zol(this, ctx):
-        interations = asm_utils.evaluate_expr(ctx.expr(), this.program_context)
+        overwrites = asm_utils.evaluate_expr(ctx.expr(), this.program_context)
 
         # Handke ZOL type schemes
         # Always ripple (old scheme)
         if   this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "ripple":
             this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
                 "tracker_type" : "ripple",
-                "iterations"  : interations,
+                "overwrites"  : overwrites,
                 "seekable"     : False,
             }
         # Always cascade
         elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "cascade":
             this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
                 "tracker_type" : "cascade",
-                "iterations"  : interations,
+                "overwrites"  : overwrites,
                 "seekable"     : False,
             }
-        # dynamical select maybe ripple and cascade based on interations
+        # dynamical select maybe ripple and cascade based on overwrites
         elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "dynamic":
-            if interations < 64:
+            if overwrites < 64:
                 this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
                     "tracker_type" : "ripple",
-                    "iterations"  : interations,
+                    "overwrites"  : overwrites,
                     "seekable"     : False,
                 }
             else:
                 this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
                     "tracker_type" : "cascade",
-                    "iterations"  : interations,
+                    "overwrites"  : overwrites,
                     "seekable"     : False,
                 }
         elif this.config["program_flow"]["bound_ZOL_tracker_type"].lower() == "counter":
             this.config["program_flow"]["ZOLs"]["bound_ZOL_%i"%(this.ZOL_id, )] = {
                 "tracker_type" : "counter",
-                "iterations"   : interations,
+                "overwrites"   : overwrites,
                 "seekable"     : False,
                 "settable"     : False,
             }

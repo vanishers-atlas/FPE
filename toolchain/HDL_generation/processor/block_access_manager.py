@@ -5,56 +5,95 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
-from FPE.toolchain import utils as tc_utils
-
 from FPE.toolchain.HDL_generation  import utils as gen_utils
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain import utils as tc_utils
 
 from FPE.toolchain.HDL_generation.basic import register
 from FPE.toolchain.HDL_generation.basic import delay
 
 #####################################################################
 
+def add_inst_config(instr_id, instr_set, config):
+
+    inputs  = 0
+
+    for instr in instr_set:
+        if asm_utils.instr_exe_unit(instr) == instr_id:
+            inputs = max(inputs, len(asm_utils.instr_fetches(instr)))
+
+    config["inputs"] = inputs
+
+    return config
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = { }
+
+    for instr in instr_set:
+        for fetch, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(fetch)) for fetch in asm_utils.instr_fetches(instr) ]):
+            if addr_comp == instr_id:
+                gen_utils.add_datapath(pathways, "%sfetch_addr_%i"%(lane, fetch), "fetch", True, instr, "%saddr_0_fetch"%(instr_prefix, ), "unsigned", config["addr_width"])
+
+        for write, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(store)) for store in asm_utils.instr_stores(instr) ]):
+            if addr_comp == instr_id:
+                gen_utils.add_datapath(pathways, "%sstore_addr_%i"%(lane, write), "store", True, instr, "%saddr_0_store"%(instr_prefix, ), "unsigned", config["addr_width"])
+
+        if asm_utils.instr_exe_unit(instr) == instr_id:
+            # Handle EXE_INPUT
+            if asm_utils.instr_mnemonic(instr) == "BAM_SEEK":
+                gen_utils.add_datapath(pathways, "%sfetch_data_0"%(lane, ), "exe", False, instr, "%sin_0"%(instr_prefix, ), "unsigned", config["step_width"])
+
+
+    return pathways
+
+def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
+    controls = {}
+
+    return controls
+
+
+#####################################################################
+
 def preprocess_config(config_in):
     config_out = {}
 
-    assert(config_in["addr_width"] > 0)
+    assert type(config_in["addr_width"]) == int, "addr_width must be an int"
+    assert config_in["addr_width"] > 0, "addr_width must greater than 0"
     config_out["addr_width"] = config_in["addr_width"]
 
-    assert(config_in["offset_width"] > 0)
+    assert type(config_in["offset_width"]) == int, "offset_width must be an int"
+    assert config_in["offset_width"] > 0, "offset_width must greater than 0"
     config_out["offset_width"] = config_in["offset_width"]
 
-    assert(config_in["step_width"] > 0)
+    assert type(config_in["step_width"]) == int, "step_width must be an int"
+    assert config_in["step_width"] > 0, "step_width must greater than 0"
     config_out["step_width"] = config_in["step_width"]
 
-    assert(type(config_in["inputs"]) == type([]))
-    config_out["inputs"] = []
-    assert(len(config_in["inputs"]) <= 1)
-    for words in config_in["inputs"]:
-        assert(words == 1)
-        config_out["inputs"].append(words)
+    assert type(config_in["inputs"]) == int, "inputs must be an int"
+    assert config_in["inputs"] >= 0, "inputs must greater than or equal to 0"
+    config_out["inputs"] = config_in["inputs"]
 
-    assert(type(config_in["steps"]) == type([]))
+    assert type(config_in["steps"]) == list, "steps must be a list"
     config_out["steps"] = []
     for step in config_in["steps"]:
-        assert(step in [
+        assert step in [
                 "fetched_backward",
                 "fetched_forward",
                 "generic_backward",
                 "generic_forward",
-            ]
-        )
-        assert(step not in config_out["steps"])
+            ], "unknown step value, " + step
+        assert step not in config_out["steps"], "step listed more than once " + step
         config_out["steps"].append(step)
 
-    assert(type(config_in["stallable"]) == type(True))
+    assert type(config_in["stallable"]) == bool, "stallable must be a boolean"
     config_out["stallable"] = config_in["stallable"]
 
     return config_out
 
 import zlib
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
         generated_name = "BAM"
 
         if config["stallable"]:
@@ -74,14 +113,23 @@ def handle_module_name(module_name, config, generate_name):
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
+
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-existing file if allowed and can
@@ -95,7 +143,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        INTERFACE = { "ports" : { }, "generics" : { } }
 
         # Include extremely commom libs
         IMPORTS += [
@@ -111,22 +159,16 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
             }
         ]
 
-        INTERFACE["ports"] += [
-            {
-                "name" : "clock",
+        INTERFACE["ports"]["clock"] = {
+            "type" : "std_logic",
+            "direction" : "in",
+        }
+
+        if CONFIG["stallable"]:
+            INTERFACE["ports"]["stall"] = {
                 "type" : "std_logic",
                 "direction" : "in",
             }
-        ]
-
-        if CONFIG["stallable"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "stall",
-                    "type" : "std_logic",
-                    "direction" : "in",
-                }
-            ]
 
         # Generation Module Code
         generate_data_ports()
@@ -142,22 +184,18 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 #####################################################################
 
 def generate_data_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    for input, words in enumerate(CONFIG["inputs"]):
-        for word in range(words):
-            assert(word == 0)
-            INTERFACE["ports"] += [
-                {
-                    "name" : "in_%i"%(input, ) ,
-                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["step_width"] - 1, ),
-                    "direction" : "in"
-                }
-            ]
+    for input in range(CONFIG["inputs"]):
+        INTERFACE["ports"]["in_%i"%(input, )] = {
+            "type" : "std_logic_vector",
+            "width": CONFIG["step_width"],
+            "direction" : "in",
+        }
 
 def generate_step_controls():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     ARCH_HEAD += "signal selected_step : std_logic_vector(%i downto 0);\n"%(CONFIG["step_width"] - 1, )
@@ -165,54 +203,38 @@ def generate_step_controls():
 
     # Handle fixed/generic step
     if set(CONFIG["steps"])&set(["generic_forward", "generic_backward"]):
-        INTERFACE["generics"] += [
-            {
-                "name" : "increment",
-                "type" : "integer"
-            }
-        ]
+        INTERFACE["generics"]["increment"] = {
+            "type" : "integer"
+        }
         if "generic_forward" in CONFIG["steps"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "step_generic_forward",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
+            INTERFACE["ports"]["step_generic_forward"] = {
+                "type" : "std_logic",
+                "direction" : "in",
+            }
             ARCH_BODY +="std_logic_vector(to_unsigned(increment, selected_step'length)) when step_generic_forward = '1'\nelse "
         if "generic_backward" in CONFIG["steps"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "step_generic_backward",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
+            INTERFACE["ports"]["step_generic_backward"] = {
+                "type" : "std_logic",
+                "direction" : "in"
+            }
             ARCH_BODY +="std_logic_vector(to_unsigned(increment, selected_step'length)) when step_generic_backward = '1'\nelse "
 
     # Handle fetched/data step
     if set(CONFIG["steps"])&set(["fetched_forward", "fetched_backward"]):
         # Check inputs
-        assert(len(CONFIG["inputs"]) >= 1)
-        assert(CONFIG["inputs"][0] >= 1)
+        assert(CONFIG["inputs"] >= 1)
 
         if "fetched_forward" in CONFIG["steps"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "step_fetched_forward",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
+            INTERFACE["ports"]["step_fetched_forward"] = {
+                "type" : "std_logic",
+                "direction" : "in"
+            }
             ARCH_BODY += "in_0 when step_fetched_forward = '1'\nelse "
         if "fetched_backward" in CONFIG["steps"]:
-            INTERFACE["ports"] += [
-                {
-                    "name" : "step_fetched_backward",
-                    "type" : "std_logic",
-                    "direction" : "in"
-                }
-            ]
+            INTERFACE["ports"]["step_fetched_backward"] = {
+                "type" : "std_logic",
+                "direction" : "in"
+            }
             ARCH_BODY += "in_0 when step_fetched_backward = '1'\nelse "
 
     ARCH_BODY += "(others => '0');\<\n"
@@ -235,16 +257,13 @@ def generate_step_controls():
     ARCH_BODY += "'0';\n"
 
 def generate_outset_adder_acc():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    INTERFACE["ports"] += [
-        {
-            "name" : "reset",
-            "type" : "std_logic",
-            "direction" : "in"
-        }
-    ]
+    INTERFACE["ports"]["reset"] = {
+        "type" : "std_logic",
+        "direction" : "in"
+    }
 
     ARCH_HEAD += "signal curr_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
     ARCH_HEAD += "signal next_offset : std_logic_vector(%i downto 0);\n"%(CONFIG["offset_width"] - 1, )
@@ -257,12 +276,13 @@ def generate_outset_adder_acc():
         {
             "has_async_force"  : True,
             "has_sync_force"   : False,
-            "has_enable"    : True
+            "has_enable"    : True,
+            "force_on_init" : False
         },
         OUTPUT_PATH,
-        "register",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "offset_acc : entity work.%s(arch)\>\n"%(reg_name)
@@ -289,27 +309,22 @@ def generate_outset_adder_acc():
     ARCH_BODY += "\<);\n\<"
 
 def generate_base_adders():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
-    INTERFACE["generics"] += [
-        {
-            "name" : "base",
-            "type" : "integer"
-        }
-    ]
-    INTERFACE["ports"] += [
-        {
-            "name" : "addr_0_fetch",
-            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
-            "direction" : "out"
-        },
-        {
-            "name" : "addr_0_store",
-            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
-            "direction" : "out"
-        },
-    ]
+    INTERFACE["generics"]["base"] = {
+        "type" : "integer"
+    }
+    INTERFACE["ports"]["addr_0_fetch"] = {
+        "type" : "std_logic_vector",
+        "width": CONFIG["addr_width"],
+        "direction" : "out"
+    }
+    INTERFACE["ports"]["addr_0_store"] = {
+        "type" : "std_logic_vector",
+        "width": CONFIG["addr_width"],
+        "direction" : "out"
+    }
 
     # Declare addr signals
     ARCH_HEAD += "signal addr_0_fetch_internal : std_logic_vector(%i downto 0);"%(CONFIG["addr_width"] - 1, )
@@ -326,9 +341,9 @@ def generate_base_adders():
             "stallable" : CONFIG["stallable"]
         },
         OUTPUT_PATH,
-        "delay",
-        True,
-        False
+        module_name=None,
+        concat_naming=False,
+        force_generation=FORCE_GENERATION
     )
 
     ARCH_BODY += "pre_addr_0_store_delay : entity work.%s(arch)\>\n"%(delay_name)

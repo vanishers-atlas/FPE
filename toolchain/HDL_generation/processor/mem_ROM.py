@@ -6,16 +6,51 @@ if __name__ == "__main__":
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
 from FPE.toolchain import utils as tc_utils
-
-from FPE.toolchain.HDL_generation import utils as gen_utils
+from FPE.toolchain import FPE_assembly as asm_utils
+from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.basic import dist_ROM
+from FPE.toolchain.HDL_generation.basic import register
+from FPE.toolchain.HDL_generation.basic import mux
 
 import math
 
 from warnings import warn
 
-from FPE.toolchain.HDL_generation.basic import register, mux
+#####################################################################
+
+def add_inst_config(instr_id, instr_set, config):
+
+    reads = 0
+    for instr in instr_set:
+        fetch_mems = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr) ]
+        reads = max(reads, fetch_mems.count(instr_id))
+    config["reads"] = reads
+
+    return config
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = { }
+
+    for instr in instr_set:
+        read = 0
+        for access in asm_utils.instr_fetches(instr):
+            if asm_utils.access_mem(access) == instr_id:
+                # Handle fetch addr
+                gen_utils.add_datapath(pathways, "%sfetch_addr_%i"%(lane, read), "fetch", False, instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+
+                # Handle fetch data
+                gen_utils.add_datapath(pathways, "%sfetch_data_%i"%(lane, read), "exe", True, instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+
+                read += 1
+
+    return pathways
+
+def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
+    controls = {}
+
+    return controls
+
 
 #####################################################################
 
@@ -55,11 +90,13 @@ possible_BRAMs = [
 def preprocess_config(config_in):
     config_out = {}
 
-    assert(config_in["reads"] >= 1)
+    assert type(config_in["stallable"]) == bool, "stallable must be a boolean"
+    config_out["stallable"] = config_in["stallable"]
+
+    assert type(config_in["reads"]) == int, "reads must be an int"
+    assert config_in["reads"] > 0., "reads must be greater than 0"
     config_out["reads"] = config_in["reads"]
 
-    assert(type(config_in["stallable"]) == type(True))
-    config_out["stallable"] = config_in["stallable"]
 
     # Check data type
     assert(type(config_in["type"]) == type(""))
@@ -107,7 +144,7 @@ def preprocess_config(config_in):
             if tiling["wasted_mem"] == best_wasted_mem
         ]
 
-        # Filter for lowest addr_banks, to save of muxing
+        # Filter for lowest addr_banks, to save of pathways
         lowest_rows = min([
             tiling["addr_banks"]
             for tiling in tilings
@@ -149,8 +186,8 @@ def preprocess_config(config_in):
 
     return config_out
 
-def handle_module_name(module_name, config, generate_name):
-    if generate_name == True:
+def handle_module_name(module_name, config):
+    if module_name == None:
 
         generated_name = "ROM"
 
@@ -176,14 +213,23 @@ def handle_module_name(module_name, config, generate_name):
 
 #####################################################################
 
-def generate_HDL(config, output_path, module_name, generate_name=True,force_generation=True):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+
+    assert type(config) == dict, "config must be a dict"
+    assert type(output_path) == str, "output_path must be a str"
+    assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
+    assert type(concat_naming) == bool, "concat_naming must be a boolean"
+    assert type(force_generation) == bool, "force_generation must be a boolean"
+    if __debug__ and concat_naming == True:
+        assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
+
 
     # Moves parameters into global scope
     CONFIG = preprocess_config(config)
     OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG, generate_name)
-    GENERATE_NAME = generate_name
+    MODULE_NAME = handle_module_name(module_name, CONFIG)
+    CONCAT_NAMING = concat_naming
     FORCE_GENERATION = force_generation
 
     # Load return variables from pre-existing file if allowed and can
@@ -197,7 +243,7 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
         IMPORTS   = []
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [], "overwrites" : {} }
+        INTERFACE = { "ports" : { }, "generics" : { }, }
 
         # Include extremely commom libs
         IMPORTS += [
@@ -224,52 +270,41 @@ def generate_HDL(config, output_path, module_name, generate_name=True,force_gene
 #####################################################################
 
 def gen_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Handle common ports
-    INTERFACE["ports"] += [
-        {
-            "name" : "clock",
-            "type" : "std_logic",
-            "direction" : "in"
-        }
-    ]
+    INTERFACE["ports"]["clock"] = {
+        "type" : "std_logic",
+        "direction" : "in",
+    }
     if CONFIG["stallable"]:
-        INTERFACE["ports"] += [
-            {
-                "name" : "stall",
-                "type" : "std_logic",
-                "direction" : "in"
-            }
-        ]
+        INTERFACE["ports"]["stall"] = {
+            "type" : "std_logic",
+            "direction" : "in",
+        }
 
     # Declare read ports
     for read in range(CONFIG["reads"]):
-        INTERFACE["ports"] += [
-            {
-                "name" : "read_%i_addr"%(read, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["addr_width"] - 1, ),
-                "direction" : "in"
-            },
-            {
-                "name" : "read_%i_data"%(read, ),
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["data_width"] - 1, ),
-                "direction" : "out"
-            }
-        ]
+        INTERFACE["ports"]["read_%i_addr"%(read, )] = {
+            "type" : "std_logic_vector",
+            "width" : CONFIG["addr_width"],
+            "direction" : "in",
+        }
+        INTERFACE["ports"]["read_%i_data"%(read, )] = {
+            "type" : "std_logic_vector",
+            "width" : CONFIG["data_width"],
+            "direction" : "out",
+        }
 
 def gen_wordwise_distributed_ROM():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     # Generation Module Code
-    INTERFACE["generics"] += [
-        {
-            "name" : "init_mif",
-            "type" : "string"
-        }
-    ]
+    INTERFACE["generics"]["init_mif"] = {
+        "type" : "string",
+    }
 
     if CONFIG["reads"] <= 3:
         # Generate a basic ROM to handle be having
@@ -282,9 +317,9 @@ def gen_wordwise_distributed_ROM():
                 "init_type" : "MIF"
             },
             OUTPUT_PATH,
-            "ROM",
-            True,
-            False
+            module_name=None,
+            concat_naming=False,
+            force_generation=FORCE_GENERATION
         )
 
         # Instancate ROM
@@ -310,7 +345,7 @@ def gen_wordwise_distributed_ROM():
         raise NotIMplementedError("Support for 4+ reads does adding")
 
 def gen_wordwise_block_ROM():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     warn("BLOCK type ROMs currently lack a means to init they value, so aren't feactural, but can given area costs")
@@ -392,9 +427,9 @@ def gen_wordwise_block_ROM():
                 "inputs" : 2
             },
             OUTPUT_PATH,
-            "mux",
-            True,
-            False
+            module_name=None,
+            concat_naming=False,
+            force_generation=FORCE_GENERATION
         )
         mux_outputs = [[]]
         for bank in range(CONFIG["addr_banks"]):
@@ -507,12 +542,13 @@ def gen_wordwise_block_ROM():
             {
                 "has_async_force" : False,
                 "has_sync_force" : False,
-                "has_enable"   : CONFIG["stallable"]
+                "has_enable"   : CONFIG["stallable"],
+                "force_on_init" : False
             },
             OUTPUT_PATH,
-            "register",
-            True,
-            False
+            module_name=None,
+            concat_naming=False,
+            force_generation=FORCE_GENERATION
         )
 
         for read in range(CONFIG["reads"]):
@@ -532,7 +568,7 @@ def gen_wordwise_block_ROM():
         raise NOtImplementedError("More than 2 reads to a BRAM isn't supported")
 
 def gen_RAMB18E1(reads):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, GENERATE_NAME, FORCE_GENERATION
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
     BRAM_HEAD = gen_utils.indented_string()
@@ -757,75 +793,3 @@ def gen_RAMB18E1(reads):
             raise ValueError("Unknown BRAM_width, %i"%(BRAM_width, ) )
 
     return BRAM_HEAD, BRAM_BODY
-
-if __name__ == "__main__":
-    generate_HDL(
-        {
-            "type"          : "BLOCK",
-            "data_width"    : 1,
-            "depth"         : 16 * 1024,
-            "reads"         : 2,
-            "stallable"     : False,
-        },
-        ".",
-        "test_ROM",
-        generate_name=True,
-        force_generation=True
-    )
-
-    generate_HDL(
-        {
-            "type"          : "BLOCK",
-            "data_width"    : 2,
-            "depth"         : 8 * 1024,
-            "reads"         : 2,
-            "stallable"     : False,
-        },
-        ".",
-        "test_ROM",
-        generate_name=True,
-        force_generation=True
-    )
-
-    generate_HDL(
-        {
-            "type"          : "BLOCK",
-            "data_width"    : 4,
-            "depth"         : 4 * 1024,
-            "reads"         : 2,
-            "stallable"     : False,
-        },
-        ".",
-        "test_ROM",
-        generate_name=True,
-        force_generation=True
-    )
-
-
-    generate_HDL(
-        {
-            "type"          : "BLOCK",
-            "data_width"    : 9,
-            "depth"         : 2 * 1024,
-            "reads"         : 2,
-            "stallable"     : False,
-        },
-        ".",
-        "test_ROM",
-        generate_name=True,
-        force_generation=True
-    )
-
-    generate_HDL(
-        {
-            "type"          : "BLOCK",
-            "data_width"    : 18,
-            "depth"         : 1 * 1024,
-            "reads"         : 2,
-            "stallable"     : False,
-        },
-        ".",
-        "test_ROM",
-        generate_name=True,
-        force_generation=True
-    )
