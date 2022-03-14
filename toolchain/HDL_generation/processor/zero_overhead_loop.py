@@ -30,7 +30,7 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
 
     tracker_mod = tracker_module_LUT[config["tracker_type"]]
 

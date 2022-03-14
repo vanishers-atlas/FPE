@@ -14,6 +14,7 @@ def generate_instr(ctx, program_context):
         except Exception as e:
             raise ValueError("Unsupported ctx given, " + str(type(ctx)) )
 
+
 def generate_instr_op(ctx, program_context):
     if   ctx.op_void() != None:
         return generate_instr_op_void(ctx.op_void(), program_context)
@@ -23,6 +24,8 @@ def generate_instr_op(ctx, program_context):
         return generate_instr_op_bam(ctx.op_bam(), program_context)
     elif ctx.op_alu() != None:
         return generate_instr_op_alu(ctx.op_alu(), program_context)
+    elif ctx.op_palu() != None:
+        return generate_instr_op_palu(ctx.op_palu(), program_context)
     elif ctx.op_ZOL() != None:
         return generate_instr_op_ZOL(ctx.op_ZOL(), program_context)
     else:
@@ -45,7 +48,7 @@ def generate_instr_op_void(ctx, program_context):
                 # Sources
                 "~".join([]),
                 # Exe
-                asm_utils.get_component_op(ctx, program_context),
+                "~".join( asm_utils.get_component_op(ctx, program_context) ),
                 # Dests
                 "~".join([]),
                 # Mods
@@ -65,11 +68,11 @@ def generate_instr_op_void(ctx, program_context):
 
 def generate_instr_op_pc(ctx, program_context):
 
-    if ctx.op_pc_jump():
+    if   ctx.op_pc_only_jump():
         return "#".join(
             [
                 # Mnemonic
-                asm_utils.token_to_text(ctx.op_pc_jump().mnemonic),
+                "JMP",
                 # Sources
                 "~".join(
                     [
@@ -77,7 +80,26 @@ def generate_instr_op_pc(ctx, program_context):
                     ]
                 ),
                 # Exe
-                asm_utils.get_component_op(ctx, program_context),
+                "~".join( asm_utils.get_component_op(ctx, program_context) ),
+                # Dests
+                "~".join([]),
+                # Mods
+                "~".join(sorted([]))
+            ]
+        )
+    elif ctx.op_pc_alu_jump():
+        return "#".join(
+            [
+                # Mnemonic
+                asm_utils.token_to_text(ctx.op_pc_alu_jump().mnemonic),
+                # Sources
+                "~".join(
+                    [
+                        generate_instr_access_imm(),
+                    ]
+                ),
+                # Exe
+                "~".join( asm_utils.get_component_op(ctx, program_context) ),
                 # Dests
                 "~".join([]),
                 # Mods
@@ -117,7 +139,7 @@ def generate_instr_op_bam_reset(ctx, program_context):
             # Sources
             "~".join([]),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join([]),
             # Mods
@@ -140,7 +162,7 @@ def generate_instr_op_bam_seek(ctx, program_context):
             # Sources
             generate_instr_access_fetch(ctx.access_fetch(), program_context),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join([]),
             # Mods
@@ -180,7 +202,7 @@ def generate_instr_op_alu_1o_1r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join(
                 [
@@ -197,10 +219,11 @@ def generate_instr_op_alu_1o_1e_1r(ctx, program_context):
 
     return "#".join(
         [
-            # Mnemonic
-            "@".join(
+            "~".join(
                 [
+                    # Mnemonic
                     asm_utils.token_to_text(ctx.mnemonic),
+                    # Bits factor
                     str(asm_utils.evaluate_expr(ctx.expr(), program_context))
                 ]
             ),
@@ -211,7 +234,7 @@ def generate_instr_op_alu_1o_1e_1r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join(
                 [
@@ -236,7 +259,7 @@ def generate_instr_op_alu_2o_0r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join([]),
             # Mods
@@ -257,7 +280,7 @@ def generate_instr_op_alu_2o_1r(ctx, program_context):
                 ]
             ),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join(
                 [
@@ -270,12 +293,15 @@ def generate_instr_op_alu_2o_1r(ctx, program_context):
     )
 
 
+ALU_internal_operands = ["ACC", ]
+ALU_internal_results = ["ACC", ]
+
 def generate_instr_access_alu_operand(ctx, program_context):
 
     if   ctx.access_fetch():
         return generate_instr_access_fetch(ctx.access_fetch(), program_context)
-    elif asm_utils.token_to_text(ctx.internal) == "ACC":
-        return "ACC"
+    elif asm_utils.token_to_text(ctx.internal) in ALU_internal_operands:
+        return "?" + asm_utils.token_to_text(ctx.internal)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -289,8 +315,8 @@ def generate_instr_access_alu_result(ctx, program_context):
 
     if ctx.access_store():
         return generate_instr_access_store(ctx.access_store(), program_context)
-    elif asm_utils.token_to_text(ctx.internal) == "ACC":
-        return "ACC"
+    elif asm_utils.token_to_text(ctx.internal) in ALU_internal_results:
+        return "?" + asm_utils.token_to_text(ctx.internal)
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -299,6 +325,263 @@ def generate_instr_access_alu_result(ctx, program_context):
                 asm_utils.ctx_start(ctx),
             )
         )
+
+####################################################################
+
+def generate_instr_op_palu(ctx, program_context):
+    if   ctx.op_palu_1o_1r() != None:
+        return generate_instr_op_palu_1o_1r(ctx.op_palu_1o_1r(), program_context)
+    elif ctx.op_palu_1o_1e_1r() != None:
+        return generate_instr_op_palu_1o_1e_1r(ctx.op_palu_1o_1e_1r(), program_context)
+    elif ctx.op_palu_2o_1r() != None:
+        return generate_instr_op_palu_2o_1r(ctx.op_palu_2o_1r(), program_context)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+                (
+                    type(ctx),
+                    asm_utils.ctx_start(ctx)
+                )
+            )
+
+
+def generate_instr_op_palu_1o_1r(ctx, program_context):
+    mods = []
+    # Parallel factor
+    parallel_factor = asm_utils.evaluate_expr(ctx.expr(), program_context)
+
+    return  "#".join(
+         [
+            "~".join(
+                [
+                    # Mnemonic
+                    asm_utils.token_to_text(ctx.mnemonic),
+                    # Parallel factor
+                    str(parallel_factor),
+                ]
+            ),
+
+            # Sources
+            "~".join(
+                [
+                    generate_instr_palu_operand(ctx.palu_operand(), program_context, parallel_factor)
+                ]
+            ),
+
+            # Exe
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
+
+            # Dests
+            "~".join(
+                [
+                    generate_instr_palu_result(ctx.palu_result(), program_context, parallel_factor)
+                ]
+            ),
+
+            # Mods
+            "~".join(sorted(mods))
+        ]
+    )
+
+def generate_instr_op_palu_1o_1e_1r(ctx, program_context):
+    mods = []
+    # Parallel factor
+    parallel_factor = asm_utils.evaluate_expr(ctx.expr(0), program_context)
+
+    return "#".join(
+         [
+            "~".join(
+                [
+                    # Mnemonic
+                    asm_utils.token_to_text(ctx.mnemonic),
+                    # Shifter bits
+                    str(asm_utils.evaluate_expr(ctx.expr(1), program_context)),
+                    str(parallel_factor),
+                ]
+            ),
+
+            # Sources
+            "~".join(
+                [
+                    generate_instr_palu_operand(ctx.palu_operand(), program_context, parallel_factor)
+                ]
+            ),
+
+            # Exe
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
+
+            # Dests
+            "~".join(
+                [
+                    generate_instr_palu_result(ctx.palu_result(), program_context, parallel_factor)
+                ]
+            ),
+
+            # Mods
+            "~".join(sorted(mods))
+        ]
+    )
+
+def generate_instr_op_palu_2o_1r(ctx, program_context):
+    mods = []
+    # Parallel factor
+    parallel_factor = asm_utils.evaluate_expr(ctx.expr(), program_context)
+
+    return "#".join(
+         [
+            "~".join(
+                [
+                    # Mnemonic
+                    asm_utils.token_to_text(ctx.mnemonic),
+                    # Parallel factor
+                    str(parallel_factor),
+                ]
+            ),
+
+            # Sources
+            "~".join(
+                [
+                    generate_instr_palu_operand(ctx.palu_operand(0), program_context, parallel_factor),
+                    generate_instr_palu_operand(ctx.palu_operand(1), program_context, parallel_factor)
+                ]
+            ),
+
+            # Exe
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
+
+            # Dests
+            "~".join(
+                [
+                    generate_instr_palu_result(ctx.palu_result(), program_context, parallel_factor)
+                ]
+            ),
+
+            # Mods
+            "~".join(sorted(mods))
+        ]
+    )
+
+def generate_instr_palu_operand(ctx, program_context, parallel_factor):
+    if   ctx.bap_fetch():
+        return generate_instr_access_bap_fetch(ctx.bap_fetch(), program_context, parallel_factor)
+    elif asm_utils.token_to_text(ctx.internal) in ALU_internal_operands:
+        return "?" + asm_utils.token_to_text(ctx.internal)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def generate_instr_palu_result(ctx, program_context, parallel_factor):
+    if ctx.bap_store():
+        return generate_instr_access_bap_store(ctx.bap_store(), program_context, parallel_factor)
+    elif asm_utils.token_to_text(ctx.internal) in ALU_internal_results:
+        return "?" + asm_utils.token_to_text(ctx.internal)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def generate_instr_access_bap_fetch(ctx, program_context, parallel_factor):
+    if   ctx.access_reg():
+        return generate_instr_access_bapa_reg(ctx.access_reg(), program_context, parallel_factor)
+    elif ctx.access_ram():
+        return generate_instr_access_bapa_ram(ctx.access_ram(), program_context, parallel_factor)
+    elif ctx.access_rom_a():
+        return generate_instr_access_bapa_rom_a(ctx.access_rom_a(), program_context, parallel_factor)
+    elif ctx.access_rom_b():
+        return generate_instr_access_bapa_rom_b(ctx.access_rom_b(), program_context, parallel_factor)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def generate_instr_access_bap_store(ctx, program_context, parallel_factor):
+    if   ctx.access_reg():
+        return generate_instr_access_bapa_reg(ctx.access_reg(), program_context, parallel_factor)
+    elif ctx.access_ram():
+        return generate_instr_access_bapa_ram(ctx.access_ram(), program_context, parallel_factor)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+
+def generate_instr_access_bapa_reg(ctx, program_context, parallel_factor):
+
+    # Get all given mods
+    mods = [ "BAPA;%i"%(parallel_factor) ]
+
+    return "'".join(
+        [
+            # Mem
+            "REG",
+            # Addr
+            generate_instr_addr(ctx.addr(), program_context),
+            # Mods
+            "@".join( sorted( mods ) ),
+        ]
+    )
+
+def generate_instr_access_bapa_ram(ctx, program_context, parallel_factor):
+    # Get all given mods
+    mods = [ "BAPA;%i"%(parallel_factor) ]
+
+    return "'".join(
+        [
+            # Mem
+            "RAM",
+            # Addr
+            generate_instr_addr(ctx.addr(), program_context),
+            # Mods
+            "@".join( sorted( mods ) ),
+        ]
+    )
+
+def generate_instr_access_bapa_rom_a(ctx, program_context, parallel_factor):
+    # Get all given mods
+    mods = [ "BAPA;%i"%(parallel_factor) ]
+
+    return "'".join(
+        [
+            # Mem
+            "ROM_A",
+            # Addr
+            generate_instr_addr(ctx.addr(), program_context),
+            # Mods
+            "@".join( sorted( mods ) ),
+        ]
+    )
+
+def generate_instr_access_bapa_rom_b(ctx, program_context, parallel_factor):
+    # Get all given mods
+    mods = [ ]
+
+    return "'".join(
+        [
+            # Mem
+            "ROM_B",
+            # Addr
+            generate_instr_addr(ctx.addr(), program_context),
+            # Mods
+            "@".join( sorted( mods ) ),
+        ]
+    )
 
 
 ####################################################################
@@ -327,7 +610,7 @@ def generate_instr_op_ZOL_set(ctx, program_context):
                 generate_instr_access_fetch(ctx.iterations, program_context)
             ]),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join([]),
             # Mods
@@ -346,7 +629,7 @@ def generate_instr_op_ZOL_seek(ctx, program_context):
                 generate_instr_access_imm()
             ]),
             # Exe
-            asm_utils.get_component_op(ctx, program_context),
+            "~".join( asm_utils.get_component_op(ctx, program_context) ),
             # Dests
             "~".join([]),
             # Mods

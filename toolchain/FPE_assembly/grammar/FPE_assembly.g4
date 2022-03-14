@@ -49,6 +49,18 @@ grammar FPE_assembly;
 								| access_ram
 								;
 
+	/* Boundary/Binary Allign Parallel (BAP) Memory accesses,
+		used for fetching(storing) blocks of data from(to) memories
+	*/
+	bap_fetch	: access_reg
+						| access_ram
+						| access_rom_a
+						| access_rom_b
+						;
+	bap_store : access_reg
+						| access_ram
+							;
+
 	access_imm : expr ;
 	access_get : 'GET' '[' addr ']' ('<' advance_mod=('ADV' | 'NO_ADV') '>')? ;
 	access_put : 'PUT' '[' addr ']' ;
@@ -102,14 +114,16 @@ grammar FPE_assembly;
 		| op_pc 	';'
 		| op_bam 	';'
 		| op_alu  ';'
+		| op_palu ';'
 		| op_ZOL  ';'
 		;
 
 		op_void : op_void_nop ;
 			op_void_nop : 'NOP' ;
 
-		op_pc 	: op_pc_jump ;
-			op_pc_jump	: mnemonic=( 'JMP' | 'JEQ' | 'JNE' | 'JLT'| 'JLE' | 'JGT' | 'JGE' ) '(' ident_ref ')' ;
+		op_pc 	: op_pc_only_jump | op_pc_alu_jump;
+			op_pc_only_jump : 'JMP' '(' ident_ref ')' ;
+			op_pc_alu_jump	: mnemonic=( 'JEQ' | 'JNE' | 'JLT'| 'JLE' | 'JGT' | 'JGE' ) '(' ident_ref ')' ;
 
 		op_bam	:	op_bam_reset | op_bam_seek;
 			op_bam_reset 	: 'RESET' 'BAM' '[' expr ']' ;
@@ -134,6 +148,22 @@ grammar FPE_assembly;
 										| internal='ACC' ;
 				alu_result 	: access_store
 										| internal='ACC' ;
+
+		op_palu 	: op_palu_1o_1r | op_palu_1o_1e_1r | op_palu_2o_1r ;
+			op_palu_1o_1r 	:  mnemonic=( 'PMOV' | 'PNOT' )
+							'('expr ',' palu_operand ',' palu_result ')' ;
+
+			op_palu_1o_1e_1r :  mnemonic=( 'PLSH' | 'PRSH' | 'PLRL' | 'PRRL' )
+							'(' expr ',' palu_operand ',' expr ',' palu_result ')' ;
+
+			op_palu_2o_1r 	:  mnemonic=( 'PAND' | 'POR' | 'PXOR' | 'PADD' | 'PSUB'  )
+							'('expr ',' palu_operand ',' palu_operand ',' palu_result ')' ;
+
+				palu_operand : bap_fetch
+											| internal='ACC' ;
+				palu_result 	: bap_store
+											| internal='ACC' ;
+
 
 /* lexer Rules */
 	/* Number Handling */

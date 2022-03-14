@@ -12,7 +12,7 @@ from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.processor import alu_dsp48e1 as ALU
+from FPE.toolchain.HDL_generation.processor import ALU
 from FPE.toolchain.HDL_generation.processor import comm_get as GET
 from FPE.toolchain.HDL_generation.processor import comm_put as PUT
 from FPE.toolchain.HDL_generation.processor import mem_regfile as REG
@@ -28,444 +28,85 @@ from FPE.toolchain.HDL_generation.basic import mux
 
 #####################################################################
 
-jump_exe_status_map = {
-    "ALU" : {
-        "JEQ" : ["equal"],
-        "JNE" : ["lesser", "greater"],
-        "JLT" : ["lesser"],
-        "JLE" : ["equal", "lesser"],
-        "JGT" : ["greater"],
-        "JGE" : ["equal", "greater"],
-    },
-}
-
-def precheck_config(config_in):
+def preprocess_config(config_in):
     config_out = {}
 
-    #####################################################################
-    # Precheck and copy input
-    #####################################################################
+    # Handle stallable
+    config_out["stallable"] = False
+
+      # Include standard pipeline stages
+    config_out["pipeline_stage"] = ["PM", "ID", "FETCH", "EXE", "STORE"]
 
     # Handle SIMD section of config
     config_out["SIMD"] = {}
-    config_out["SIMD"] = copy.deepcopy(config_in["SIMD"])
-    assert(config_in["SIMD"]["lanes"] >= 0)
 
-    # Handle instr_set section of config
-    assert(len(config_in["instr_set"]) > 0)
-    config_out["instr_set"] = copy.deepcopy(config_in["instr_set"])
+    assert type(config_in["SIMD"]["lanes"]) == int, "SIMD.lanes must be an int"
+    assert config_in["SIMD"]["lanes"] > 0, "SIMD.lanes must be greater than 0"
+    config_out["SIMD"]["lanes"] = config_in["SIMD"]["lanes"]
 
-    # Handle program_flow section of config
-    config_out["program_flow"] = {}
-    config_out["program_flow"] = copy.deepcopy(config_in["program_flow"])
-    assert(config_in["program_flow"]["program_length"] >= 0)
-    assert(len(config_in["program_flow"]["ZOLs"]) >= 0)
-
-    # Handle instr_decoder section of config
-    config_out["instr_decoder"] = {}
-    config_out["instr_decoder"] = copy.deepcopy(config_in["instr_decoder"])
-    assert(config_in["instr_decoder"]["opcode_width"] > 0)
-    assert(type(config_in["instr_decoder"]["addr_widths"]) == type([]))
-    for width in config_in["instr_decoder"]["addr_widths"]:
-        assert(width > 0)
-
-    # Handle address_sources section of config
-    config_out["address_sources"] = {}
-    config_out["address_sources"] = copy.deepcopy(config_in["address_sources"])
-    for bam in config_in["address_sources"]:
-        assert(config_in["address_sources"][bam]["addr_width"] > 0)
-        assert(config_in["address_sources"][bam]["step_width"] > 0)
-
-
-    # Handle data_memory section of config
-    config_out["data_memories"] = {}
-    config_out["data_memories"] = copy.deepcopy(config_in["data_memories"])
-    assert(len(config_in["data_memories"]) > 0)
-    for mem in config_in["data_memories"].keys():
-        assert(config_in["data_memories"][mem]["addr_width"] > 0)
-        assert(config_in["data_memories"][mem]["data_width"] > 0)
-
-        # Check FIFO_handshakes of comm memories
-        if mem in ["GET", "PUT"]:
-            assert(type(config_in["data_memories"][mem]["FIFO_handshakes"]) == type(True))
-
-        # Check type of ROM and RAM memories
-        if mem in ["ROM_A", "ROM_B", "RAM"]:
-            assert(type(config_in["data_memories"][mem]["type"]) == type(""))
-
-    # Handle execute_units section of config
-    config_out["execute_units"] = {}
-    config_out["execute_units"] = copy.deepcopy(config_in["execute_units"])
-
-    assert(len(config_in["execute_units"]) > 0)
-    for exe in config_in["execute_units"].keys():
-        assert(config_in["execute_units"][exe]["data_width"] > 0)
-
-    return config_out
-
-#####################################################################
-
-def preprocess_mem_addr_datapath(config, stage, dst_mem):
-    addr_datapath = []
-
-    for instr in config["instr_set"].keys():
-        if stage == "fetch":
-            accesses = asm_utils.instr_fetches(instr)
-        elif stage == "store":
-            accesses = asm_utils.instr_stores(instr)
-        else:
-            raise ValueError(stage)
-
-        access_mems = [ asm_utils.access_mem(access) for access in accesses ]
-        access_addrs = [ asm_utils.access_addr(access) for access in accesses ]
-
-        # Find all indexes (accesses) that use this mem
-        indexes = [i for i, mem in enumerate(access_mems) if mem == dst_mem]
-
-        # Add more accesses if needed
-        for _ in range(len(addr_datapath), len(indexes)):
-            addr_datapath.append([])
-
-        # Map the found indexes to accesses
-        for access, index in  enumerate(indexes):
-            # Compute the addr source signal
-            src_com = asm_utils.addr_com(access_addrs[index])
-            src_port = int(asm_utils.addr_port(access_addrs[index]))
-            src_signal = "%s_addr_%i_%s"%(src_com, src_port, stage)
-
-
-            if not any([
-                src_signal == addr["signal"]
-                for addr in addr_datapath[access]
-            ]):
-                if src_com == "ID":
-                    src_width = config["instr_decoder"]["addr_widths"][src_port]
-                else:
-                    src_width = config["address_sources"][src_com]["addr_width"]
-
-                addr_datapath[access].append(
-                    {
-                        "signal" : src_signal,
-                        "com" : src_com,
-                        "port" : src_port,
-                        "width" : src_width
-                    }
-                )
-    return addr_datapath
-
-def preprocess_mem_data_datapath(config, mem):
-    input_datapath = []
-
-    for instr in config["instr_set"].keys():
-        exe_unit = asm_utils.instr_exe_unit(instr)
-
-        stores = asm_utils.instr_stores(instr)
-        store_mems = [ asm_utils.access_mem(store) for store in stores ]
-        store_mods = [ asm_utils.access_mods(store) for store in stores ]
-
-        indexes = [ index for index, store_mem in enumerate(store_mems) if store_mem == mem]
-
-        # Add more inputs if needed
-        for _ in range(len(input_datapath), len(indexes)):
-            input_datapath.append( [] )
-
-        for write, index in enumerate(indexes):
-
-            # Work out number of words in access, defaulting in 1
-            try:
-                words = int(store_mods[index]["block_size"])
-            except KeyError:
-                words = 1
-
-
-            # Add more words if needed
-            for _ in range(len(input_datapath[write]), words):
-                input_datapath[write].append( [] )
-
-            for word in range(words):
-                assert(word == 0)
-                data_signal = "%s_out_%i"%(exe_unit, index, )
-
-                if not any([
-                    data_signal == scr["signal"]
-                    for scr in input_datapath[write][word]
-                ]):
-                    input_datapath[write][word].append(
-                        {
-                            "signal" : data_signal,
-                            "com" : exe_unit,
-                            "port" : index,
-                            "width" : config["execute_units"][exe_unit]["data_width"]
-                        }
-                    )
-
-    return input_datapath
-
-def preprocess_mem_access_blocks(config, stage, dst_mem):
-    access_blocks = set()
-
-    for instr in config["instr_set"].keys():
-        if stage == "fetch":
-            accesses = asm_utils.instr_fetches(instr)
-        elif stage == "store":
-            accesses = asm_utils.instr_stores(instr)
-        else:
-            raise ValueError(stage)
-
-        access_mems  = [ asm_utils.access_mem(access) for access in accesses ]
-        access_addrs = [ asm_utils.access_addr(access) for access in accesses ]
-        access_mods  = [ asm_utils.access_mods(access) for access in accesses ]
-
-
-        # Find all indexes (accesses) that use this mem
-        indexes = [i for i, mem in enumerate(access_mems) if mem == dst_mem]
-
-        # Add block size of each found accesses
-        for access in indexes:
-            if "block_size" in access_mods[access]:
-                access_blocks.add(int(access_mods[access]["block_size"]))
-            else:
-                access_blocks.add(1)
-
-    return list(sorted(access_blocks))
-
-#####################################################################
-# Functions for preprocessing the data paths of any exe component
-# ie. any component that reads fetched/writes stored data
-#####################################################################
-
-def preprocess_exe_input_datapath(config, exe):
-    input_datapath = []
-
-    for instr in config["instr_set"].keys():
-        exe_unit = asm_utils.instr_exe_unit(instr)
-
-        fetches = asm_utils.instr_fetches(instr)
-        fetch_mems = [ asm_utils.access_mem(fetch) for fetch in fetches ]
-        fetch_mods = [ asm_utils.access_mods(fetch) for fetch in fetches ]
-
-        if exe == exe_unit:
-            # Add more inputs if needed
-            for _ in range(len(input_datapath), len(fetch_mems)):
-                input_datapath.append( [] )
-
-            # Process each input
-            for input, fetch_mem in enumerate(fetch_mems):
-                fetch_read = fetch_mems[:input + 1].count(fetch_mem) - 1
-
-                # Work out number of words in access, defaulting in 1
-                try:
-                    words = int(fetch_mods[input]["block_size"])
-                except KeyError:
-                    words = 1
-
-                # Add more words if needed
-                for _ in range(len(input_datapath[input]), words):
-                    input_datapath[input].append( [] )
-
-                for word in range(words):
-                    assert(word == 0)
-                    data_signal = "%s_read_%i_data"%(fetch_mem, fetch_read, )
-
-                    if not any([
-                        data_signal == scr["signal"]
-                        for scr in input_datapath[input][word]
-                    ]):
-                        input_datapath[input][word].append(
-                            {
-                                "signal" : data_signal,
-                                "com" : fetch_mem,
-                                "port" : fetch_read,
-                                "width" : config["data_memories"][fetch_mem]["data_width"],
-                            }
-                        )
-
-    return input_datapath
-
-def preprocess_exe_output_datapath(config, exe):
-    output_datapaths = []
-
-    for instr in config["instr_set"].keys():
-        exe_unit = asm_utils.instr_exe_unit(instr)
-
-        stores = asm_utils.instr_stores(instr)
-        store_mems = [ asm_utils.access_mem(store) for store in stores ]
-        store_mods = [ asm_utils.access_mods(store) for store in stores ]
-
-        if exe == exe_unit:
-            # Add more outputs if needed
-            for _ in range(len(output_datapaths), len(store_mems)):
-                output_datapaths.append( [] )
-
-            # Process each input
-            for output, fetch_mem in enumerate(store_mods):
-                store_write = store_mems[:output + 1].count(store_mems) - 1
-
-                # Work out number of words in access, defaulting in 1
-                try:
-                    words = int(store_mods[output]["block_size"])
-                except KeyError:
-                    words = 1
-
-                # Add more words if needed
-                for _ in range(len(output_datapaths[output]), words):
-                    output_datapaths[output].append( [] )
-
-    return output_datapaths
-
-
-#####################################################################
-
-def preprocess_config(config_in):
-    config_out = precheck_config(config_in)
-
-    #####################################################################
-    # Process copied Config
-    #####################################################################
-
-    # Include standard pipeline stages
-    config_out["pipeline_stage"] = ["PC", "PM", "ID", "FETCH", "EXE", "STORE"]
-
-    # Handle SIMD section of config
     if config_out["SIMD"]["lanes"] == 1:
         config_out["SIMD"]["lanes_names"] = [""]
     else:
         config_out["SIMD"]["lanes_names"] = [
             "LANE_%i_"%(l)
-             for l in range(CONFIG["SIMD"]["lanes"])
+            for l in range(CONFIG["SIMD"]["lanes"])
         ]
 
+
+    # Handle instr_set section of config
+    assert type(config_in["instr_set"]) == dict, "instr_set must be a dict"
+    config_out["instr_set"] = copy.deepcopy(config_in["instr_set"])
+
+
     # Handle program_flow section of config
-    for ZOL in config_out["program_flow"]["ZOLs"].keys():
-        ZOL_input = preprocess_exe_input_datapath(config_out, ZOL)
-        config_out["program_flow"]["ZOLs"][ZOL]["inputs"] = []
-        for data in ZOL_input:
-            config_out["program_flow"]["ZOLs"][ZOL]["inputs"].append(
-                {
-                    "data" : data,
-                }
-            )
-
-    config_out["program_flow"]["uncondional_jump"] = any([
-        asm_utils.instr_mnemonic(instr) == "JMP"
-        for instr in config_out["instr_set"].keys()
-    ])
-    config_out["program_flow"]["statuses"] = {}
-    config_out["program_flow"]["inputs"] = []
-    pc_input = preprocess_exe_input_datapath(config_out, "PC")
-    for data in pc_input:
-        config_out["program_flow"]["inputs"].append(
-            {
-                "data" : data,
-            }
-        )
-
-    config_out["program_flow"]["stallable"] = False
+    assert type(config_in["program_flow"]) == dict, "program_flow must be a dict"
+    config_out["program_flow"] = copy.deepcopy(config_in["program_flow"])
+    assert type(config_in["program_flow"]["ZOLs"]) == dict, "program_flow.lanes must be an dict"
 
 
     # Handle instr_decoder section of config
-    config_out["instr_decoder"]["instr_width"] = config_out["instr_decoder"]["opcode_width"] + sum(config_out["instr_decoder"]["addr_widths"])
+    assert type(config_in["instr_decoder"]) == dict, "instr_decoder must be a dict"
+    config_out["instr_decoder"] = copy.deepcopy(config_in["instr_decoder"])
+
+    assert type(config_in["instr_decoder"]["addr_widths"]) == list, "instr_decoder.addr_widths must be a list"
+    assert all([type(width) == int for width in config_in["instr_decoder"]["addr_widths"]]), "instr_decoder.addr_widths must integers"
+    assert all([width > 0 for width in config_in["instr_decoder"]["addr_widths"]]), "instr_decoder.addr_widths must be greater than 0"
+
+    assert type(config_in["instr_decoder"]["opcode_width"]) == int , "instr_decoder.opcode_width must integers"
+    assert config_in["instr_decoder"]["opcode_width"] > 0, "instr_decoder.opcode_width must be greater than 0"
+
+    config_out["instr_decoder"]["instr_width"] = sum(config_in["instr_decoder"]["addr_widths"]) + config_in["instr_decoder"]["opcode_width"]
+
 
     # Handle address_sources section of config
-    for bam in config_out["address_sources"]:
-        config_out["address_sources"][bam]["inputs"] = []
-        bam_data = preprocess_exe_input_datapath(config_out, bam)
-        for data in bam_data:
-            config_out["address_sources"][bam]["inputs"].append(
-                {
-                    "data" : data,
-                }
-            )
+    assert type(config_in["address_sources"]) == dict, "address_sources must be a dict"
+    config_out["address_sources"] = copy.deepcopy(config_in["address_sources"])
+
 
     # Handle data_memory section of config
-    for mem in config_out["data_memories"].keys():
-        # Check for stall sources
-        if mem in ["GET", "PUT"]:
-            if config_out["data_memories"][mem]["FIFO_handshakes"] == True:
-                config_out["program_flow"]["stallable"] = True
+    assert type(config_in["data_memories"]) == dict, "data_memories must be a dict"
+    config_out["data_memories"] = copy.deepcopy(config_in["data_memories"])
 
-        # Work out read blocks
-        config_out["data_memories"][mem]["read_blocks"] = preprocess_mem_access_blocks(config_out, "fetch", mem)
+    if "GET" in config_in["data_memories"].keys():
+        assert type(config_out["data_memories"]["GET"]["FIFO_handshakes"]) == bool, "data_memories.GET.FIFO_handshakes must be bool"
+        if config_out["data_memories"]["GET"]["FIFO_handshakes"] == True:
+            config_out["stallable"] = True
 
-        # Work out datapaths for fetchs
-        # Only need to handle addrs as only inputs are muxed
-        config_out["data_memories"][mem]["reads"] = []
-        reads_addrs = preprocess_mem_addr_datapath(config_out, "fetch", mem)
-        for addr in reads_addrs:
-            config_out["data_memories"][mem]["reads"].append(
-                {
-                    "addr" : addr,
-                }
-            )
+    if "PUT" in config_in["data_memories"].keys():
+        assert type(config_out["data_memories"]["PUT"]["FIFO_handshakes"]) == bool, "data_memories.PUT.FIFO_handshakes must be bool"
+        if config_out["data_memories"]["PUT"]["FIFO_handshakes"] == True:
+            config_out["stallable"] = True
 
-        # Work out read blocks
-        config_out["data_memories"][mem]["write_blocks"] = preprocess_mem_access_blocks(config_out, "store", mem)
-
-        # Work out datapaths for stores
-        # Need to handle addrs and data as inputs are muxed
-        config_out["data_memories"][mem]["writes"] = []
-        write_addrs = preprocess_mem_addr_datapath(config_out, "store", mem)
-        write_data =  preprocess_mem_data_datapath(config_out, mem)
-        for addr, data in zip(
-            preprocess_mem_addr_datapath(config_out, "store", mem),
-            preprocess_mem_data_datapath(config_out, mem)
-        ):
-            config_out["data_memories"][mem]["writes"].append(
-                {
-                    "addr" : addr,
-                    "data" : data,
-                }
-            )
 
     # Handle execute_units section of config
-    for exe in config_out["execute_units"].keys():
-        # Work out input datapaths
-        config_out["execute_units"][exe]["inputs"] = []
-        input_data = preprocess_exe_input_datapath(config_out, exe)
-        for data in input_data:
-            config_out["execute_units"][exe]["inputs"].append(
-                {
-                    "data" : data,
-                }
-            )
+    assert type(config_in["execute_units"]) == dict, "execute_units must be a dict"
+    config_out["execute_units"] = copy.deepcopy(config_in["execute_units"])
 
-        # Work out outputs datapaths
-        # Only number of outputs and words needed
-        config_out["execute_units"][exe]["outputs"] = []
-        output_data = preprocess_exe_output_datapath(config_out, exe)
-        for data in output_data:
-            config_out["execute_units"][exe]["outputs"].append(
-                {
-                    "data" : data,
-                }
-            )
-
-        # Extract execute_unit oper_set,
-        # Tell exe unit what oper to implanent
-        config_out["execute_units"][exe]["oper_set"] = list( sorted( set(
-            [
-                exe_lib_lookup[exe].instr_to_oper(instr)
-                for instr in config_out["instr_set"].keys()
-                if exe == asm_utils.instr_exe_unit(instr)
-            ]
-        ) ) )
-
-        # Extract statuses execute_unit has to generate
-        config_out["execute_units"][exe]["statuses"] = []
-        if exe in jump_exe_status_map:
-            for instr in config_out["instr_set"].keys():
-                if asm_utils.instr_mnemonic(instr) in jump_exe_status_map[exe]:
-                    for status in jump_exe_status_map[exe][asm_utils.instr_mnemonic(instr)]:
-                        if status not in config_out["execute_units"][exe]["statuses"]:
-                            config_out["execute_units"][exe]["statuses"].append(status)
-
-        config_out["program_flow"]["statuses"][exe] = config_out["execute_units"][exe]["statuses"]
-
-        # Set the signal padding option for the execute_unit
-        config_out["execute_units"][exe]["signal_padding"] = config_in["signal_padding"]
 
     # Set the signal padding option
+    assert type(config_in["signal_padding"]) == str, "signal_padding must be a str"
     config_out["signal_padding"] = config_in["signal_padding"]
+
 
     return config_out
 
@@ -479,6 +120,7 @@ def handle_module_name(module_name, config):
         return generated_name
     else:
         return module_name
+
 
 #####################################################################
 
@@ -513,10 +155,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         CONTROLS = gen_utils.init_controls()
         ARCH_HEAD = gen_utils.indented_string()
         ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = {
-            "ports" : { },
-            "generics" : { },
-        }
+        INTERFACE = { "ports" : { }, "generics" : { }, }
 
         # Include extremely commom libs
         IMPORTS += [
@@ -555,8 +194,9 @@ def gen_non_pipelined_signals():
     }
 
     # Create and pull down stall signal
-    if CONFIG["program_flow"]["stallable"]:
+    if CONFIG["stallable"]:
         ARCH_HEAD += "signal stall : std_logic;\n"
+
 
 #####################################################################
 
@@ -594,7 +234,7 @@ def gen_execute_units():
                 {
                     **config,
                     "signal_padding" : CONFIG["signal_padding"],
-                    "stallable" : CONFIG["program_flow"]["stallable"],
+                    "stallable" : CONFIG["stallable"],
                 }
             )
             interface, name = exe_lib_lookup[exe].generate_HDL(
@@ -604,9 +244,6 @@ def gen_execute_units():
                 concat_naming=CONCAT_NAMING,
                 force_generation=FORCE_GENERATION
             )
-
-            # OLd way of handling controls, remove once ALU updated to new way
-            CONFIG["execute_units"][exe]["controls"] = copy.deepcopy(interface["controls"])
 
             ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, name)
 
@@ -667,7 +304,6 @@ mem_predeclared_ports_per_mem = {
     "ROM_B" : { },
 }
 
-
 def gen_data_memories():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
@@ -690,7 +326,7 @@ def gen_data_memories():
                 {
                     **config,
                     "signal_padding" : CONFIG["signal_padding"],
-                    "stallable" : CONFIG["program_flow"]["stallable"],
+                    "stallable" : CONFIG["stallable"],
                 }
             )
             sub_interface, sub_name = mem_lib_lookup[mem].generate_HDL(
@@ -769,16 +405,16 @@ def gen_addr_sources():
     # needs to happen before ID is generated so ID can be passed the mux controls
     for instr in CONFIG["instr_set"]:
         ID_addr = 0
-        for read, access in enumerate(asm_utils.instr_srcs(instr)):
+        for read, access in enumerate(asm_utils.instr_fetches(instr)):
             if asm_utils.addr_com(asm_utils.access_addr(access)) == "ID":
                 for lane in CONFIG["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath(DATAPATHS, "%sfetch_addr_%i"%(lane, read), "fetch", True, instr, "ID_addr_%i_fetch"%(ID_addr, ), "unsigned",  CONFIG["instr_decoder"]["addr_widths"][ID_addr])
+                    gen_utils.add_datapath_source(DATAPATHS, "%sfetch_addr_%i"%(lane, read), "fetch", instr, "ID_addr_%i_fetch"%(ID_addr, ), "unsigned",  CONFIG["instr_decoder"]["addr_widths"][ID_addr])
                 ID_addr += 1
 
-        for write, access in enumerate(asm_utils.instr_dests(instr)):
+        for write, access in enumerate(asm_utils.instr_stores(instr)):
             if asm_utils.addr_com(asm_utils.access_addr(access)) == "ID":
                 for lane in CONFIG["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath(DATAPATHS, "%sstore_addr_%i"%(lane, write), "store", True, instr, "ID_addr_%i_store"%(ID_addr, ), "unsigned",  CONFIG["instr_decoder"]["addr_widths"][ID_addr])
+                    gen_utils.add_datapath_source(DATAPATHS, "%sstore_addr_%i"%(lane, write), "store", instr, "ID_addr_%i_store"%(ID_addr, ), "unsigned",  CONFIG["instr_decoder"]["addr_widths"][ID_addr])
                 ID_addr += 1
 
     ARCH_BODY += "\n-- Address components\n"
@@ -796,7 +432,7 @@ def gen_addr_sources():
                 {
                     **config,
                     "signal_padding" : CONFIG["signal_padding"],
-                    "stallable" : CONFIG["program_flow"]["stallable"],
+                    "stallable" : CONFIG["stallable"],
                 }
             )
             interface, name = BAM.generate_HDL(
@@ -848,8 +484,6 @@ def gen_addr_sources():
             DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, BAM.get_inst_pathways(bam, inst + "_", CONFIG["instr_set"], interface, config, lane) )
             CONTROLS = gen_utils.merge_controls( CONTROLS, BAM.get_inst_controls(bam, inst + "_", CONFIG["instr_set"], interface, config) )
 
-
-
 #####################################################################
 
 def gen_predecode_pipeline():
@@ -865,10 +499,10 @@ def gen_predecode_pipeline():
 PC_predeclared_ports = {
     "clock" : "clock",
     "kickoff" : "kickoff",
-    "ZOL_value" : "overwrite_PC_value_bus",
-    "ZOL_overwrite" : "overwrite_PC_enable_bus",
+    "zero_overhead_value" : "zero_overhead_value_bus",
+    "zero_overhead_overwrite" : "zero_overhead_overwrite_bus",
     "stall" : "stall",
-    "running" : "running_PC",
+    "ALU_jump" : "ALU_core_jump_taken",
 }
 
 def gen_program_counter():
@@ -880,38 +514,26 @@ def gen_program_counter():
     else:
         module_name = None
 
-    interface, name = PC.generate_HDL(
+    config = PC.add_inst_config(
+        "PC",
+        CONFIG["instr_set"],
         {
             **CONFIG["program_flow"],
-            "statuses"  : {
-                exe : config["statuses"]
-                for exe, config in CONFIG["execute_units"].items()
-                if "statuses" in config and len(config["statuses"]) != 0
-            },
-            "inputs" : [len(words) for words in CONFIG["program_flow"]["inputs"]],
-            "signal_padding" : CONFIG["signal_padding"],
-            "stallable" : CONFIG["program_flow"]["stallable"],
-        },
+            "stallable" : CONFIG["stallable"],
+        }
+    )
+    interface, name = PC.generate_HDL(
+        config,
         OUTPUT_PATH,
         module_name=module_name,
         concat_naming=CONCAT_NAMING,
         force_generation=FORCE_GENERATION
     )
+    # controls
+    DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, PC.get_inst_pathways("PC", "", CONFIG["instr_set"], interface, config, CONFIG["SIMD"]["lanes_names"][0]) )
+    CONTROLS  = gen_utils.merge_controls( CONTROLS , PC.get_inst_controls("PC", "", CONFIG["instr_set"], interface, config) )
 
-    # Work around for old list versions of interface
-    if type(interface["ports"]) == list:
-        interface["ports"] = {
-            port["name"] : port
-            for port in interface["ports"]
-        }
-    if type(interface["generics"]) == list:
-        interface["generics"] = {
-            generic["name"] : generic
-            for generic in interface["generics"]
-        }
-
-
-    CONFIG["program_flow"]["PC_width"] = interface["PC_width"]
+    CONFIG["program_flow"]["PC_width"] = interface["ports"]["value"]["width"]
 
     ARCH_BODY += "\nPC : entity work.%s(arch)\>\n"%(name)
 
@@ -934,10 +556,12 @@ def gen_program_counter():
             ARCH_BODY += "%s => %s,\n"%(port, signal)
 
     # Handle non predeclared ports
-    for port in interface["ports"]:
+    for port, details  in interface["ports"].items():
         if port not in PC_predeclared_ports.keys():
-            details = interface["ports"][port]
-            ARCH_HEAD += "signal PC_%s : %s;\n"%(port, details["type"])
+            try:
+                ARCH_HEAD += "signal PC_%s : %s(%i downto 0);\n"%(port, details["type"], details["width"] - 1, )
+            except KeyError:
+                ARCH_HEAD += "signal PC_%s : %s;\n"%(port, details["type"])
             ARCH_BODY += "%s => PC_%s,\n"%(port, port)
 
     ARCH_BODY.drop_last_X(2)
@@ -961,9 +585,9 @@ ZOL_predeclared_ports = {
     "clock" : "clock",
     "stall" : "stall",
     "PC_value" : "PC_value",
-    "PC_running" : "running_PC",
-    "overwrite_PC_enable" : "overwrite_PC_enable_bus",
-    "overwrite_PC_value" : "overwrite_PC_value_bus",
+    "PC_running" : "PC_running",
+    "overwrite_PC_enable" : "zero_overhead_overwrite_bus",
+    "overwrite_PC_value" : "zero_overhead_value_bus",
 }
 
 ZOL_declared_ports = [
@@ -979,8 +603,8 @@ def gen_zero_overhead_loops():
         INTERFACE["ZOL_overwrites_encoding"] = {}
 
         # Pull ZOL bused to defauly values
-        ARCH_HEAD += "signal overwrite_PC_value_bus  : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
-        ARCH_HEAD += "signal overwrite_PC_enable_bus : std_logic := 'L';\n"
+        ARCH_HEAD += "signal zero_overhead_value_bus  : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
+        ARCH_HEAD += "signal zero_overhead_overwrite_bus : std_logic := 'L';\n"
 
     # Generate ZOL hardward
     for ZOL_name, ZOL_details in CONFIG["program_flow"]["ZOLs"].items():
@@ -995,7 +619,7 @@ def gen_zero_overhead_loops():
                 **ZOL_details,
                 "PC_width"  : CONFIG["program_flow"]["PC_width"],
                 "signal_padding" : CONFIG["signal_padding"],
-                "stallable" : CONFIG["program_flow"]["stallable"],
+                "stallable" : CONFIG["stallable"],
             },
             OUTPUT_PATH,
             module_name=module_name,
@@ -1064,10 +688,10 @@ def gen_program_memory():
             "depth" : CONFIG["program_flow"]["program_length"],
             "addr_width" : CONFIG["program_flow"]["PC_width"],
             "data_width" : CONFIG["instr_decoder"]["instr_width"],
-            "read_blocks" : [1],
+            "buffer_reads" : True,
             "type" : "DIST",
             "reads" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
+            "stallable" : CONFIG["stallable"],
         },
         OUTPUT_PATH,
         module_name=module_name,
@@ -1090,7 +714,7 @@ def gen_program_memory():
 
     ARCH_BODY += "port map (\>\n"
     ARCH_BODY += "clock => clock,\n"
-    if CONFIG["program_flow"]["stallable"]:
+    if CONFIG["stallable"]:
         ARCH_BODY += "stall => stall,\n"
     ARCH_BODY += "read_0_addr => PM_addr,\n"
     ARCH_BODY += "read_0_data => PM_data\n"
@@ -1147,27 +771,19 @@ def gen_instr_decoder():
     ARCH_BODY += "port map (\>\n"
 
     # Handle predeclared ports
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if port["name"] in ID_predeclared_ports.keys()
-        ],
-        key=lambda d : d["name"]
-    ):
-        ARCH_BODY += "%s => %s,\n"%(port["name"], ID_predeclared_ports[port["name"]])
+    for port, signal in ID_predeclared_ports.items():
+        if port in interface["ports"]:
+            ARCH_BODY += "%s => %s,\n"%(port, signal, )
 
     # Handle prefixed ports
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if port["name"] not in ID_predeclared_ports.keys()
-        ],
-        key=lambda d : d["name"]
-    ):
-        ARCH_HEAD += "signal ID_%s : %s;\n"%(port["name"], port["type"])
-        ARCH_BODY += "%s => ID_%s,\n"%(port["name"], port["name"])
+    for port in sorted(interface["ports"].keys()):
+        if port not in ID_predeclared_ports.keys():
+            details = interface["ports"][port]
+            try:
+                ARCH_HEAD += "signal ID_%s : %s(%i downto 0);\n"%(port, details["type"], details["width"] - 1, )
+            except Exception as e:
+                ARCH_HEAD += "signal ID_%s : %s;\n"%(port, details["type"], )
+            ARCH_BODY += "%s => ID_%s,\n"%(port, port, )
 
     ARCH_BODY.drop_last_X(2)
     ARCH_BODY += "\<\n);\n"
@@ -1178,36 +794,21 @@ def gen_instr_decoder():
     ARCH_BODY += "ID_enable <= running_ID;\n"
 
     # Handle PC control signals
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if (
-                port["name"].startswith("jump_")
-                or (port["name"].startswith("update_") and port["name"].endswith("_statuses"))
-            )
-        ],
-        key=lambda d : d["name"]
-    ):
-        ARCH_BODY += "PC_%s <= ID_%s;\n"%(port["name"], port["name"])
+    for port in sorted(interface["ports"]):
+        if port.startswith("jump_") or (port.startswith("update_") and port.endswith("_statuses")):
+            ARCH_BODY += "PC_%s <= ID_%s;\n"%(port, port, )
 
     # Handle fanning out control signals
-    for port in sorted(
-        [
-            port
-            for port in interface["ports"]
-            if (
-                port["name"] not in ID_predeclared_ports.keys()
-                and port["name"] not in ID_non_fanout_ports
-                and not port["name"].startswith("addr_")
-                and not port["name"].startswith("jump_")
-                and not (port["name"].startswith("update_") and port["name"].endswith("_statuses"))
-            )
-        ],
-        key=lambda d : d["name"]
-    ):
-        for lane in CONFIG["SIMD"]["lanes_names"]:
-            ARCH_BODY += "%s%s <= ID_%s;\n"%(lane, port["name"], port["name"])
+    for port in sorted(interface["ports"]):
+        if (
+            port not in ID_predeclared_ports.keys()
+            and port not in ID_non_fanout_ports
+            and not port.startswith("addr_")
+            and not port.startswith("jump_")
+            and not (port.startswith("update_") and port.endswith("_statuses"))
+        ):
+            for lane in CONFIG["SIMD"]["lanes_names"]:
+                ARCH_BODY += "%s%s <= ID_%s;\n"%(lane, port, port, )
 
 #####################################################################
 
@@ -1215,15 +816,24 @@ def gen_running_delays():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
+    # Handle running output
+    INTERFACE["ports"]["running"] = {
+        "type" : "std_logic",
+        "direction" : "out"
+    }
+    ARCH_BODY += "running <= PC_running;\n\n"
+
     # Declare each stage's running signal
     for stage in CONFIG["pipeline_stage"]:
         ARCH_HEAD += "signal running_%s : std_logic;\n"%(stage, )
+
+    ARCH_BODY += "running_%s <= PC_running;\n"%(CONFIG["pipeline_stage"][0], )
 
     DELAY_INTERFACE, DELAY_NAME = delay.generate_HDL(
         {
             "width" : 1,
             "depth" : 1,
-            "stallable" : CONFIG["program_flow"]["stallable"],
+            "stallable" : CONFIG["stallable"],
         },
         OUTPUT_PATH,
         module_name=None,
@@ -1236,15 +846,8 @@ def gen_running_delays():
 
         ARCH_BODY += "port map (\n\>"
         ARCH_BODY += "clock => clock,\n"
-        if CONFIG["program_flow"]["stallable"]:
+        if CONFIG["stallable"]:
             ARCH_BODY += "stall => stall,\n"
         ARCH_BODY += "data_in (0) => running_%s,\n"%(stage_in, )
         ARCH_BODY += "data_out(0) => running_%s\n"%(stage_out, )
         ARCH_BODY += "\<);\<\n\n"
-
-    # Handle running output
-    INTERFACE["ports"]["running"] = {
-        "type" : "std_logic",
-        "direction" : "out"
-    }
-    ARCH_BODY += "running <= running_PC;\n\n"

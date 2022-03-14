@@ -2,6 +2,7 @@ from FPE.toolchain.FPE_assembly.grammar.FPE_assemblyParser import FPE_assemblyPa
 
 from FPE.toolchain import FPE_assembly as asm_utils
 
+
 def get_component_addr(ctx, program_context):
     if   type(ctx) == parser.Addr_literalContext:
         return get_component_addr_literal(ctx, program_context)
@@ -34,7 +35,6 @@ def get_component_addr_bam(ctx, program_context):
             )
         )
 
-
 ################################################################
 
 def get_component_access(ctx, program_context):
@@ -42,9 +42,15 @@ def get_component_access(ctx, program_context):
         return get_component_access_fetch(ctx, program_context)
     elif type(ctx) == parser.Access_storeContext:
         return get_component_access_store(ctx, program_context)
+    elif type(ctx) == parser.Bap_fetchContext:
+        return get_component_bap_fetch(ctx, program_context)
+    elif type(ctx) == parser.Bap_storeContext:
+        return get_component_bap_store(ctx, program_context)
     else:
         try:
-            return get_component_access(ctx.parentCtx, program_context)
+            temp = get_component_access(ctx.parentCtx, program_context)
+            return temp
+
         except (AttributeError, TypeError):
             raise TypeError(
                 "%s is unsupported by get_component_access"%
@@ -93,6 +99,39 @@ def get_component_access_store(ctx, program_context):
         )
 
 
+def get_component_bap_fetch(ctx, program_context):
+    if   ctx.access_reg():
+        return get_component_access_reg(ctx.access_reg(), program_context)
+    elif ctx.access_ram():
+        return get_component_access_ram(ctx.access_ram(), program_context)
+    elif ctx.access_rom_a():
+        return get_component_access_rom_a(ctx.access_rom_a(), program_context)
+    elif ctx.access_rom_b():
+        return get_component_access_rom_b(ctx.access_rom_b(), program_context)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+def get_component_bap_store(ctx, program_context):
+    if   ctx.access_reg():
+        return get_component_access_reg(ctx.access_reg(), program_context)
+    elif ctx.access_ram():
+        return get_component_access_ram(ctx.access_ram(), program_context)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+
 def get_component_access_imm(ctx, program_context):
     return "IMM"
 
@@ -121,6 +160,8 @@ def get_component_op(ctx, program_context):
         return get_component_op_bam(ctx, program_context)
     elif type(ctx) == parser.Op_aluContext:
         return get_component_op_alu(ctx, program_context)
+    elif type(ctx) == parser.Op_paluContext:
+        return get_component_op_palu(ctx, program_context)
     elif type(ctx) == parser.Op_voidContext:
         return get_component_op_void(ctx, program_context)
     elif type(ctx) == parser.Op_pcContext:
@@ -148,9 +189,11 @@ def get_component_op_bam(ctx, program_context):
     ):
         child_ctx = ctx.children[0]
         if child_ctx.expr():
-            return "BAM_%i"%(
-                asm_utils.evaluate_expr(child_ctx.expr(), program_context)
-            )
+            return [
+                "BAM_%i"%(
+                    asm_utils.evaluate_expr(child_ctx.expr(), program_context)
+                )
+            ]
         else:
             raise NotImplementedError(
                 "%s without a supported subrule at %s"%
@@ -177,7 +220,24 @@ def get_component_op_alu(ctx, program_context):
             ctx.op_alu_2o_1r(),
         ]
     ):
-        return "ALU"
+        return ["ALU", ]
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx)),
+            )
+
+def get_component_op_palu(ctx, program_context):
+    if any(
+        [
+            ctx.op_palu_1o_1r(),
+            ctx.op_palu_1o_1e_1r(),
+            ctx.op_palu_2o_1r(),
+        ]
+    ):
+        return ["ALU", ]
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -190,12 +250,10 @@ def get_component_op_void(ctx, program_context):
     return ""
 
 def get_component_op_pc(ctx, program_context):
-    if any(
-        [
-            ctx.op_pc_jump(),
-        ]
-    ):
-        return "PC"
+    if   ctx.op_pc_only_jump():
+        return ["PC", ]
+    elif ctx.op_pc_alu_jump():
+        return ["PC", "ALU"]
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%
@@ -211,7 +269,7 @@ def get_component_op_ZOL(ctx, program_context):
             ctx.op_ZOL_set(),
         ]
     ):
-        return asm_utils.token_to_text(ctx.children[0].exe_com.IDENTIFER())
+        return [asm_utils.token_to_text(ctx.children[0].exe_com.IDENTIFER()), ]
     else:
         raise NotImplementedError(
             "%s without a supported subrule at %s"%

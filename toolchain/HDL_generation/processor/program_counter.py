@@ -8,23 +8,66 @@ if __name__ == "__main__":
 import copy
 
 from FPE.toolchain.HDL_generation  import utils as gen_utils
+from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain import utils as tc_utils
 
+from FPE.toolchain.HDL_generation.basic import RS_FF_latch
 from FPE.toolchain.HDL_generation.basic import register
+from FPE.toolchain.HDL_generation.basic import mux
 
 #####################################################################
 
+import json
+
 def add_inst_config(instr_id, instr_set, config):
+
+    PC_only_jump = False
+    ALU_jump = False
+
+    for instr in instr_set:
+        if instr_id in asm_utils.instr_exe_units(instr):
+            mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
+            if mnemonic == "JMP":
+                PC_only_jump = True
+
+            if mnemonic in ["JEQ", "JNE", "JGT", "JGE", "JLT", "JLE", ]:
+                ALU_jump = True
+
+
+    config["PC_only_jump"] = PC_only_jump
+    config["ALU_jump"] = ALU_jump
 
     return config
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
+
+    # Handle fetched_operand ports
+    if "jump_value" in interface["ports"]:
+        for instr in instr_set:
+            if instr_id in asm_utils.instr_exe_units(instr):
+                mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
+                if mnemonic in ["JMP", "JEQ", "JNE", "JGT", "JGE", "JLT", "JTE", ]:
+                    gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ),
+                        "exe", instr, instr_prefix + "PC_jump_value", "unsigned", interface["ports"]["jump_value"]["width"]
+                    )
 
     return pathways
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
+
+    # Handle acc_enable control
+    if "PC_only_jump" in interface["ports"].keys():
+        PC_only_jump = { "0" : [], "1" : [], }
+        for instr in instr_set:
+            mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
+            if   mnemonic in ["JMP", ]:
+                PC_only_jump["1"].append(instr)
+            else:
+                PC_only_jump["0"].append(instr)
+        gen_utils.add_control(controls, "exe", instr_prefix + "PC_PC_only_jump", PC_only_jump, "std_logic")
+
 
     return controls
 
@@ -47,17 +90,11 @@ def preprocess_config(config_in):
     config_out["ZOLs_present"] = len(config_in["ZOLs"]) > 0
 
     # Handle jumping
-    assert(type(config_in["uncondional_jump"]) == type(True))
-    config_out["uncondional_jump"] = config_in["uncondional_jump"]
-    config_out["statuses"] = copy.deepcopy(config_in["statuses"])
-    config_out["jumping_enabled"] = config_out["uncondional_jump"] or len(config_out["statuses"]) > 0
+    assert(type(config_in["PC_only_jump"]) == bool)
+    config_out["PC_only_jump"] = config_in["PC_only_jump"]
 
-    # Handle inputs
-    assert(type(config_in["inputs"]) == type([]))
-    config_out["inputs"] = []
-    for words in config_in["inputs"]:
-        assert(words == 1)
-        config_out["inputs"].append(words)
+    assert(type(config_in["ALU_jump"]) == bool)
+    config_out["ALU_jump"] = config_in["ALU_jump"]
 
     return config_out
 
@@ -72,22 +109,16 @@ def handle_module_name(module_name, config):
 
         if config["stallable"]:
             generated_name += "_stall"
-        else:
-            generated_name += "_nostall"
 
-        if config["jumping_enabled"]:
-            jumps = str(config["uncondional_jump"])
-            jumps += "\n".join(sorted(config["statuses"]))
-            generated_name += "_%sjmp"%str( hex(
-                zlib.adler32(jumps.encode('utf-8'))
-            ) ).lstrip("0x").zfill(8)
-        else:
-            generated_name += "_nojmp"
+        if config["PC_only_jump"]:
+            generated_name += "_JMP"
+
+        if config["ALU_jump"]:
+            generated_name += "_ALU"
 
         if config["ZOLs_present"]:
             generated_name += "_ZOL"
-        else:
-            generated_name += "_noZOL"
+
 
         return generated_name
     else:
@@ -96,8 +127,7 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -106,322 +136,187 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = preprocess_config(config)
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
     # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : [], "generics" : [] }
+        # Init component_details
+        com_det = gen_utils.component_details()
 
         # Include extremely commom libs
-        IMPORTS += [
-            {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"},
-            {"library" : "ieee", "package" : "numeric_std", "parts" : "all"},
-        ]
+        com_det.add_import("ieee", "std_logic_1164", "all")
+        com_det.add_import("ieee", "numeric_std", "all")
 
         # Setop common ports
-        INTERFACE["ports"] += [ { "name" : "clock", "type" : "std_logic", "direction" : "in" } ]
+        com_det.add_port("clock", "std_logic", "in")
 
         # Generation Module Code
-        populate_interface()
-        generate_data_ports()
-        generate_state_management()
-        generate_generate_running()
-        generate_value_register()
-        generate_end_value_checking()
-        generate_jumping()
-        generate_next_value()
+        gen_running_FF(gen_det, com_det)
+        gen_value_reg(gen_det, com_det)
+        gen_end_checking(gen_det, com_det)
+        gen_next_value_logic(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def populate_interface():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+def gen_running_FF(gen_det, com_det):
 
-    INTERFACE["PC_width"] = CONFIG["PC_width"]
+    # Declare ports
+    com_det.add_port("kickoff", "std_logic", "in")
+    com_det.add_port("running", "std_logic", "out")
 
-def generate_data_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    com_det.arch_head += "signal running_internal : std_logic;\n"
 
-    for input, words in enumerate(CONFIG["inputs"]):
-        for word in range(words):
-            assert(word == 0)
-            INTERFACE["ports"] += [
-                {
-                    "name" : "in_%i"%(input, ),
-                    "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
-                    "direction" : "in"
-                }
-            ]
-
-def generate_state_management():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    INTERFACE["ports"] += [
+    RSFF_interface, RSFF_name = RS_FF_latch.generate_HDL(
         {
-            "name" : "kickoff",
-            "type" : "std_logic",
-            "direction" : "in"
-        }
-    ]
-
-    ARCH_HEAD += "type PC_states is (INACTIVE, STARTING, ACTIVE);\n"
-    ARCH_HEAD += "signal last_state : PC_states := INACTIVE;\n"
-    ARCH_HEAD += "signal curr_state : PC_states;\n"
-
-    ARCH_BODY += "-- State updating process\n"
-    ARCH_BODY += "process(clock)\>\n"
-    ARCH_BODY += "\<begin\>\n"
-    ARCH_BODY += "if rising_edge(clock) then\>\n"
-    ARCH_BODY += "last_state <= curr_state;\n"
-    ARCH_BODY += "\<end if;\n"
-    ARCH_BODY += "\<end process;\n"
-
-    ARCH_BODY += "curr_state <=\> STARTING when last_state = INACTIVE and kickoff = '1'\n"
-    ARCH_BODY += "else ACTIVE   when last_state = STARTING\n"
-    ARCH_BODY += "else INACTIVE when last_state = ACTIVE and end_reached = '1'\n"
-    ARCH_BODY += "else last_state;\n"
-
-def generate_generate_running():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    INTERFACE["ports"] += [
-        {
-            "name" : "running",
-            "type" : "std_logic",
-            "direction" : "out"
-        }
-    ]
-
-    ARCH_HEAD += "signal internal_running : std_logic;\n"
-
-    ARCH_BODY += "\n-- Running handling\n"
-    ARCH_BODY += "running <= internal_running;\n"
-
-    ARCH_BODY += "internal_running <=\> '0' when last_state = INACTIVE\n"
-    ARCH_BODY += "else '1' when (last_state = STARTING or last_state = ACTIVE)\n"
-    ARCH_BODY += "else 'U';\<\n"
-
-def generate_value_register():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    INTERFACE["ports"] += [
-        {
-            "name" : "value",
-            "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
-            "direction" : "out"
+            "has_enable": False,
+            "clocked"   : True,
         },
-    ]
+        gen_det.output_path,
+        module_name=None,
+        concat_naming=False,
+        force_generation=gen_det.force_generation
+    )
 
-    ARCH_BODY += "\n-- Value register\n"
+    com_det.arch_body += "running_FF : entity work.%s(arch)\>\n"%(RSFF_name, )
+    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "S => kickoff and not program_end_reached,\n"
+    com_det.arch_body += "R =>program_end_reached,\n"
+    com_det.arch_body += "Q => running_internal\n"
+    com_det.arch_body += "\<);\n\<\n"
+
+    com_det.arch_body += "running <= running_internal;\n\n"
+
+def gen_value_reg(gen_det, com_det):
+
+    if gen_det.config["stallable"]:
+        com_det.add_port("stall", "std_logic", "in")
 
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force"  : False,
             "has_sync_force"   : True,
             "has_enable"    : True,
-            "force_on_init" : False
+            "force_on_init" : True
         },
-        OUTPUT_PATH,
+        gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "value_reg : entity work.%s(arch)\>\n"%(reg_name)
+    com_det.arch_body += "value_reg : entity work.%s(arch)\>\n"%(reg_name, )
+    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "data_width => %i,\n"%(gen_det.config["PC_width"], )
+    com_det.arch_body += "force_value => 0\n"
+    com_det.arch_body += "\<)\n"
 
-    ARCH_BODY += "generic map (\n\>"
-    ARCH_BODY += "data_width => %i,\n"%(CONFIG["PC_width"], )
-    ARCH_BODY += "force_value => 0"
-    ARCH_BODY += "\<)\n"
+    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "force => program_end_reached,\n"
+    if gen_det.config["stallable"]:
+        com_det.arch_body += "enable  => running_internal and stall,\n"
+    else:
+        com_det.arch_body += "enable  => running_internal,\n"
 
-    ARCH_BODY += "port map (\n\>"
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "enable  => internal_running,\n"
-    ARCH_BODY += "force => value_reg_reset,\n"
-    ARCH_BODY += "data_in  => next_value,\n"
-    ARCH_BODY += "data_out => internal_value\n"
-    ARCH_BODY += "\<);\n"
+    com_det.arch_head += "signal curr_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
 
-    ARCH_BODY += "\<\n"
+    com_det.arch_body += "data_in  => next_value,\n"
+    com_det.arch_body += "data_out => curr_value\n"
+    com_det.arch_body += "\<);\n\<\n"
 
-    ARCH_BODY += "\n-- Value register controls\n"
+    com_det.add_port("value", "std_logic_vector", "out", gen_det.config["PC_width"])
+    com_det.arch_body += "value <= curr_value;\n\n"
 
-    ARCH_HEAD += "signal value_reg_reset : std_logic;\n"
+def gen_end_checking(gen_det, com_det):
+    com_det.add_generic("end_value", "integer")
 
-    ARCH_BODY += "value_reg_reset <=\> '1' when last_state = STARTING\n"
-    ARCH_BODY += "else '0' when last_state = INACTIVE or last_state = ACTIVE\n"
-    ARCH_BODY += "else 'U';\<\n"
+    com_det.arch_head += "signal program_end_reached : std_logic;\n"
+    com_det.arch_body += "program_end_reached <= '1' when to_integer(unsigned(curr_value)) = end_value else '0';\n\n"
 
-    ARCH_HEAD += "signal internal_value, next_value : std_logic_vector(%i downto 0);\n"%(CONFIG["PC_width"] - 1)
+def gen_next_value_logic(gen_det, com_det):
+    com_det.arch_head += "signal next_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
+    value_tail = "next_value"
 
-    ARCH_BODY += "value <= internal_value;\n"
-
-def generate_end_value_checking():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    ARCH_BODY += "\n-- End Value Checking\n"
-
-    INTERFACE["generics"] += [
+    _, mux_2 = mux.generate_HDL(
         {
-            "name" : "end_value",
-            "type" : "integer",
-        }
-    ]
-
-    ARCH_HEAD += "signal end_reached : std_logic;\n"
-
-    ARCH_BODY += "end_reached <= '1' when to_integer(unsigned(next_value)) = end_value else '0';\n"
-
-def generate_jumping():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    # Exit if no jumping
-    if not CONFIG["uncondional_jump"] and len(CONFIG["statuses"]) == 0:
-        CONFIG["jumping_enabled"] = False
-        return
-
-    # Check there is enough input ports for jumping
-    assert(len(CONFIG["inputs"]) >= 1)
-    assert(CONFIG["inputs"][0] >= 1)
-
-    CONFIG["jumping_enabled"] = True
-    ARCH_HEAD += "signal jump_occured : std_logic;\n"
-    jump_occured = "jump_occured <=\>"
-
-    # Handle uncondional_jump
-    if CONFIG["uncondional_jump"]:
-        INTERFACE["ports"] += [
-            {
-                "name" : "jump_uncondional",
-                "type" : "std_logic",
-                "direction" : "in"
-            }
-        ]
-        jump_occured += "'1' when jump_uncondional = '1'\nelse "
-
-    # Handle condional_jumps
-    reg_interface, reg_name = register.generate_HDL(
-        {
-            "has_async_force"  : False,
-            "has_sync_force"   : False,
-            "has_enable"    : True,
-            "force_on_init" : False
+            "inputs"  : 2,
         },
-        OUTPUT_PATH,
+        gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
-    for exe, signals in CONFIG["statuses"].items():
-        # Buffer all statuses from the same exe compoundent together
-        INTERFACE["ports"] += [
-            {
-                "name" : "update_%s_statuses"%(exe),
-                "type" : "std_logic",
-                "direction" : "in"
-            }
-        ]
+    if gen_det.config["PC_only_jump"] or gen_det.config["ALU_jump"]:
+        com_det.add_port("jump_value", "std_logic_vector", "in", gen_det.config["PC_width"])
 
-        ARCH_HEAD += "signal %s_statuses_in, %s_statuses_out : std_logic_vector(%i downto 0);\n"%(exe, exe, len(signals) - 1)
+        if gen_det.config["PC_only_jump"]:
+            com_det.add_port("PC_only_jump", "std_logic", "in")
+        if gen_det.config["ALU_jump"]:
+            com_det.add_port("ALU_jump", "std_logic", "in")
 
-        ARCH_BODY += "%s_statuses_reg : entity work.%s(arch)\>\n"%(exe, reg_name)
-        ARCH_BODY += "generic map ( data_width => %i )\n"%(len(signals))
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "enable => update_%s_statuses,\n"%(exe)
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => %s_statuses_in,\n"%(exe)
-        ARCH_BODY += "data_out => %s_statuses_out\n"%(exe)
-        ARCH_BODY += "\<);\n"
-        ARCH_BODY += "\<\n"
+        com_det.arch_body += "jumping_mux : entity work.%s(arch)\>\n"%(mux_2, )
 
-        for i, signal in enumerate(signals):
-            # Create status and jump port for each status
-            INTERFACE["ports"] += [
-                {
-                    "name" : "%s_status_%s"%(exe, signal),
-                    "type" : "std_logic",
-                    "direction" : "in"
-                },
-                {
-                    "name" : "jump_%s_%s"%(exe, signal),
-                    "type" : "std_logic",
-                    "direction" : "in"
-                },
-            ]
+        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["PC_width"], )
 
-            # Pack and unpack statuses into buffer
-            ARCH_HEAD += "signal %s_status_%s_buffered : std_logic;\n"%(exe, signal)
+        com_det.arch_body += "port map (\n\>"
 
-            ARCH_BODY += "%s_statuses_in(%i) <= %s_status_%s;\n"%(exe, i, exe, signal)
-            ARCH_BODY += "%s_status_%s_buffered <= %s_statuses_out(%i);\n"%(exe, signal, exe, i)
+        if   gen_det.config["PC_only_jump"] and gen_det.config["ALU_jump"]:
+            com_det.arch_body += "sel(0) => PC_only_jump or ALU_jump,\n"
+        elif gen_det.config["PC_only_jump"] and not gen_det.config["ALU_jump"]:
+            com_det.arch_body += "sel(0) => PC_only_jump,\n"
+        elif not gen_det.config["PC_only_jump"] and gen_det.config["ALU_jump"]:
+            com_det.arch_body += "sel(0) => ALU_jump,\n"
+        else:
+            raise ValueError("Unknown jump case")
 
-            # Generate Jump logic
-            jump_occured += "'1' when %s_status_%s_buffered = '1' and jump_%s_%s = '1'\nelse "%(exe, signal, exe, signal)
+        com_det.arch_head += "signal jump_fail_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
 
-    # Finish jump occured logic and add to arch-body
-    jump_occured += "\<'0';\n"
-    ARCH_BODY += jump_occured
+        com_det.arch_body += "data_in_0 => jump_fail_value,\n"
+        com_det.arch_body += "data_in_1 => jump_value,\n"
 
-def generate_next_value():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+        com_det.arch_body += "data_out  => %s\n"%(value_tail, )
+        value_tail = "jump_fail_value"
 
-    ARCH_BODY += "next_value <=\> "
+        com_det.arch_body += "\<);\n\<\n"
 
-    if CONFIG["stallable"]:
-        INTERFACE["ports"] += [
-            {
-                "name" : "stall",
-                "type" : "std_logic",
-                "direction" : "in"
-            },
-        ]
-        ARCH_BODY += "internal_value when stall = '1'\nelse "
+    if gen_det.config["ZOLs_present"]:
+        com_det.add_port("zero_overhead_value", "std_logic_vector", "in", gen_det.config["PC_width"])
+        com_det.add_port("zero_overhead_overwrite", "std_logic", "in")
 
-    if CONFIG["ZOLs_present"]:
-        INTERFACE["ports"] += [
-            {
-                "name" : "ZOL_value",
-                "type" : "std_logic_vector(%i downto 0)"%(CONFIG["PC_width"] - 1),
-                "direction" : "in"
-            },
-            {
-                "name" : "ZOL_overwrite",
-                "type" : "std_logic",
-                "direction" : "in"
-            }
-        ]
+        com_det.arch_body += "zero_overhead_mux : entity work.%s(arch)\>\n"%(mux_2, )
 
-        ARCH_BODY += "ZOL_value when ZOL_overwrite = '1'\nelse "
+        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["PC_width"], )
 
-    if CONFIG["jumping_enabled"]:
-        ARCH_BODY += "in_0 when jump_occured = '1'\nelse "
+        com_det.arch_body += "port map (\n\>"
 
-    ARCH_BODY += "std_logic_vector(to_unsigned(to_integer(unsigned(internal_value)) + 1, next_value'length));\n\<"
+        com_det.arch_body += "sel(0) => zero_overhead_overwrite,\n"
+
+        com_det.arch_head += "signal zero_overhead_fail_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
+
+        com_det.arch_body += "data_in_0 => zero_overhead_fail_value,\n"
+        com_det.arch_body += "data_in_1 => zero_overhead_value,\n"
+
+        com_det.arch_body += "data_out  => %s\n"%(value_tail, )
+        value_tail = "zero_overhead_fail_value"
+
+        com_det.arch_body += "\<);\n\<\n"
+
+
+    com_det.arch_head += "signal inc_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
+
+    com_det.arch_body += "inc_value <= std_logic_vector(to_unsigned(to_integer(unsigned(curr_value)) + 1, %i));\n"%(gen_det.config["PC_width"], )
+    com_det.arch_body += " %s <= inc_value;\n\n"%(value_tail, )

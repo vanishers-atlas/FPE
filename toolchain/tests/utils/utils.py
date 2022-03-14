@@ -126,8 +126,8 @@ def run_sweep_leaf(
         True   # Force generation of all files, to make sure any changes are included
     )
 
-    # print("TOOLCHAIN STOPPED BEFORE TESTING")
-    # exit()
+    #return None
+
 
     # Symulate testbench
     vhdl_files = [
@@ -160,12 +160,13 @@ def run_sweep_branch(branch_name, path, test_sets):
     print("#####################################################\n")
 
     for test_set in test_sets:
-        print(test_set)
         test_set_name = test_set.__file__.split("\\")[-2]
 
         result = test_set.run_sweep(path="%s\\%s" % (path, test_set_name))
 
-        if result != 0:
+        if result == None:
+            print("%s test, TOOLCHAIN STOPPED BEFORE TESTING\n\n"%(test_set_name, ) )
+        elif result != 0:
             raise ValueError("%s test FAILED, result %i"%(test_set_name, result) )
 
     print("\n#####################################################")

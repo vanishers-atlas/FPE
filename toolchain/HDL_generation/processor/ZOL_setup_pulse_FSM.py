@@ -15,7 +15,7 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
 
     return pathways
 
@@ -129,7 +129,8 @@ def generate_FSM():
     ARCH_HEAD += "-- State signal values\n"
     ARCH_HEAD += "-- '1' : Setup\n"
     ARCH_HEAD += "-- '0' : RUNNING\n"
-    ARCH_HEAD += "signal curr_state, next_state : std_logic := '0';\n\n"
+    ARCH_HEAD += "signal curr_state : std_logic := '1';\n"
+    ARCH_HEAD += "signal next_state : std_logic;\n"
 
     ARCH_BODY += "-- State Buffering\n"
     ARCH_BODY += "process (clock)\>\n"
@@ -141,7 +142,7 @@ def generate_FSM():
 
     ARCH_BODY += "-- next_state computing\n"
     ARCH_BODY += "next_state <=\> '1' when curr_state = '0' and overwrites_reached = '1' and match_found = '1'\n"
-    ARCH_BODY += "else '1' when PC_running /= '1'\n"
+    #ARCH_BODY += "else '1' when PC_running /= '1'\n"
     ARCH_BODY += "else '0';\<\n\n"
 
-    ARCH_BODY += "setup <= curr_state;\n"
+    ARCH_BODY += "setup <=  '1' when curr_state = '1' or PC_running /= '1' else '0';\n"

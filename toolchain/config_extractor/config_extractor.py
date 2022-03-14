@@ -48,7 +48,6 @@ def extract_config(assembly_file, parameter_file, config_file):
         walker.walk(extractor, program_context["program_tree"])
         config = extractor.get_updated_config()
 
-
     with open(config_file, "w") as f:
         f.write(json.dumps(config, sort_keys=True, indent=4))
 

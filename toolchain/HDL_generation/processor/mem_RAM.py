@@ -5,7 +5,9 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import re
 import math
+import copy
 
 from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
@@ -20,50 +22,129 @@ from FPE.toolchain.HDL_generation.basic import mux
 
 def add_inst_config(instr_id, instr_set, config):
 
-    reads = 0
-    for instr in instr_set:
-        fetch_mems = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr) ]
-        reads = max(reads, fetch_mems.count(instr_id))
-    config["reads"] = reads
+    BAPA_used = False
 
+    reads = 0
     writes = 0
     for instr in instr_set:
-        store_mems = [ asm_utils.access_mem(access) for access in asm_utils.instr_stores(instr) ]
-        writes = max(writes, store_mems.count(instr_id))
-    config["writes"] = writes
-
-    return config
-
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
-
-    for instr in instr_set:
-        read = 0
+        count = 0
         for access in asm_utils.instr_fetches(instr):
             if asm_utils.access_mem(access) == instr_id:
-                # Handle fetch addr
-                gen_utils.add_datapath(pathways, "%sfetch_addr_%i"%(lane, read), "fetch", False, instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+                count += 1
 
-                # Handle fetch data
-                gen_utils.add_datapath(pathways, "%sfetch_data_%i"%(lane, read), "exe", True, instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+                if "BAPA" in asm_utils.access_mods(access):
+                    BAPA_used = True
+        reads = max(reads, count)
 
-                read += 1
-
-        write = 0
+        count = 0
         for access in asm_utils.instr_stores(instr):
             if asm_utils.access_mem(access) == instr_id:
-                # Handle store addr
-                gen_utils.add_datapath(pathways, "%sstore_addr_%i"%(lane, write), "store", False, instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+                count += 1
 
-                # Handle store data
-                gen_utils.add_datapath(pathways, "%sstore_data_%i"%(lane, write), "store", False, instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
+            if "BAPA" in asm_utils.access_mods(access):
+                BAPA_used = True
+        writes = max(writes, count)
 
-                write += 1
+    config["buffer_reads"] = True
+    config["reads"] = reads
+    config["writes"] = writes
+    if BAPA_used:
+        config["BAPA"] = mem_BAPA_harness.add_inst_config(instr_id, instr_set, { "stallable" : config["stallable"] })
+
+
+    return config
+read_addr_patern = re.compile("read_(\d+)_addr")
+read_data_patern = re.compile("read_(\d+)_data")
+write_addr_patern = re.compile("write_(\d+)_addr")
+write_data_patern = re.compile("write_(\d+)_data")
+
+def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
+    pathways = gen_utils.init_datapaths()
+
+    if "BAPA" in config.keys():
+        pathways = mem_BAPA_harness.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
+    else:
+        # Gather pathway ports
+        read_addr_ports = []
+        read_data_ports = []
+        write_addr_ports = []
+        write_data_ports = []
+        for port in interface["ports"]:
+            match = read_addr_patern.fullmatch(port)
+            if match:
+                read_addr_ports.append(int(match.group(1)))
+                continue
+
+            match = read_data_patern.fullmatch(port)
+            if match:
+                read_data_ports.append(int(match.group(1)))
+                continue
+
+            match = write_addr_patern.fullmatch(port)
+            if match:
+                write_addr_ports.append(int(match.group(1)))
+                continue
+
+            match = write_data_patern.fullmatch(port)
+            if match:
+                write_data_ports.append(int(match.group(1)))
+                continue
+
+        # Loop over all instructions and generate paths for all found pathway ports
+        for instr in instr_set:
+            reads = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr)].count(instr_id)
+            writes = [ asm_utils.access_mem(access) for access in asm_utils.instr_stores(instr)].count(instr_id)
+
+            # Handle read_addr_ports
+            for read in read_addr_ports:
+                if read < reads:
+                    gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, read, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+
+            # Handle read_data_ports
+            for read in read_data_ports:
+                if read < reads:
+                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_0"%(lane, read, ), "exe", instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+
+            # Handle write_data_ports
+            for write in write_addr_ports:
+                if write < writes:
+                    gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, write, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+
+            # Handle write_data_ports
+            for write in write_data_ports:
+                if write < writes:
+                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_0"%(lane, write, ), "store", instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
 
     return pathways
 
+write_enables_pattern = re.compile("write_(\d+)_enable")
+
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
+
+    if "BAPA" in config.keys():
+        controls = mem_BAPA_harness.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
+    else:
+        # Gather controt ports
+        write_enable_controls = []
+        for port in interface["ports"]:
+            match = write_enables_pattern.fullmatch(port)
+            if match:
+                write_enable_controls.append(int(match.group(1)) )
+                continue
+
+        # Handle write_enable_controls
+        for write in write_enable_controls:
+            values = { "0" : [], "1" : [], }
+
+            for instr in instr_set:
+                if [asm_utils.access_mem(store) for store in asm_utils.instr_stores(instr)].count(instr_id) > write:
+                    values["1"].append(instr)
+                else:
+                    values["0"].append(instr)
+
+            gen_utils.add_control(controls, "store", instr_prefix + "write_%i_enable"%(write, ), values, "std_logic")
+
 
     return controls
 
@@ -108,6 +189,9 @@ def preprocess_config(config_in):
 
     assert(config_in["reads"] >= 1)
     config_out["reads"] = config_in["reads"]
+
+    assert type(config_in["buffer_reads"]) == bool, "buffer_reads must be a bool"
+    config_out["buffer_reads"] = config_in["buffer_reads"]
 
     assert(config_in["writes"] >= 1)
     config_out["writes"] = config_in["writes"]
@@ -244,8 +328,7 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -254,218 +337,329 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = preprocess_config(config)
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
     # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : { }, "generics" : { } }
+        # Init component_details
+        com_det = gen_utils.component_details()
 
         # Include extremely commom libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            }
-        ]
+        com_det.add_import("ieee", "std_logic_1164", "all")
 
         # Generation Module Code
-        gen_ports()
+        if "BAPA" in gen_det.config.keys():
+            gen_BAPA_RAM(gen_det, com_det)
+        else:
 
-        if   CONFIG["type"] == "DIST":
-            gen_wordwise_distributed_RAM()
-        elif CONFIG["type"] == "BLOCK":
-            gen_wordwise_block_RAM()
+            gen_ports(gen_det, com_det)
+
+            if   gen_det.config["type"] == "DIST":
+                gen_wordwise_distributed_RAM(gen_det, com_det)
+            elif gen_det.config["type"] == "BLOCK":
+                gen_wordwise_block_RAM(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def gen_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+hardness_fanin_signals = ["clock", "stall"]
+hardness_ripple_up_signals = [
+    re.compile("read_(\d+)_addr"),
+    re.compile("read_(\d+)_word_(\d+)"),
+    re.compile("write_(\d+)_addr"),
+    re.compile("write_(\d+)_word_(\d+)"),
+    re.compile("write_(\d+)_enable_(\d+)"),
+]
+hardness_internal_signals = [
+    re.compile("block_(\d+)_read_(\d+)_addr"),
+    re.compile("block_(\d+)_read_(\d+)_data"),
+    re.compile("block_(\d+)_write_(\d+)_addr"),
+    re.compile("block_(\d+)_write_(\d+)_data"),
+    re.compile("block_(\d+)_write_(\d+)_enable"),
+]
+
+subblock_fanin_signals = ["clock", "stall"]
+subblock_internal_signals = [
+    re.compile("read_(\d+)_addr"),
+    re.compile("read_(\d+)_data"),
+    re.compile("write_(\d+)_addr"),
+    re.compile("write_(\d+)_data"),
+    re.compile("write_(\d+)_enable"),
+]
+
+def gen_BAPA_RAM(gen_det, com_det):
+    # Compute subblock details
+    num_subblocks = gen_det.config["BAPA"]["num_blocks"]
+    subblock_depth = math.ceil(gen_det.config["depth"]/num_subblocks)
+    subblock_addr_width = tc_utils.unsigned.width(subblock_depth - 1)
+
+    subblock_config = copy.deepcopy(gen_det.config)
+    # Remove BAPA from subblock_config as BAPA is being handled in this super component
+    del subblock_config["BAPA"]
+    # overwrite depth
+    subblock_config["depth"] = subblock_depth
+    # Tell subblock to not buffer its reads, as the BAPA harness handles that in a BAPA mem
+    subblock_config["buffer_reads"] = False
+
+    # Generate BAPA harness
+    if gen_det.concat_naming:
+        module_name = gen_det.module_name + "_BAPA_harness"
+    else:
+        module_name = None
+
+    harness_interface, harness_name = mem_BAPA_harness.generate_HDL(
+        gen_det.config["BAPA"],
+        gen_det.output_path,
+        module_name=module_name,
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
+    )
+
+    # Instancate BAPA harness
+    com_det.arch_body += "BAPA_harness : entity work.%s(arch)\>\n"%(harness_name, )
+
+    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "data_width => %i,\n"%(gen_det.config["data_width"], )
+    com_det.arch_body += "block_addr_width => %i\n"%(subblock_addr_width, )
+    com_det.arch_body += "\<)\n"
+
+    com_det.arch_body += "port map (\n\>"
+
+    # Handle fanin signals
+    for signal in hardness_fanin_signals:
+        if signal in harness_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+
+    # Handle ripple up signals
+    for rule in hardness_ripple_up_signals:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            # Handle generic controlled ports
+            if details["type"].startswith("std_logic_vector("):
+                if details["type"].startswith("std_logic_vector(block_addr_width"):
+                    width = gen_det.config["addr_width"]
+                elif details["type"].startswith("std_logic_vector(data_width"):
+                    width = gen_det.config["data_width"]
+                else:
+                    raise ValueError("Unknown std_logic_vector type in harness interface, " + details["type"])
+
+                com_det.add_port(port, "std_logic_vector", details["direction"], width)
+            # Ripple up non generic controlled ports untouched
+            else:
+                com_det.add_port(port, details["type"], details["direction"])
+
+            # Connect harness port to rippled port
+            com_det.arch_body += "%s => %s,\n"%(port, port)
+
+    # Handle internal signals
+    for rule in hardness_internal_signals:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            # Handle generic controlled ports
+            if details["type"].startswith("std_logic_vector("):
+                if details["type"].startswith("std_logic_vector(block_addr_width"):
+                    width = subblock_addr_width
+                elif details["type"].startswith("std_logic_vector(data_width"):
+                    width = gen_det.config["data_width"]
+                else:
+                    raise ValueError("Unknown std_logic_vector type in harness interface, " + details["type"])
+            # Handle non generic controlled ports
+            else:
+                try:
+                    width = details["width"]
+                except KeyError:
+                    width = None
+
+            # Connect harness port to internal signal
+            if width == None:
+                com_det.arch_head += "signal %s : std_logic;\n"%(port, )
+            else:
+                com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(port, width - 1, )
+            com_det.arch_body += "%s => %s,\n"%(port, port)
+
+    com_det.arch_body.drop_last_X(2)
+    com_det.arch_body += "\n\<);\n\<\n"
+
+    # Generate subblock
+    if gen_det.concat_naming :
+        module_name = gen_det.module_name + "_subblock"
+    else:
+        module_name = None
+
+    subblock_interface, subblock_name = generate_HDL(
+        subblock_config,
+        gen_det.output_path,
+        module_name=module_name,
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
+    )
+
+    # Instancate sub blocks
+    for subblock in range(num_subblocks):
+        com_det.arch_body += "subblock_%i : entity work.%s(arch)\>\n"%(subblock, subblock_name, )
+
+        if subblock_interface["generics"]:
+            com_det.arch_body += "generic map (\>\n"
+            raise NotImplementedError()
+            com_det.arch_body += "\<)\n"
+
+        com_det.arch_body += "port map (\n\>"
+
+        # Handle fanin signals
+        for signal in subblock_fanin_signals:
+            if signal in subblock_interface["ports"]:
+                com_det.arch_body += "%s => %s,\n"%(signal, signal)
+
+        # Handle internal signals
+        for rule in subblock_internal_signals:
+            for port in [port for port in subblock_interface["ports"].keys() if rule.fullmatch(port) ]:
+                details = subblock_interface["ports"][port]
+
+                com_det.arch_body += "%s => block_%i_%s,\n"%(port, subblock, port, )
+
+
+        com_det.arch_body.drop_last_X(2)
+        com_det.arch_body += "\n\<);\n\<\n"
+
+
+#####################################################################
+
+def gen_ports(gen_det, com_det):
 
     # Handle common ports
-    INTERFACE["ports"]["clock"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
-    if CONFIG["stallable"]:
-        INTERFACE["ports"]["stall"] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
+    com_det.add_port("clock", "std_logic", "in")
+    if gen_det.config["stallable"]:
+        com_det.add_port("stall", "std_logic", "in")
 
     # Declare read ports
-    for read in range(CONFIG["reads"]):
-        INTERFACE["ports"]["read_%i_addr"%(read, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["addr_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["read_%i_data"%(read, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["data_width"],
-            "direction" : "out",
-        }
+    for read in range(gen_det.config["reads"]):
+        com_det.add_port("read_%i_addr"%(read, ), "std_logic_vector", "in",  gen_det.config["addr_width"])
+        com_det.add_port("read_%i_data"%(read, ), "std_logic_vector", "out",  gen_det.config["data_width"])
 
     # Declare write ports
-    for write in range(CONFIG["writes"]):
-        INTERFACE["ports"]["write_%i_addr"%(write, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["addr_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["write_%i_data"%(write, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["data_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["write_%i_enable"%(write, )] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
+    for write in range(gen_det.config["writes"]):
+        com_det.add_port("write_%i_addr"%(write, ), "std_logic_vector", "in",  gen_det.config["addr_width"])
+        com_det.add_port("write_%i_data"%(write, ), "std_logic_vector", "in",  gen_det.config["data_width"])
+        com_det.add_port("write_%i_enable"%(write, ), "std_logic", "in")
 
-def gen_wordwise_distributed_RAM():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+def gen_wordwise_distributed_RAM(gen_det, com_det):
 
-    if CONFIG["init_type"] == "MIF":
-        INTERFACE["generics"] += [
-            {
-                "name" : "init_mif",
-                "type" : "string"
-            }
-        ]
+    if gen_det.config["init_type"] == "MIF":
+        com_det.add_generic("init_mif", "string")
 
 
-    if   CONFIG["writes"] == 1 and CONFIG["reads"] == 1:
+    if   gen_det.config["writes"] == 1 and gen_det.config["reads"] == 1:
         # Generate a basic ROM to handle be having
         ram_interface, ram_name = dist_RAM.generate_HDL(
             {
-                "depth" : CONFIG["depth"],
+                "depth" : gen_det.config["depth"],
                 "ports_config" : "SIMPLE_DUAL",
-                "synchronous_reads" : True,
-                "enabled_reads" : CONFIG["stallable"],
-                "init_type" : "MIF" if CONFIG["init_type"] == "MIF" else "NONE"
+                "synchronous_reads" : gen_det.config["buffer_reads"],
+                "enabled_reads" : gen_det.config["stallable"],
+                "init_type" : "MIF" if gen_det.config["init_type"] == "MIF" else "NONE"
             },
-            OUTPUT_PATH,
+            gen_det.output_path,
             module_name=None,
             concat_naming=False,
-            force_generation=FORCE_GENERATION
+            force_generation=gen_det.force_generation
         )
 
         # Instancate RAM
-        ARCH_BODY += "dist_RAM : entity work.%s(arch)\>\n"%(ram_name,)
+        com_det.arch_body += "dist_RAM : entity work.%s(arch)\>\n"%(ram_name,)
 
-        ARCH_BODY += "generic map (\>\n"
-        if CONFIG["init_type"] == "MIF":
-            ARCH_BODY += "init_mif => init_mif\n"
-        ARCH_BODY += "data_width => %i\n"%(CONFIG["data_width"], )
-        ARCH_BODY += "\<)\n"
+        com_det.arch_body += "generic map (\>\n"
+        if gen_det.config["init_type"] == "MIF":
+            com_det.arch_body += "init_mif => init_mif\n"
+        com_det.arch_body += "data_width => %i\n"%(gen_det.config["data_width"], )
+        com_det.arch_body += "\<)\n"
 
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        if CONFIG["stallable"]:
-            ARCH_BODY += "read_enable => not stall,\n"
-        ARCH_BODY += "read_addr => read_0_addr,\n"
-        ARCH_BODY += "read_data => read_0_data,\n"
-        ARCH_BODY += "write_addr => write_0_addr,\n"
-        ARCH_BODY += "write_data => write_0_data,\n"
-        if CONFIG["stallable"]:
-            ARCH_BODY += "write_enable => write_0_enable and not stall\n"
+        com_det.arch_body += "port map (\n\>"
+        if gen_det.config["buffer_reads"]:
+            com_det.arch_body += "clock => clock,\n"
+        if gen_det.config["stallable"]:
+            com_det.arch_body += "read_enable => not stall,\n"
+        com_det.arch_body += "read_addr => read_0_addr,\n"
+        com_det.arch_body += "read_data => read_0_data,\n"
+        com_det.arch_body += "write_addr => write_0_addr,\n"
+        com_det.arch_body += "write_data => write_0_data,\n"
+        if gen_det.config["stallable"]:
+            com_det.arch_body += "write_enable => write_0_enable and not stall\n"
         else:
-            ARCH_BODY += "write_enable => write_0_enable\n"
-        ARCH_BODY += "\<);\n\<\n"
+            com_det.arch_body += "write_enable => write_0_enable\n"
+        com_det.arch_body += "\<);\n\<\n"
 
-    elif CONFIG["writes"] == 1 and CONFIG["reads"] <= 3:
+    elif gen_det.config["writes"] == 1 and gen_det.config["reads"] <= 3:
         # Generate a basic ROM to handle be having
         ram_interface, ram_name = dist_RAM.generate_HDL(
             {
-                "depth" : CONFIG["depth"],
+                "depth" : gen_det.config["depth"],
                 "ports_config" : "QUAD",
-                "synchronous_reads" : True,
-                "enabled_reads" : CONFIG["stallable"],
+                "synchronous_reads" : gen_det.config["buffer_reads"],
+                "enabled_reads" : gen_det.config["stallable"],
                 "init_type" : "MIF"
             },
-            OUTPUT_PATH,
+            gen_det.output_path,
             module_name=None,
             concat_naming=False,
-            force_generation=FORCE_GENERATION
+            force_generation=gen_det.force_generation
         )
 
         # Instancate RAM
-        ARCH_BODY += "dist_RAM : entity work.%s(arch)\>\n"%(ram_name,)
+        com_det.arch_body += "dist_RAM : entity work.%s(arch)\>\n"%(ram_name,)
 
-        ARCH_BODY += "generic map (\>\n"
-        if CONFIG["init_type"] == "MIF":
-            ARCH_BODY += "init_mif => init_mif\n"
-        ARCH_BODY += "data_width => %i\n"%(CONFIG["data_width"], )
-        ARCH_BODY += "\<)\n"
+        com_det.arch_body += "generic map (\>\n"
+        if gen_det.config["init_type"] == "MIF":
+            com_det.arch_body += "init_mif => init_mif\n"
+        com_det.arch_body += "data_width => %i\n"%(gen_det.config["data_width"], )
+        com_det.arch_body += "\<)\n"
 
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        if CONFIG["stallable"]:
-            ARCH_BODY += "read_enable => not stall,\n"
+        com_det.arch_body += "port map (\n\>"
+        if gen_det.config["buffer_reads"]:
+            com_det.arch_body += "clock => clock,\n"
+        if gen_det.config["stallable"]:
+            com_det.arch_body += "read_enable => not stall,\n"
         for read in range(0, reads):
-            ARCH_BODY += "read_%i_addr => read_%i_addr,\n"%(read, read, )
-            ARCH_BODY += "read_%i_data => read_%i_data,\n"%(read, read, )
+            com_det.arch_body += "read_%i_addr => read_%i_addr,\n"%(read, read, )
+            com_det.arch_body += "read_%i_data => read_%i_data,\n"%(read, read, )
         for read in range(reads, 3):
-            ARCH_BODY += "write_addr => write_0_addr,\n"
-            ARCH_BODY += "write_data => write_0_data,\n"
-        if CONFIG["stallable"]:
-            ARCH_BODY += "write_enable => write_0_enable and not stall\n"
+            com_det.arch_body += "write_addr => write_0_addr,\n"
+            com_det.arch_body += "write_data => write_0_data,\n"
+        if gen_det.config["stallable"]:
+            com_det.arch_body += "write_enable => write_0_enable and not stall\n"
         else:
-            ARCH_BODY += "write_enable => write_0_enable\n"
-        ARCH_BODY += "\<);\n\<\n"
-    elif CONFIG["writes"] < 1:
+            com_det.arch_body += "write_enable => write_0_enable\n"
+        com_det.arch_body += "\<);\n\<\n"
+    elif gen_det.config["writes"] < 1:
         raise NotIMplementedError("Support for 2+ writes needs adding")
-    else:# CONFIG["reads"] < 3
+    else:# gen_det.config["reads"] < 3
         raise NotIMplementedError("Support for 4+ reads needs adding")
 
-def gen_wordwise_block_RAM():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+def gen_wordwise_block_RAM(gen_det, com_det):
 
-    if CONFIG["init_type"] == "MIF":
+    if gen_det.config["init_type"] == "MIF":
         raise NotImplanentedError("BLOCK type RAMs currently lack a means to init they value")
 
-    IMPORTS += [
-        {
-            "library" : "UNISIM",
-            "package" : "vcomponents",
-            "parts" : "all"
-        }
-    ]
-
-    # Push back changes to config
-    INTERFACE["overwrites"]["addr_width"] = CONFIG["addr_width"]
-    INTERFACE["overwrites"]["data_width"] = CONFIG["data_width"]
+    com_det.add_import("UNISIM", "vcomponents", "all")
 
     # Generate BRAM
-    if CONFIG["reads"] == 1 and CONFIG["writes"] == 1:
-        if CONFIG["BRAM_primitive"] == "RAMB18E1":
-            BRAM_HEAD, BRAM_BODY = gen_RAMB18E1()
+    if gen_det.config["reads"] == 1 and gen_det.config["writes"] == 1:
+        if gen_det.config["BRAM_primitive"] == "RAMB18E1":
+            BRAM_HEAD, BRAM_BODY = gen_RAMB18E1(gen_det)
         else:
-            raise ValueError("Unknown BRAM_primitive, %s"%(str(CONFIG["BRAM_primitive"]), ) )
+            raise ValueError("Unknown BRAM_primitive, %s"%(str(gen_det.config["BRAM_primitive"]), ) )
 
         # Generate template code for all subwords in an addr_1ank
         BANK_HEAD = gen_utils.indented_string()
@@ -473,58 +667,58 @@ def gen_wordwise_block_RAM():
         print("Greating template addr_Bank")
 
         # Declare bank wide addr and data signals
-        BANK_HEAD += "signal BRAM_bank_BANKNAME_read_addr : std_logic_vector(%i downto 0);\n"%(CONFIG["addr_width"] - 1, )
-        BANK_HEAD += "signal BRAM_bank_BANKNAME_write_addr : std_logic_vector(%i downto 0);\n"%(CONFIG["addr_width"] - 1, )
-        BANK_HEAD += "signal BRAM_bank_BANKNAME_read_data : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
-        BANK_HEAD += "signal BRAM_bank_BANKNAME_write_data : std_logic_vector(%i downto 0);\n"%(CONFIG["data_width"] - 1, )
+        BANK_HEAD += "signal BRAM_bank_BANKNAME_read_addr : std_logic_vector(%i downto 0);\n"%(gen_det.config["addr_width"] - 1, )
+        BANK_HEAD += "signal BRAM_bank_BANKNAME_write_addr : std_logic_vector(%i downto 0);\n"%(gen_det.config["addr_width"] - 1, )
+        BANK_HEAD += "signal BRAM_bank_BANKNAME_read_data : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
+        BANK_HEAD += "signal BRAM_bank_BANKNAME_write_data : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
         BANK_HEAD += "signal BRAM_bank_BANKNAME_write_enable : std_logic;\n"
 
         # Include BRAMs each all subwords
-        for subword in range(CONFIG["subwords"]):
-            print("Handling subword %i of %i"%(subword, CONFIG["subwords"] - 1, ))
+        for subword in range(gen_det.config["subwords"]):
+            print("Handling subword %i of %i"%(subword, gen_det.config["subwords"] - 1, ))
             BANK_HEAD += str(BRAM_HEAD).replace("SUBWORDNAME", str(subword))
             BANK_BODY += str(BRAM_BODY).replace("SUBWORDNAME", str(subword))
 
             # Connect up addr singals
-            if CONFIG["BRAM_addr_width"] >= 14:
+            if gen_det.config["BRAM_addr_width"] >= 14:
                 BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_addr <= BRAM_bank_BANKNAME_read_addr(13 downto 0);\n".replace( "SUBWORDNAME", str(subword) )
                 BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_write_addr <= BRAM_bank_BANKNAME_write_addr(13 downto 0);\n".replace( "SUBWORDNAME", str(subword) )
             else:
                 BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_addr(13 downto %i) <= BRAM_bank_BANKNAME_read_addr(%i downto 0);\n".replace(
                     "SUBWORDNAME", str(subword)
                 )%(
-                    14 - CONFIG["BRAM_addr_width"],
-                    CONFIG["BRAM_addr_width"]  - 1,
+                    14 - gen_det.config["BRAM_addr_width"],
+                    gen_det.config["BRAM_addr_width"]  - 1,
                 )
                 BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_addr(%i downto 0) <= (others => '0');\n\n".replace(
                     "SUBWORDNAME", str(subword)
                 )%(
-                    14 - CONFIG["BRAM_addr_width"] - 1,
+                    14 - gen_det.config["BRAM_addr_width"] - 1,
                 )
                 BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_write_addr(13 downto %i) <= BRAM_bank_BANKNAME_write_addr(%i downto 0);\n".replace(
                     "SUBWORDNAME", str(subword)
                 )%(
-                    14 - CONFIG["BRAM_addr_width"],
-                    CONFIG["BRAM_addr_width"]  - 1,
+                    14 - gen_det.config["BRAM_addr_width"],
+                    gen_det.config["BRAM_addr_width"]  - 1,
                 )
                 BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_write_addr(%i downto 0) <= (others => '0');\n\n".replace(
                     "SUBWORDNAME", str(subword)
                 )%(
-                    14 - CONFIG["BRAM_addr_width"] - 1,
+                    14 - gen_det.config["BRAM_addr_width"] - 1,
                 )
 
             # Connect up data singals
             BANK_BODY += "BRAM_bank_BANKNAME_read_data(%i downto %i) <= BRAM_BANKNAME_SUBWORDNAME_read_data;\n".replace(
                 "SUBWORDNAME", str(subword)
             )%(
-                ((subword + 1) * CONFIG["BRAM_width"]) - 1,
-                (subword * CONFIG["BRAM_width"]),
+                ((subword + 1) * gen_det.config["BRAM_width"]) - 1,
+                (subword * gen_det.config["BRAM_width"]),
             )
             BANK_BODY += "BRAM_BANKNAME_SUBWORDNAME_write_data <= BRAM_bank_BANKNAME_write_data(%i downto %i);\n\n".replace(
                 "SUBWORDNAME", str(subword)
             )%(
-                ((subword + 1) * CONFIG["BRAM_width"]) - 1,
-                (subword * CONFIG["BRAM_width"]),
+                ((subword + 1) * gen_det.config["BRAM_width"]) - 1,
+                (subword * gen_det.config["BRAM_width"]),
             )
 
             # Connect up enable singals
@@ -535,44 +729,44 @@ def gen_wordwise_block_RAM():
             {
                 "inputs" : 2
             },
-            OUTPUT_PATH,
+            gen_det.output_path,
             module_name=None,
             concat_naming=False,
-            force_generation=FORCE_GENERATION
+            force_generation=gen_det.force_generation
         )
 
         mux_outputs = [[]]
-        for bank in range(CONFIG["addr_banks"]):
-            print("Handling bank %i of %i"%(bank, CONFIG["addr_banks"] - 1, ))
-            ARCH_HEAD += str(BANK_HEAD).replace("BANKNAME", str(bank))
-            ARCH_BODY += str(BANK_BODY).replace("BANKNAME", str(bank))
+        for bank in range(gen_det.config["addr_banks"]):
+            print("Handling bank %i of %i"%(bank, gen_det.config["addr_banks"] - 1, ))
+            com_det.arch_head += str(BANK_HEAD).replace("BANKNAME", str(bank))
+            com_det.arch_body += str(BANK_BODY).replace("BANKNAME", str(bank))
 
             # Connect up bank's addr ports
-            ARCH_BODY += "BRAM_bank_BANKNAME_read_addr <= read_0_addr;\n".replace("BANKNAME", str(bank) )
-            ARCH_BODY += "BRAM_bank_BANKNAME_write_addr <= write_0_addr;\n".replace("BANKNAME", str(bank) )
+            com_det.arch_body += "BRAM_bank_BANKNAME_read_addr <= read_0_addr;\n".replace("BANKNAME", str(bank) )
+            com_det.arch_body += "BRAM_bank_BANKNAME_write_addr <= write_0_addr;\n".replace("BANKNAME", str(bank) )
 
             # Connect up bank's enable ports
-            if CONFIG["addr_width"] == CONFIG["BRAM_addr_width"]:
-                ARCH_BODY += "BRAM_bank_BANKNAME_write_enable <= write_0_enable;\n".replace("BANKNAME", str(bank) )
+            if gen_det.config["addr_width"] == gen_det.config["BRAM_addr_width"]:
+                com_det.arch_body += "BRAM_bank_BANKNAME_write_enable <= write_0_enable;\n".replace("BANKNAME", str(bank) )
             else:
-                ARCH_BODY += "BRAM_bank_BANKNAME_write_enable <= write_0_enable and %s;\n".replace(
+                com_det.arch_body += "BRAM_bank_BANKNAME_write_enable <= write_0_enable and %s;\n".replace(
                     "BANKNAME", str(bank)
                 )%(
                     " and ".join([
-                        "write_0_addr(%i)"%(bit + CONFIG["BRAM_addr_width"], ) if bank & 2**bit
-                        else "(not write_0_addr(%i))"%(bit + CONFIG["BRAM_addr_width"], )
-                        for bit in range(CONFIG["addr_width"] - CONFIG["BRAM_addr_width"])
+                        "write_0_addr(%i)"%(bit + gen_det.config["BRAM_addr_width"], ) if bank & 2**bit
+                        else "(not write_0_addr(%i))"%(bit + gen_det.config["BRAM_addr_width"], )
+                        for bit in range(gen_det.config["addr_width"] - gen_det.config["BRAM_addr_width"])
                     ]),
                 )
 
 
 
             # Connect up bank's data ports
-            ARCH_BODY += "BRAM_bank_BANKNAME_write_data <= write_0_data;\n".replace("BANKNAME", str(bank) )
+            com_det.arch_body += "BRAM_bank_BANKNAME_write_data <= write_0_data;\n".replace("BANKNAME", str(bank) )
 
-            ARCH_HEAD += "signal banks_BANKNAME_to_BANKNAME_read_data : std_logic_vector(%i downto 0);\n".replace(
-                "BANKNAME", str(bank) )%(CONFIG["data_width"] - 1, )
-            ARCH_BODY += "banks_BANKNAME_to_BANKNAME_read_data <= BRAM_bank_BANKNAME_read_data;\n".replace( "BANKNAME", str(bank) )
+            com_det.arch_head += "signal banks_BANKNAME_to_BANKNAME_read_data : std_logic_vector(%i downto 0);\n".replace(
+                "BANKNAME", str(bank) )%(gen_det.config["data_width"] - 1, )
+            com_det.arch_body += "banks_BANKNAME_to_BANKNAME_read_data <= BRAM_bank_BANKNAME_read_data;\n".replace( "BANKNAME", str(bank) )
 
             # Add muxs as needed
             mux_outputs[0].append((bank, bank))
@@ -581,25 +775,25 @@ def gen_wordwise_block_RAM():
                     start_bank_A, end_bank_A = mux_outputs[level][0]
                     start_bank_B, end_bank_B = mux_outputs[level][1]
 
-                    ARCH_HEAD += "signal banks_%i_to_%i_read_data : std_logic_vector(%i downto 0);\n"%(
+                    com_det.arch_head += "signal banks_%i_to_%i_read_data : std_logic_vector(%i downto 0);\n"%(
                         start_bank_A,
                         end_bank_B,
-                        CONFIG["data_width"]  - 1,
+                        gen_det.config["data_width"]  - 1,
                     )
 
-                    ARCH_BODY += "banks_%i_to_%i_read_data_muz : entity work.%s(arch)\>\n"%(
+                    com_det.arch_body += "banks_%i_to_%i_read_data_muz : entity work.%s(arch)\>\n"%(
                         start_bank_A, end_bank_B, mux_name,
                     )
 
-                    ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+                    com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-                    ARCH_BODY += "port map (\n\>"
-                    ARCH_BODY += "sel(0) => read_0_addr(%i),\n"%(CONFIG["BRAM_addr_width"] + level, )
-                    ARCH_BODY += "data_in_0 => banks_%i_to_%i_read_data,\n"%(start_bank_A, end_bank_A, )
-                    ARCH_BODY += "data_in_1 => banks_%i_to_%i_read_data,\n"%(start_bank_B, end_bank_B, )
-                    ARCH_BODY += "data_out => banks_%i_to_%i_read_data\n"%(start_bank_A, end_bank_B, )
+                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "sel(0) => read_0_addr(%i),\n"%(gen_det.config["BRAM_addr_width"] + level, )
+                    com_det.arch_body += "data_in_0 => banks_%i_to_%i_read_data,\n"%(start_bank_A, end_bank_A, )
+                    com_det.arch_body += "data_in_1 => banks_%i_to_%i_read_data,\n"%(start_bank_B, end_bank_B, )
+                    com_det.arch_body += "data_out => banks_%i_to_%i_read_data\n"%(start_bank_A, end_bank_B, )
 
-                    ARCH_BODY += "\<);\n\<\n"
+                    com_det.arch_body += "\<);\n\<\n"
 
                     # Update mux mux_outputs
                     mux_outputs[level] = []
@@ -620,29 +814,29 @@ def gen_wordwise_block_RAM():
                         assert(len(mux_outputs[level]) == 2)
                         start_bank_B, end_bank_B = mux_outputs[level][1]
 
-                    ARCH_HEAD += "signal banks_%i_to_%i_read_data : std_logic_vector(%i downto 0);\n"%(
+                    com_det.arch_head += "signal banks_%i_to_%i_read_data : std_logic_vector(%i downto 0);\n"%(
                         start_bank_A,
                         end_bank_B,
-                        CONFIG["data_width"]  - 1,
+                        gen_det.config["data_width"]  - 1,
                     )
 
-                    ARCH_BODY += "banks_%i_to_%i_read_data_muz : entity work.%s(arch)\>\n"%(
+                    com_det.arch_body += "banks_%i_to_%i_read_data_muz : entity work.%s(arch)\>\n"%(
                         start_bank_A, end_bank_B, mux_name,
                     )
 
-                    ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+                    com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-                    ARCH_BODY += "port map (\n\>"
-                    ARCH_BODY += "sel(0) => read_0_addr(%i),\n"%(CONFIG["BRAM_addr_width"] + level, )
+                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "sel(0) => read_0_addr(%i),\n"%(gen_det.config["BRAM_addr_width"] + level, )
 
-                    ARCH_BODY += "data_in_0 => banks_%i_to_%i_read_data,\n"%(start_bank_A, end_bank_A, )
+                    com_det.arch_body += "data_in_0 => banks_%i_to_%i_read_data,\n"%(start_bank_A, end_bank_A, )
                     if len(mux_outputs[level]) == 1:
-                        ARCH_BODY += "data_in_1 => (others => 'U'),\n"
+                        com_det.arch_body += "data_in_1 => (others => 'U'),\n"
                     else:
-                        ARCH_BODY += "data_in_1 => banks_%i_to_%i_read_data,\n"%(start_bank_B, end_bank_B, )
-                    ARCH_BODY += "data_out => banks_%i_to_%i_read_data\n"%(start_bank_A, end_bank_B, )
+                        com_det.arch_body += "data_in_1 => banks_%i_to_%i_read_data,\n"%(start_bank_B, end_bank_B, )
+                    com_det.arch_body += "data_out => banks_%i_to_%i_read_data\n"%(start_bank_A, end_bank_B, )
 
-                    ARCH_BODY += "\<);\n\<\n"
+                    com_det.arch_body += "\<);\n\<\n"
 
                     # Update mux mux_outputs
                     mux_outputs[level] = []
@@ -652,38 +846,40 @@ def gen_wordwise_block_RAM():
                         mux_outputs.append([(start_bank_A, end_bank_B)])
 
         mux_output = mux_outputs[-1][0]
-        # connect data output to a registor
-        reg_interface, reg_name = register.generate_HDL(
-            {
-                "has_async_force" : False,
-                "has_sync_force" : False,
-                "has_enable"   : CONFIG["stallable"],
-                "force_on_init" : False
-            },
-            OUTPUT_PATH,
-            module_name=None,
-            concat_naming=False,
-            force_generation=FORCE_GENERATION
-        )
+        if gen_det.config["buffer_reads"]:
+            # connect data output to a registor
+            reg_interface, reg_name = register.generate_HDL(
+                {
+                    "has_async_force" : False,
+                    "has_sync_force" : False,
+                    "has_enable"   : gen_det.config["stallable"],
+                    "force_on_init" : False
+                },
+                gen_det.output_path,
+                module_name=None,
+                concat_naming=False,
+                force_generation=gen_det.force_generation
+            )
 
-        ARCH_BODY += "read_0_buffer : entity work.%s(arch)\>\n"%(reg_name, )
+            com_det.arch_body += "read_0_buffer : entity work.%s(arch)\>\n"%(reg_name, )
 
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+            com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        if CONFIG["stallable"]:
-            ARCH_BODY += "enable => not stall,\n"
-        ARCH_BODY += "data_in  => banks_0_to_%i_read_data,\n"%(mux_output[1], )
-        ARCH_BODY += "data_out => read_0_data\n"
-        ARCH_BODY += "\<);\n\<\n"
+            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "clock => clock,\n"
+            if gen_det.config["stallable"]:
+                com_det.arch_body += "enable => not stall,\n"
+            com_det.arch_body += "data_in  => banks_0_to_%i_read_data,\n"%(mux_output[1], )
+            com_det.arch_body += "data_out => read_0_data\n"
+            com_det.arch_body += "\<);\n\<\n"
+        else:
+            # connect data output straight to port
+            com_det.arch_body += "read_0_data <= banks_0_to_%i_read_data;\n"%(mux_output[1], )
 
-    else:#CONFIG["reads"] >= 3
+    else:#gen_det.config["reads"] >= 3
         raise NOtImplementedError("Only 1 read and 1 write to a BRAM are supported")
 
-def gen_RAMB18E1():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+def gen_RAMB18E1(gen_det):
 
     BRAM_HEAD = gen_utils.indented_string()
     BRAM_BODY = gen_utils.indented_string()
@@ -788,7 +984,7 @@ def gen_RAMB18E1():
     BRAM_BODY += "SRVAL_B => X\"00000\",\n"
 
     BRAM_BODY += "\n-- Address Collision Mode: \"PERFORMANCE\" or \"DELAYED_WRITE\"\n"
-    BRAM_BODY += "RDADDR_COLLISION_HWCONFIG => \"PERFORMANCE\",\n"
+    BRAM_BODY += "RDADDR_COLLISION_HWgen_det.config => \"PERFORMANCE\",\n"
 
     BRAM_BODY += "\n-- Collision check: Values (\"ALL\", \"WARNING_ONLY\", \"GENERATE_X_ONLY\" or \"NONE\")\n"
     BRAM_BODY += "SIM_COLLISION_CHECK => \"NONE\",\n"
@@ -801,10 +997,10 @@ def gen_RAMB18E1():
     BRAM_BODY += "RAM_MODE => \"TDP\",\n"
 
     BRAM_BODY += "\n-- READ_WIDTH_A/B, WRITE_WIDTH_A/B: Read/write width per port\n"
-    BRAM_BODY += "READ_WIDTH_A  => %i,\n"%(CONFIG["BRAM_width"], )
+    BRAM_BODY += "READ_WIDTH_A  => %i,\n"%(gen_det.config["BRAM_width"], )
     BRAM_BODY += "READ_WIDTH_B  => 0,\n"
     BRAM_BODY += "WRITE_WIDTH_A => 0,\n"
-    BRAM_BODY += "WRITE_WIDTH_B => %i,\n"%(CONFIG["BRAM_width"], )
+    BRAM_BODY += "WRITE_WIDTH_B => %i,\n"%(gen_det.config["BRAM_width"], )
 
     BRAM_BODY += "-- Simulation Device: Must be set to \"7SERIES\" for simulation behavior\n"
     BRAM_BODY += "SIM_DEVICE => \"7SERIES\"\n"
@@ -818,7 +1014,7 @@ def gen_RAMB18E1():
     BRAM_BODY += "CLKARDCLK     => clock,\n"
 
     BRAM_BODY += "WEA           => \"00\",\n"
-    if CONFIG["stallable"]:
+    if gen_det.config["stallable"]:
         BRAM_BODY += "ENARDEN 		=> not stall,\n"
     else:
         BRAM_BODY += "ENARDEN 		=> '1',\n"
@@ -843,7 +1039,7 @@ def gen_RAMB18E1():
 
     BRAM_HEAD += "signal BRAM_BANKNAME_SUBWORDNAME_write_enable : std_logic;\n"
     BRAM_BODY += "WEBWE           => (0 => BRAM_BANKNAME_SUBWORDNAME_write_enable, 1 => BRAM_BANKNAME_SUBWORDNAME_write_enable, others => '0'),\n"
-    if CONFIG["stallable"]:
+    if gen_det.config["stallable"]:
         BRAM_BODY += "ENBWREN 		=> not stall,\n"
     else:
         BRAM_BODY += "ENBWREN 		=> '1',\n"
@@ -867,40 +1063,40 @@ def gen_RAMB18E1():
     BRAM_BODY += "\<);\n\<\n"
 
     # Build read data
-    BRAM_HEAD += "signal BRAM_BANKNAME_SUBWORDNAME_read_data : std_logic_vector(%i downto 0);\n"%( CONFIG["BRAM_width"] - 1, )
-    if   CONFIG["BRAM_width"] ==  1:
+    BRAM_HEAD += "signal BRAM_BANKNAME_SUBWORDNAME_read_data : std_logic_vector(%i downto 0);\n"%( gen_det.config["BRAM_width"] - 1, )
+    if   gen_det.config["BRAM_width"] ==  1:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_data <= BRAM_BANKNAME_SUBWORDNAME_DO_A(0 downto 0);\n\n"
-    elif CONFIG["BRAM_width"] ==  2:
+    elif gen_det.config["BRAM_width"] ==  2:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_data <= BRAM_BANKNAME_SUBWORDNAME_DO_A(1 downto 0);\n\n"
-    elif CONFIG["BRAM_width"] ==  4:
+    elif gen_det.config["BRAM_width"] ==  4:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_data <= BRAM_BANKNAME_SUBWORDNAME_DO_A(3 downto 0);\n\n"
-    elif CONFIG["BRAM_width"] ==  9:
+    elif gen_det.config["BRAM_width"] ==  9:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_data <= BRAM_BANKNAME_SUBWORDNAME_PO_A(0 downto 0) & BRAM_BANKNAME_SUBWORDNAME_DO_A(7 downto 0);\n\n"
-    elif CONFIG["BRAM_width"] == 18:
+    elif gen_det.config["BRAM_width"] == 18:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_read_data <= BRAM_BANKNAME_SUBWORDNAME_PO_A & BRAM_BANKNAME_SUBWORDNAME_DO_A;\n\n"
     else:
         raise ValueError("Unknown BRAM_width, %i"%(BRAM_width, ) )
 
     # Build write data
-    BRAM_HEAD += "signal BRAM_BANKNAME_SUBWORDNAME_write_data : std_logic_vector(%i downto 0);\n"%( CONFIG["BRAM_width"] - 1, )
-    if   CONFIG["BRAM_width"] ==  1:
+    BRAM_HEAD += "signal BRAM_BANKNAME_SUBWORDNAME_write_data : std_logic_vector(%i downto 0);\n"%( gen_det.config["BRAM_width"] - 1, )
+    if   gen_det.config["BRAM_width"] ==  1:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(0 downto 0) <= BRAM_BANKNAME_SUBWORDNAME_write_data;\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(15 downto 1) <= (others => '-');\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_PI_B <= (others => '-');\n"
-    elif CONFIG["BRAM_width"] ==  2:
+    elif gen_det.config["BRAM_width"] ==  2:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(1 downto 0) <= BRAM_BANKNAME_SUBWORDNAME_write_data;\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(15 downto 2) <= (others => '-');\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_PI_B <= (others => '-');\n\n"
-    elif CONFIG["BRAM_width"] ==  4:
+    elif gen_det.config["BRAM_width"] ==  4:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(3 downto 0) <= BRAM_BANKNAME_SUBWORDNAME_write_data;\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(15 downto 4) <= (others => '-');\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_PI_B <= (others => '-');\n\n"
-    elif CONFIG["BRAM_width"] ==  9:
+    elif gen_det.config["BRAM_width"] ==  9:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(7 downto 0) <= BRAM_BANKNAME_SUBWORDNAME_write_data(7 downto 0);\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B(15 downto8 ) <= (others => '-');\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_PI_B(0 downto 0) <= BRAM_BANKNAME_SUBWORDNAME_write_data(8 downto 8);\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_PI_B(1 downto 1) <= (others => '-');\n\n"
-    elif CONFIG["BRAM_width"] == 18:
+    elif gen_det.config["BRAM_width"] == 18:
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_DI_B <= BRAM_BANKNAME_SUBWORDNAME_write_data(15 downto 0);\n"
         BRAM_BODY += "BRAM_BANKNAME_SUBWORDNAME_PI_B <= BRAM_BANKNAME_SUBWORDNAME_write_data(17 downto 16);\n\n"
     else:

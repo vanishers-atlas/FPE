@@ -71,6 +71,24 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by FPE_assemblyParser#bap_fetch.
+    def enterBap_fetch(self, ctx:FPE_assemblyParser.Bap_fetchContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#bap_fetch.
+    def exitBap_fetch(self, ctx:FPE_assemblyParser.Bap_fetchContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#bap_store.
+    def enterBap_store(self, ctx:FPE_assemblyParser.Bap_storeContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#bap_store.
+    def exitBap_store(self, ctx:FPE_assemblyParser.Bap_storeContext):
+        pass
+
+
     # Enter a parse tree produced by FPE_assemblyParser#access_imm.
     def enterAccess_imm(self, ctx:FPE_assemblyParser.Access_immContext):
         pass
@@ -260,12 +278,21 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by FPE_assemblyParser#op_pc_jump.
-    def enterOp_pc_jump(self, ctx:FPE_assemblyParser.Op_pc_jumpContext):
+    # Enter a parse tree produced by FPE_assemblyParser#op_pc_only_jump.
+    def enterOp_pc_only_jump(self, ctx:FPE_assemblyParser.Op_pc_only_jumpContext):
         pass
 
-    # Exit a parse tree produced by FPE_assemblyParser#op_pc_jump.
-    def exitOp_pc_jump(self, ctx:FPE_assemblyParser.Op_pc_jumpContext):
+    # Exit a parse tree produced by FPE_assemblyParser#op_pc_only_jump.
+    def exitOp_pc_only_jump(self, ctx:FPE_assemblyParser.Op_pc_only_jumpContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_pc_alu_jump.
+    def enterOp_pc_alu_jump(self, ctx:FPE_assemblyParser.Op_pc_alu_jumpContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_pc_alu_jump.
+    def exitOp_pc_alu_jump(self, ctx:FPE_assemblyParser.Op_pc_alu_jumpContext):
         pass
 
 
@@ -383,6 +410,60 @@ class FPE_assemblyListener(ParseTreeListener):
 
     # Exit a parse tree produced by FPE_assemblyParser#alu_result.
     def exitAlu_result(self, ctx:FPE_assemblyParser.Alu_resultContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_palu.
+    def enterOp_palu(self, ctx:FPE_assemblyParser.Op_paluContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_palu.
+    def exitOp_palu(self, ctx:FPE_assemblyParser.Op_paluContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_palu_1o_1r.
+    def enterOp_palu_1o_1r(self, ctx:FPE_assemblyParser.Op_palu_1o_1rContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_palu_1o_1r.
+    def exitOp_palu_1o_1r(self, ctx:FPE_assemblyParser.Op_palu_1o_1rContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_palu_1o_1e_1r.
+    def enterOp_palu_1o_1e_1r(self, ctx:FPE_assemblyParser.Op_palu_1o_1e_1rContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_palu_1o_1e_1r.
+    def exitOp_palu_1o_1e_1r(self, ctx:FPE_assemblyParser.Op_palu_1o_1e_1rContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#op_palu_2o_1r.
+    def enterOp_palu_2o_1r(self, ctx:FPE_assemblyParser.Op_palu_2o_1rContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#op_palu_2o_1r.
+    def exitOp_palu_2o_1r(self, ctx:FPE_assemblyParser.Op_palu_2o_1rContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#palu_operand.
+    def enterPalu_operand(self, ctx:FPE_assemblyParser.Palu_operandContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#palu_operand.
+    def exitPalu_operand(self, ctx:FPE_assemblyParser.Palu_operandContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#palu_result.
+    def enterPalu_result(self, ctx:FPE_assemblyParser.Palu_resultContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#palu_result.
+    def exitPalu_result(self, ctx:FPE_assemblyParser.Palu_resultContext):
         pass
 
 

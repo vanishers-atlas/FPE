@@ -23,7 +23,7 @@ class extractor(ParseTreeListener):
 
 
     def enterOp_bam_seek(this, ctx):
-        BAM = asm_utils.get_component_op(ctx, this.program_context)
+        BAM = asm_utils.get_component_op(ctx, this.program_context)[0]
 
         # Defualt to FORWARD
         if ctx.step_mod == None:

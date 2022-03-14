@@ -2,11 +2,126 @@ from FPE.toolchain.HDL_generation.utils import indented_string as inStr
 
 import json, zlib
 
-
 class FilesInvalid (Exception):
     pass
 
-def load_files(force_generation, output_path, module_name):
+
+###################################################################
+
+class generation_details ():
+    def __init__(this, config, output_path, module_name, concat_naming, force_generation):
+        assert type(config) == dict, "config must be a dist"
+        this.config = config
+
+        assert type(output_path) == str, "output_path must be a string"
+        this.output_path = output_path
+
+        assert type(module_name) == str, "module_name must be a string"
+        this.module_name = module_name
+
+        assert type(concat_naming) == bool, "concat_naming must be a bool"
+        this.concat_naming = concat_naming
+
+        assert type(force_generation) == bool, "force_generation must be a bool"
+        this.force_generation = force_generation
+
+class component_details ():
+    def __init__(this):
+        this.arch_head = inStr.indented_string()
+        this.arch_body = inStr.indented_string()
+
+        this._imports = []
+
+        this._ports = {}
+        this._generics = {}
+        this._misc_interface_items = {}
+
+
+    def add_import(this, library, package, parts):
+        this._imports.append( {
+            "library" : library,
+            "package" : package,
+            "parts" : parts
+        } )
+
+    def get_imports(this):
+        return this._imports
+
+
+    def add_port(this, port_name, port_type, port_direction, port_width=None):
+        assert type(port_name) == str, "port_name must be a string"
+        assert port_name not in this._ports.keys(), "there already us a port called " + port_name
+
+        assert type(port_type) == str, "port_type must be a string"
+
+        assert type(port_direction) == str, "port_direction must be a string"
+
+        assert port_width == None or type(port_width) == int, "port_width must be an int or absent"
+        assert port_width == None or port_width > 0,  "port_width must be greater than 0"
+
+        this._ports[port_name] = {
+            "type" : port_type,
+            "direction" : port_direction,
+        }
+        if port_width != None:
+            this._ports[port_name]["width"] = port_width
+
+    def add_generic(this, generic_name, generic_type, generic_width=None):
+        assert type(generic_name) == str, "generic_name must be a string"
+        assert generic_name not in this._generics.keys(), "there already us a generic called " + generic_name
+
+        assert type(generic_type) == str, "generic_type must be a string"
+
+        assert generic_width == None or type(generic_width) == int, "generic_width must be an int or absent"
+        assert generic_width == None or generic_width > 0,  "generic_width must be greater than 0"
+
+        this._generics[generic_name] = {
+            "type" : generic_type,
+        }
+        if generic_width != None:
+            this._generics[generic_name]["width"] = generic_width
+
+    def add_interface_item(this, key, value):
+        assert type(key) == str, "key must be a string"
+        assert key not in this._misc_interface_items.keys(), "there already us an interface item called " + add_interface_item
+        assert key not in ["ports", "generics"], "ports and generics should be added to the inferace via the add_port and add_generic functions"
+
+        this._misc_interface_items[key] = value
+
+    def get_interface(this):
+        return {
+            **this._misc_interface_items,
+            "generics" : this._generics,
+            "ports" : this._ports,
+        }
+
+
+###################################################################
+
+def load_files(*args):
+    # Handle input arg(s)
+    if len(args) == 1:
+        gen_det = args[0]
+        assert type(gen_det) == generation_details, "Invalid usage, in collecton parameter mode, args[0] (gen_det) must be a generation_details"
+
+        force_generation = gen_det.force_generation
+        output_path = gen_det.output_path
+        module_name = gen_det.module_name
+    elif len(args) == 3:
+        force_generation = args[0]
+        assert type(force_generation) == bool, "Invalid usage, in seperate parameter mode, args[0] (force_generation)  must be a bool"
+
+        output_path = args[1]
+        assert type(output_path) == str, "Invalid usage, in seperate parameter mode, args[1] (output_path)  must be a str"
+
+        module_name = args[2]
+        assert type(module_name) == str, "Invalid usage, in seperate parameter mode, args[2] (module_name)  must be a str"
+    else:
+        raise SyntaxError("Invalad usage, load_files has 2 possible modes of usage: collecton parameters and seperate parameters. "
+            + "in collecton parameter mode 1 paremeteris requiredL gen_det (generation_details). "
+            + "In seperate parameter mode 3 parameters are required: force_generation(bool), output_path(str), and module_name(str)"
+        )
+
     if not force_generation:
         try:
             with open(output_path + "\\" + module_name + ".inter") as f:
@@ -25,10 +140,52 @@ def load_files(force_generation, output_path, module_name):
     else:
         raise FilesInvalid()
 
+def generate_files(*args):
 
-###################################################################
+    # Handle input arg(s)
+    if len(args) == 2:
+        assert type(args[0]) == generation_details, "Invalid usage, in collecton parameter mode, args[0] (gen_det) must be a generation_details"
+        gen_det = args[0]
 
-def generate_files(output_path, module_name, imports, arch_head, arch_body, interface):
+        assert type(args[1]) == component_details, "Invalid usage, in collecton parameter mode, args[1] (com_det) must be a component_details"
+        com_det = args[1]
+
+        output_path = gen_det.output_path
+        module_name = gen_det.module_name
+
+        imports = com_det.get_imports()
+        arch_head = com_det.arch_head
+        arch_body = com_det.arch_body
+        interface = com_det.get_interface()
+
+    elif len(args) == 6:
+        output_path = args[0]
+        assert type(output_path) == str, "Invalid usage, in seperate parameter mode, args[0] (output_path)  must be a str"
+
+        module_name = args[1]
+        assert type(module_name) == str, "Invalid usage, in seperate parameter mode, args[1] (module_name)  must be a str"
+
+        imports = args[2]
+        assert type(imports) == list, "Invalid usage, in seperate parameter mode, args[2] (imports)  must be a list"
+
+        arch_head = args[3]
+        assert type(arch_head) == inStr.indented_string, "Invalid usage, in seperate parameter mode, args[3] (arch_head)  must be an indented_string"
+
+        arch_body = args[4]
+        assert type(arch_body) == inStr.indented_string, "Invalid usage, in seperate parameter mode, args[4] (arch_body)  must be an indented_string"
+
+        interface = args[5]
+        assert type(interface) == dict, "Invalid usage, in seperate parameter mode, args[5] (interface)  must be a dict"
+    else:
+        raise SyntaxError("Invalad usage, generate_files has 2 possible modes of usage: collecton parameters and seperate parameters. "
+            + "in collecton parameter mode 2 paremeteris requiredL gen_det(generation_details), and com_det(component_details). "
+            + "In seperate parameter mode 6 parameters are required: output_path(str), module_name(str), imports(list), arch_head(indented_string), arch_body(indented_string), and imports(dict)"
+        )
+
+    output_path, module_name, imports, arch_head, arch_body, interface
+
+
+
     text = inStr.indented_string()
 
     # include imports

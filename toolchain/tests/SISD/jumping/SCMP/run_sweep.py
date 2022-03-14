@@ -8,16 +8,28 @@ if __name__ == "__main__":
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import SIGNED
-    import UNSIGNED
+    import JEQ
+    import JLT
+    import JGT
+    import JLE
+    import JGE
+    import JNE
 else:
-    from . import SIGNED
-    from . import UNSIGNED
+    from . import JEQ
+    from . import JLT
+    from . import JGT
+    from . import JLE
+    from . import JGE
+    from . import JNE
 
 
 test_sets = [
-    SIGNED,
-    UNSIGNED
+    JEQ,
+    JLT,
+    JGT,
+    JLE,
+    JGE,
+    JNE,
 ]
 
 

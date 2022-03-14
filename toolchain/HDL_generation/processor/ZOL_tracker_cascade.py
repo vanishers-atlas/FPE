@@ -19,7 +19,7 @@ from FPE.toolchain.HDL_generation.processor import ZOL_inverted_SR_FSM
 def add_inst_config(instr_id, instr_set, config):
 
     for instr in instr_set:
-        if asm_utils.instr_exe_unit(instr) == instr_id:
+        if instr_id in asm_utils.instr_exe_units(instr):
             mnemonic = asm_utils.instr_mnemonic(instr)
             if   mnemonic == "ZOL_SET":
                 raise ValueError("Cascade tracker doesn't support ZOL_SET instructions")
@@ -32,7 +32,7 @@ def add_inst_config(instr_id, instr_set, config):
 
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = {}
+    pathways = gen_utils.init_datapaths()
 
     return pathways
 

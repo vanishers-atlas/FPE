@@ -24,12 +24,16 @@ class handler(ParseTreeListener):
         this.values.add(this.program_context["loop_labels"][loop_label]["start"])
         this.values.add(this.program_context["loop_labels"][loop_label]["end"])
 
-    def enterOp_pc_jump(this, ctx):
+
+    def enterOp_pc_only_jump(this, ctx):
         jump_label = asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())
 
         this.values.add(this.program_context["jump_labels"][jump_label])
 
+    def enterOp_pc_alu_jump(this, ctx):
+        jump_label = asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())
 
+        this.values.add(this.program_context["jump_labels"][jump_label])
 
 
     def enterAccess_imm(this, ctx):

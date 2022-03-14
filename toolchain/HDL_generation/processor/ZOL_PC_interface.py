@@ -16,7 +16,7 @@ from FPE.toolchain.HDL_generation.basic import register
 def add_inst_config(instr_id, instr_set, config):
 
     for instr in instr_set:
-        if asm_utils.instr_exe_unit(instr) == instr_id:
+        if instr_id in asm_utils.instr_exe_units(instr):
             mnemonic = asm_utils.instr_mnemonic(instr)
             if   mnemonic == "ZOL_SEEK":
                 config["seekable"] = True
@@ -24,19 +24,18 @@ def add_inst_config(instr_id, instr_set, config):
                 pass
             else:
                 raise ValueError("Unknow instr mnemonic, " + mnemonic)
-
     return config
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
 
     if config["seekable"]:
         for instr in instr_set:
-            if asm_utils.instr_exe_unit(instr) == instr_id:
+            if instr_id in asm_utils.instr_exe_units(instr):
                 mnemonic = asm_utils.instr_mnemonic(instr)
                 if   mnemonic == "ZOL_SEEK":
-                    gen_utils.add_datapath(pathways, "%sfetch_data_0"%(lane, ), "exe", False, instr, instr_prefix + "seek_overwrite_value", "unsigned", interface["ports"]["seek_overwrite_value"]["width"])
-                    gen_utils.add_datapath(pathways, "%sfetch_data_1"%(lane, ), "exe", False, instr, instr_prefix + "seek_check_value", "unsigned", interface["ports"]["seek_check_value"]["width"])
+                    gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ), "exe", instr, instr_prefix + "seek_overwrite_value", "unsigned", interface["ports"]["seek_overwrite_value"]["width"])
+                    gen_utils.add_datapath_dest(pathways, "%sfetch_data_1_word_0"%(lane, ), "exe", instr, instr_prefix + "seek_check_value", "unsigned", interface["ports"]["seek_check_value"]["width"])
 
     return pathways
 
@@ -47,7 +46,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
         values = { "0" : [], "1" : [], }
 
         for instr in instr_set:
-            if asm_utils.instr_mnemonic(instr) == "ZOL_SEEK" and asm_utils.instr_exe_unit(instr) == instr_id:
+            if asm_utils.instr_mnemonic(instr) == "ZOL_SEEK" and instr_id in asm_utils.instr_exe_units(instr):
                 values["1"].append(instr)
             else:
                 values["0"].append(instr)

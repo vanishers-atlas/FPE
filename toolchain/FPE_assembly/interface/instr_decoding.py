@@ -9,16 +9,16 @@
 def instr_mnemonic(instr):
     return instr.split("#")[0]
 
-def instr_srcs(instr):
+def instr_operands(instr):
     if instr.split("#")[1] != "":
         return instr.split("#")[1].split("~")
     else:
         return []
 
-def instr_exe_unit(instr):
-    return instr.split("#")[2]
+def instr_exe_units(instr):
+    return instr.split("#")[2].split("~")
 
-def instr_dests(instr):
+def instr_results(instr):
     if instr.split("#")[3] != "":
         return instr.split("#")[3].split("~")
     else:
@@ -38,31 +38,24 @@ def instr_mods(instr):
                 raise NotImplenentedError()
     return mods
 
-exe_internals = {
-    "ALU" : ["ACC"],
-}
-
 def instr_fetches(instr):
     return [
         src
-        for src in instr_srcs(instr)
-        if
-        (
-            instr_exe_unit(instr) not in exe_internals.keys()
-            or src not in exe_internals[instr_exe_unit(instr)]
-        )
+        for src in instr_operands(instr)
+        if not access_is_internal(src)
     ]
 
 def instr_stores(instr):
     return [
         dest
-        for dest in instr_dests(instr)
-        if
-        (
-            instr_exe_unit(instr) in exe_internals.keys()
-            and dest not in exe_internals[instr_exe_unit(instr)]
-        )
+        for dest in instr_results(instr)
+        if not access_is_internal(dest)
     ]
+
+
+def mnemonic_decompose(mnemonic):
+    return mnemonic.split("~")
+
 
 ###############################################################
 # Access decomposing
@@ -72,13 +65,25 @@ def instr_stores(instr):
 # With "'" as section delimators
 # With "@" as multiple delimators
 
+def access_is_internal(access):
+    # ? used the mark internal, ie non fetched operands
+    return access.startswith("?")
+
+def access_internal(access):
+    assert access_is_internal(access)
+    return access.lstrip("?")
+
+
 def access_mem(access):
+    assert not access_is_internal(access)
     return access.split("'")[0]
 
 def access_addr(access):
+    assert not access_is_internal(access)
     return access.split("'")[1]
 
 def access_mods(access):
+    assert not access_is_internal(access)
     mods = {}
     mod_strs = access.split("'")[2]
     if mod_strs != "":

@@ -9,39 +9,55 @@ import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import A_in_0_B_in_1
-    import A_in_0_acc_B_in_1_acc
+    import passthrough_core
 
-    import C_in_0
+    import DSP_core_AB_only_narrow
+    import DSP_core_AB_only_mid
 
-    import S_in_0_C_shifter
-    import S_in_0_acc_C_shifter_in_0
+    import DSP_core_MUL_only_narrow
+    import DSP_core_MUL_only_mid
+    import DSP_core_MUL_only_wide
 
-    import AB_in_1_B_AB_C_in_0
-    import AB_in_1_A_AB_B_AB_C_in_0
+    import DSP_core_AB_MUL_narrow
+    import DSP_core_AB_MUL_mid
+    import DSP_core_AB_MUL_wide
+
+    import PALU_passthrough_core
+    import PALU_DSP_core
 else:
-    from . import A_in_0_B_in_1
-    from . import A_in_0_acc_B_in_1_acc
+    from . import passthrough_core
 
-    from . import C_in_0
+    from . import DSP_core_AB_only_narrow
+    from . import DSP_core_AB_only_mid
 
-    from . import S_in_0_C_shifter
-    from . import S_in_0_acc_C_shifter_in_0
+    from . import DSP_core_MUL_only_narrow
+    from . import DSP_core_MUL_only_mid
+    from . import DSP_core_MUL_only_wide
 
-    from . import AB_in_1_B_AB_C_in_0
-    from . import AB_in_1_A_AB_B_AB_C_in_0
+    from . import DSP_core_AB_MUL_narrow
+    from . import DSP_core_AB_MUL_mid
+    from . import DSP_core_AB_MUL_wide
+
+    from . import PALU_passthrough_core
+    from . import PALU_DSP_core
+
 
 test_sets = [
-    A_in_0_B_in_1,
-    A_in_0_acc_B_in_1_acc,
+    passthrough_core,
 
-    C_in_0,
+    DSP_core_AB_only_narrow,
+    DSP_core_AB_only_mid,
 
-    S_in_0_acc_C_shifter_in_0,
-    S_in_0_C_shifter,
+    DSP_core_MUL_only_narrow,
+    DSP_core_MUL_only_mid,
+    DSP_core_MUL_only_wide,
 
-    AB_in_1_B_AB_C_in_0,
-    AB_in_1_A_AB_B_AB_C_in_0,
+    DSP_core_AB_MUL_narrow,
+    DSP_core_AB_MUL_mid,
+    DSP_core_AB_MUL_wide,
+
+    PALU_passthrough_core,
+    PALU_DSP_core,
 ]
 
 

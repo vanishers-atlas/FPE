@@ -57,10 +57,6 @@ def handle_module_name(module_name, config):
         # Handle enable
         if config["has_enable"] == True:
             generated_name += "_enable"
-
-        # Handle "force_on_init"
-        if config["force_on_init"] == True:
-            generated_name += "_inited"
             
         # Handle force
         if   config["force_type"] == "NONE":

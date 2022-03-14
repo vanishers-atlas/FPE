@@ -50,9 +50,14 @@ class handler(ParseTreeListener):
 
         this.program.append(instr)
 
-    def enterOp_pc_jump(this, ctx):
+    def enterOp_pc_only_jump(this, ctx):
         imm_addr = this.program_context["IMM_addr_map"][ this.program_context["jump_labels"][asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())] ]
         this.addresses.append(imm_addr)
+
+    def enterOp_pc_alu_jump(this, ctx):
+        imm_addr = this.program_context["IMM_addr_map"][ this.program_context["jump_labels"][asm_utils.token_to_text(ctx.ident_ref().IDENTIFER())] ]
+        this.addresses.append(imm_addr)
+
 
     def enterOp_ZOL_seek(this, ctx):
         values = this.program_context["loop_labels"][asm_utils.token_to_text(ctx.loop_label.IDENTIFER())]

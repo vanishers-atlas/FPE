@@ -1,5 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.std_logic_unsigned.all;
 
 entity testbench is
 
@@ -170,9 +172,11 @@ begin
 			-- Check the data is correct
 			assert(PUT_FIFO_0_data = PUT_FIFO_0_test_data(PUT_FIFO_0_index))
 				report "Incorrect " & integer'Image(PUT_FIFO_0_index) & " th output"
+				& integer'Image(to_integer(unsigned(PUT_FIFO_0_data))) & " != " & integer'Image(to_integer(unsigned(PUT_FIFO_0_test_data(PUT_FIFO_0_index))))
 				severity error;
 			assert(PUT_FIFO_0_data /= PUT_FIFO_0_test_data(PUT_FIFO_0_index))
 				report "Correct " & integer'Image(PUT_FIFO_0_index) & " th output"
+				& integer'Image(to_integer(unsigned(PUT_FIFO_0_data))) & " == " & integer'Image(to_integer(unsigned(PUT_FIFO_0_test_data(PUT_FIFO_0_index))))
 				severity note;
 
 			-- Advance to output index

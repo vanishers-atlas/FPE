@@ -11,7 +11,7 @@ from FPE.toolchain.tests import utils
 def run_sweep(path="."):
     test_name = __file__.split("\\")[-2]
 
-    return utils.run_sweep_leaf(path, test_name)
+    return utils.run_sweep_leaf(path, test_name, time="100us")
 
 if __name__ == "__main__":
     exit(run_sweep())

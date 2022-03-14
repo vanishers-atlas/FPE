@@ -1,0 +1,332 @@
+{
+  // Test MOV
+  MOV(0b0000, PUT[0]);
+  MOV(ACC, PUT[0]);
+  MOV(0b0011, PUT[0]);
+  MOV(ACC, PUT[0]);
+  MOV(0b1100, PUT[0]);
+  MOV(ACC, PUT[0]);
+  MOV(0b1111, PUT[0]);
+  MOV(ACC, PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+
+  // Test parallel left shifts and rolls
+  LSH(0b0001, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  NOP;
+
+  LSH(0b0010, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  NOP;
+
+  LSH(0b0100, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  NOP;
+
+  LSH(0b1000, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  LSH(ACC, 1, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  LSH(0b0001, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  NOP;
+
+  LSH(0b0010, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  NOP;
+
+  LSH(0b0100, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  NOP;
+
+  LSH(0b1000, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  LSH(ACC, 2, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  LSH(0b0001, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  NOP;
+
+  LSH(0b0010, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  NOP;
+
+  LSH(0b0100, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  NOP;
+
+  LSH(0b1000, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  LSH(ACC, 3, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+
+  LRL(0b0001, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  NOP;
+
+  LRL(0b0010, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  NOP;
+
+  LRL(0b0100, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  NOP;
+
+  LRL(0b1000, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  LRL(ACC, 1, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  LRL(0b0001, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  NOP;
+
+  LRL(0b0010, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  NOP;
+
+  LRL(0b0100, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  NOP;
+
+  LRL(0b1000, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  LRL(ACC, 2, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  LRL(0b0001, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  NOP;
+
+  LRL(0b0010, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  NOP;
+
+  LRL(0b0100, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  NOP;
+
+  LRL(0b1000, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  LRL(ACC, 3, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+
+  // Test parallel right shifts and rolls
+  RSH(0b1000, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  NOP;
+
+  RSH(0b0100, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  NOP;
+
+  RSH(0b0010, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  NOP;
+
+  RSH(0b0001, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  RSH(ACC, 1, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  RSH(0b1000, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  NOP;
+
+  RSH(0b0100, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  NOP;
+
+  RSH(0b0010, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  NOP;
+
+  RSH(0b0001, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  RSH(ACC, 2, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  RSH(0b1000, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  NOP;
+
+  RSH(0b0100, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  NOP;
+
+  RSH(0b0010, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  NOP;
+
+  RSH(0b0001, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  RSH(ACC, 3, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+
+  RRL(0b1000, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  NOP;
+
+  RRL(0b0100, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  NOP;
+
+  RRL(0b0010, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  NOP;
+
+  RRL(0b0001, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  RRL(ACC, 1, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  RRL(0b1000, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  NOP;
+
+  RRL(0b0100, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  NOP;
+
+  RRL(0b0010, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  NOP;
+
+  RRL(0b0001, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  RRL(ACC, 2, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  RRL(0b1000, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  NOP;
+
+  RRL(0b0100, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  NOP;
+
+  RRL(0b0010, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  NOP;
+
+  RRL(0b0001, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  RRL(ACC, 3, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+}

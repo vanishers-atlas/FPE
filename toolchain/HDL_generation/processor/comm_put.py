@@ -5,6 +5,8 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import re
+
 from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
@@ -24,26 +26,66 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
+write_addr_patern = re.compile("write_(\d+)_addr")
+write_data_patern = re.compile("write_(\d+)_data")
+
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
 
+    # Gather pathway ports
+    write_addr_ports = []
+    write_data_ports = []
+    for port in interface["ports"]:
+        match = write_addr_patern.fullmatch(port)
+        if match:
+            write_addr_ports.append(int(match.group(1)))
+            continue
+
+        match = write_data_patern.fullmatch(port)
+        if match:
+            write_data_ports.append(int(match.group(1)))
+            continue
+
+    # Loop over all instructions and generate paths for all found pathway ports
     for instr in instr_set:
-        write = 0
-        for access in asm_utils.instr_stores(instr):
-            if asm_utils.access_mem(access) == instr_id:
-                # Handle store addr
-                gen_utils.add_datapath(pathways, "%sstore_addr_%i"%(lane, write), "store", False, instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+        writes = [ asm_utils.access_mem(access) for access in asm_utils.instr_stores(instr)].count(instr_id)
 
-                # Handle store data
-                gen_utils.add_datapath(pathways, "%sstore_data_%i"%(lane, write), "store", False, instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
+        # Handle write_data_ports
+        for write in write_addr_ports:
+            if write < writes:
+                gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, write, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
 
-                write += 1
-
+        # Handle write_data_ports
+        for write in write_data_ports:
+            if write < writes:
+                gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_0"%(lane, write, ), "store", instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
 
     return pathways
 
+write_enables_pattern = re.compile("write_(\d+)_enable")
+
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
+
+    # Gather controt ports
+    write_enable_controls = []
+    for port in interface["ports"]:
+        match = write_enables_pattern.fullmatch(port)
+        if match:
+            write_enable_controls.append(int(match.group(1)) )
+            continue
+
+    # Handle write_enable_controls
+    for write in write_enable_controls:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            if [asm_utils.access_mem(store) for store in asm_utils.instr_stores(instr)].count(instr_id) > write:
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "store", instr_prefix + "write_%i_enable"%(write, ), values, "std_logic")
 
     return controls
 

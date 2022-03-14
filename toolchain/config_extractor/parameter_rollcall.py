@@ -83,7 +83,7 @@ class extractor(ParseTreeListener):
     #################################################################################
 
     def enterOp_bam(this, ctx):
-        BAM = asm_utils.get_component_op(ctx, this.program_context)
+        BAM = asm_utils.get_component_op(ctx, this.program_context)[0]
         # Ensure BAM exists
         if BAM not in this.para_file["address_sources"]:
             this.para_file["address_sources"][BAM] = {}
@@ -100,6 +100,8 @@ class extractor(ParseTreeListener):
 
     def enterOp_alu(this, ctx):
         ALU = asm_utils.get_component_op(ctx, this.program_context)
+        assert len(ALU) == 1
+        ALU = ALU[0]
         # Ensure ALU exists
         if ALU not in this.para_file["execute_units"]:
             this.para_file["execute_units"][ALU] = {}

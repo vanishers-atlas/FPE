@@ -5,6 +5,8 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import re
+
 from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
@@ -24,25 +26,89 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
+read_addr_patern = re.compile("read_(\d+)_addr")
+read_data_patern = re.compile("read_(\d+)_data")
+
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
 
+    # Gather pathway ports
+    read_addr_ports = []
+    read_data_ports = []
+    for port in interface["ports"]:
+        match = read_addr_patern.fullmatch(port)
+        if match:
+            read_addr_ports.append(int(match.group(1)))
+            continue
+
+        match = read_data_patern.fullmatch(port)
+        if match:
+            read_data_ports.append(int(match.group(1)))
+            continue
+
+
+    # Loop over all instructions and generate paths for all found pathway ports
     for instr in instr_set:
-        read = 0
-        for access in asm_utils.instr_fetches(instr):
-            if asm_utils.access_mem(access) == instr_id:
-                # Handle fetch addr
-                gen_utils.add_datapath(pathways, "%sfetch_addr_%i"%(lane, read), "fetch", False, instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+        reads = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr)].count(instr_id)
 
-                # Handle fetch data
-                gen_utils.add_datapath(pathways, "%sfetch_data_%i"%(lane, read), "exe", True, instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+        # Handle read_addr_ports
+        for read in read_addr_ports:
+            if read < reads:
+                gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, read, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
 
-                read += 1
+        # Handle read_data_ports
+        for read in read_data_ports:
+            if read < reads:
+                gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_0"%(lane, read, ), "exe", instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
 
     return pathways
 
+read_adv_pattern = re.compile("read_(\d*)_adv")
+read_enable_pattern = re.compile("read_(\d*)_enable")
+
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
+
+    # Gather controt ports
+    read_adv_controls = []
+    read_enable_controls = []
+    for port in interface["ports"]:
+        match = read_adv_pattern.fullmatch(port)
+        if match:
+            read_adv_controls.append(int(match.group(1)) )
+            continue
+
+        match = read_enable_pattern.fullmatch(port)
+        if match:
+            read_enable_controls.append(int(match.group(1)) )
+            continue
+
+    # Handle read_adv_controls
+    for read in read_adv_controls:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            get_read_mods = [ asm_utils.access_mods(fetch) for fetch in asm_utils.instr_fetches(instr) if asm_utils.access_mem(fetch) == instr_id ]
+            if len(get_read_mods) > read and "ADV" in get_read_mods[read].keys():
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "fetch", instr_prefix + "read_%i_adv"%(read, ), values, "std_logic")
+
+
+    # Handle read_enable_controls
+    for read in read_enable_controls:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            fetches = asm_utils.instr_fetches(instr)
+            if fetches.count(instr_id) > read:
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "fetch", instr_prefix + "read_%i_enable"%(read, ), values, "std_logic")
 
     return controls
 

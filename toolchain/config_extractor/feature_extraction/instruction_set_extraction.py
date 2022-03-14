@@ -37,8 +37,12 @@ class extractor(ParseTreeListener):
         this.addr_slot = 0
 
 
-    def enterOp_pc_jump(this, ctx):
+    def enterOp_pc_only_jump(this, ctx):
         this.enterAddr_literal(ctx, mem="IMM")
+
+    def enterOp_pc_alu_jump(this, ctx):
+        this.enterAddr_literal(ctx, mem="IMM")
+
 
     def enterOp_ZOL_seek(this, ctx):
         this.enterAddr_literal(ctx, mem="IMM")

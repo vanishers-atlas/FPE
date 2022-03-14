@@ -5,6 +5,8 @@ if __name__ == "__main__":
     levels_below_FPE = path[::-1].index("FPE") + 1
     sys.path.append("\\".join(path[:-levels_below_FPE]))
 
+import re
+
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain import utils as tc_utils
@@ -19,7 +21,7 @@ def add_inst_config(instr_id, instr_set, config):
     inputs  = 0
 
     for instr in instr_set:
-        if asm_utils.instr_exe_unit(instr) == instr_id:
+        if instr_id in asm_utils.instr_exe_units(instr):
             inputs = max(inputs, len(asm_utils.instr_fetches(instr)))
 
     config["inputs"] = inputs
@@ -27,27 +29,99 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = { }
+    pathways = gen_utils.init_datapaths()
 
     for instr in instr_set:
         for fetch, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(fetch)) for fetch in asm_utils.instr_fetches(instr) ]):
             if addr_comp == instr_id:
-                gen_utils.add_datapath(pathways, "%sfetch_addr_%i"%(lane, fetch), "fetch", True, instr, "%saddr_0_fetch"%(instr_prefix, ), "unsigned", config["addr_width"])
+                gen_utils.add_datapath_source(pathways, "%sfetch_addr_%i"%(lane, fetch), "fetch", instr, "%saddr_0_fetch"%(instr_prefix, ), "unsigned", config["addr_width"])
 
         for write, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(store)) for store in asm_utils.instr_stores(instr) ]):
             if addr_comp == instr_id:
-                gen_utils.add_datapath(pathways, "%sstore_addr_%i"%(lane, write), "store", True, instr, "%saddr_0_store"%(instr_prefix, ), "unsigned", config["addr_width"])
+                gen_utils.add_datapath_source(pathways, "%sstore_addr_%i"%(lane, write), "store", instr, "%saddr_0_store"%(instr_prefix, ), "unsigned", config["addr_width"])
 
-        if asm_utils.instr_exe_unit(instr) == instr_id:
-            # Handle EXE_INPUT
+        if instr_id in asm_utils.instr_exe_units(instr):
             if asm_utils.instr_mnemonic(instr) == "BAM_SEEK":
-                gen_utils.add_datapath(pathways, "%sfetch_data_0"%(lane, ), "exe", False, instr, "%sin_0"%(instr_prefix, ), "unsigned", config["step_width"])
+                gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ), "exe", instr, "%sin_0"%(instr_prefix, ), "unsigned", config["step_width"])
 
 
     return pathways
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
+
+    # Handle step generic forward control
+    if "step_generic_forward" in interface["ports"]:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            accesses = asm_utils.instr_fetches(instr) + asm_utils.instr_stores(instr)
+            addrs = [ asm_utils.access_addr(access) for access in asm_utils.instr_fetches(instr) + asm_utils.instr_stores(instr)]
+            this_bam_addrs = [addr for addr in addrs if asm_utils.addr_com(addr) == instr_id]
+            if len(this_bam_addrs) != 0 and any([ "FORWARD" in asm_utils.addr_mods(addr).keys() for addr in this_bam_addrs ]):
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "fetch", instr_prefix + "step_generic_forward", values, "std_logic")
+
+    # Handle step generic backwards control
+    if "step_generic_backward" in interface["ports"]:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            accesses = asm_utils.instr_fetches(instr) + asm_utils.instr_stores(instr)
+            addrs = [ asm_utils.access_addr(access) for access in asm_utils.instr_fetches(instr) + asm_utils.instr_stores(instr)]
+            this_bam_addrs = [addr for addr in addrs if asm_utils.addr_com(addr) == instr_id]
+            if len(this_bam_addrs) != 0 and any([ "BACKWARD" in asm_utils.addr_mods(addr).keys() for addr in this_bam_addrs ]):
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "fetch", instr_prefix + "step_generic_backward", values, "std_logic")
+
+    # Handle reset control
+    if "reset" in interface["ports"]:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            if asm_utils.instr_mnemonic(instr) == "BAM_RESET" and instr_id in asm_utils.instr_exe_units(instr):
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "exe", instr_prefix + "reset", values, "std_logic")
+
+    # Handle seek forward control
+    if "step_fetched_forward" in interface["ports"]:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            if (    asm_utils.instr_mnemonic(instr) == "BAM_SEEK"
+                and instr_id in asm_utils.instr_exe_units(instr)
+                and "FORWARD" in asm_utils.instr_mods(instr)
+            ):
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "exe", instr_prefix + "step_fetched_forward", values, "std_logic")
+
+    # Handle seek forward control
+    if "step_fetched_backward" in interface["ports"]:
+        values = { "0" : [], "1" : [], }
+
+        for instr in instr_set:
+            if (    asm_utils.instr_mnemonic(instr) == "BAM_SEEK"
+                and instr_id in asm_utils.instr_exe_units(instr)
+                and "BACKWARD" in asm_utils.instr_mods(instr)
+            ):
+                values["1"].append(instr)
+            else:
+                values["0"].append(instr)
+
+        gen_utils.add_control(controls, "exe", instr_prefix + "step_fetched_backward", values, "std_logic")
+
 
     return controls
 
