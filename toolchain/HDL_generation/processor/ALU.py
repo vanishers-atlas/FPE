@@ -8,6 +8,7 @@ if __name__ == "__main__":
 import re
 import copy
 
+
 from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
@@ -141,16 +142,12 @@ def handle_module_name(module_name, config):
     if module_name == None:
         generated_name = "ALU"
 
-        enerated_name += "_%i"%config["data_width"]
+        generated_name += "_%i"%config["data_width"]
 
         if config["stallable"]:
             generated_name += "_stallable"
         else:
             generated_name += "_nonstallable"
-
-        # Hash oper_set
-        generated_name += "_%sop"%str( hex( zlib.adler32("\n".join(config["oper_set"]).encode('utf-8')) )).lstrip("0x").zfill(8)
-
 
         return generated_name
     else:
@@ -196,7 +193,6 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         gen_utils.generate_files(gen_det, com_det)
 
         return com_det.get_interface(), gen_det.module_name
-
 
 #####################################################################
 

@@ -92,28 +92,32 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
 
         # Loop over all instructions and generate paths for all found pathway ports
         for instr in instr_set:
-            reads = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr)].count(instr_id)
-            writes = [ asm_utils.access_mem(access) for access in asm_utils.instr_stores(instr)].count(instr_id)
+            reads  = [fetch for fetch, access in enumerate(asm_utils.instr_fetches(instr)) if asm_utils.access_mem(access) == instr_id ]
+            writes = [store for store, access in enumerate(asm_utils.instr_stores(instr)) if asm_utils.access_mem(access) == instr_id ]
 
             # Handle read_addr_ports
             for read in read_addr_ports:
-                if read < reads:
-                    gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, read, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+                if read < len(reads):
+                    fetch = reads[read]
+                    gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, fetch, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
 
             # Handle read_data_ports
             for read in read_data_ports:
-                if read < reads:
-                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_0"%(lane, read, ), "exe", instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+                if read < len(reads):
+                    fetch = reads[read]
+                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_0"%(lane, fetch, ), "exe", instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
 
             # Handle write_data_ports
             for write in write_addr_ports:
-                if write < writes:
-                    gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, write, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+                if write < len(writes):
+                    store = writes[write]
+                    gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, store, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
 
             # Handle write_data_ports
             for write in write_data_ports:
-                if write < writes:
-                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_0"%(lane, write, ), "store", instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
+                if write < len(writes):
+                    store = writes[write]
+                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_0"%(lane, store, ), "store", instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
 
     return pathways
 

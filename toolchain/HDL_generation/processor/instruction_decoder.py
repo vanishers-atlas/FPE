@@ -13,8 +13,6 @@ from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.processor import alu_dsp48e1
-
 from FPE.toolchain.HDL_generation.basic import delay
 from FPE.toolchain.HDL_generation.basic import register
 
@@ -503,10 +501,6 @@ def generate_fetch_signals():
 
         ARCH_BODY += "addr_%i_fetch <= %s(%s);\n"%(addr, INPUT_SIGNALS["instr"], section)
     ARCH_BODY += "\n"
-
-exe_lib_lookup = {
-    "ALU" : alu_dsp48e1,
-}
 
 def generate_exe_signals():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION

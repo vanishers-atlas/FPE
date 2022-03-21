@@ -106,34 +106,38 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
 
     # Loop over all instructions and generate paths for all found pathway ports
     for instr in instr_set:
-
-        reads = [ access for access in asm_utils.instr_fetches(instr) if asm_utils.access_mem(access) == instr_id ]
-        writes = [ access for access in asm_utils.instr_stores(instr) if asm_utils.access_mem(access) == instr_id ]
+        fetches = asm_utils.instr_fetches(instr)
+        reads   = [fetch for fetch, access in enumerate(fetches) if asm_utils.access_mem(access) == instr_id ]
+        stores = asm_utils.instr_stores(instr)
+        writes = [store for store, access in enumerate(stores) if asm_utils.access_mem(access) == instr_id ]
 
         # Handle read_addr_ports
         for read in read_addr_ports:
             if read < len(reads):
-                gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, read, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+                fetch = reads[read]
+                gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, fetch, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
 
         # Handle read_data_ports
         for read, word in read_data_ports:
             if read < len(reads):
-                read_mods = asm_utils.access_mods(reads[read])
+                fetch = reads[read]
+                read_mods = asm_utils.access_mods(fetches[fetch])
                 if word == 0 or "BAPA" in read_mods and word < int(read_mods["BAPA"]):
-                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_%i"%(lane, read, word, ), "exe", instr, "%sread_%i_word_%i"%(instr_prefix, read, word, ), config["signal_padding"], config["data_width"])
+                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_%i"%(lane, fetch, word, ), "exe", instr, "%sread_%i_word_%i"%(instr_prefix, read, word, ), config["signal_padding"], config["data_width"])
 
-        # Handle write_addr_ports
+        # Handle write_data_ports
         for write in write_addr_ports:
             if write < len(writes):
-                gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, write, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+                store = writes[write]
+                gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, store, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
 
         # Handle write_data_ports
         for write, word in write_data_ports:
             if write < len(writes):
-                write_mods = asm_utils.access_mods(writes[write])
+                store = writes[write]
+                write_mods = asm_utils.access_mods(stores[store])
                 if word == 0 or "BAPA" in write_mods and word < int(write_mods["BAPA"]):
-                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_%i"%(lane, write, word, ), "store", instr, "%swrite_%i_word_%i"%(instr_prefix, write, word, ), config["signal_padding"], config["data_width"])
-
+                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_%i"%(lane, store, word, ), "store", instr, "%swrite_%i_word_%i"%(instr_prefix, write, word, ), config["signal_padding"], config["data_width"])
 
     return pathways
 
