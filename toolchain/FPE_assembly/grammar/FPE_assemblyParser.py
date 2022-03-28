@@ -8,7 +8,7 @@ import sys
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3O")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3U")
         buf.write("\u01b6\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4\23\t\23")
@@ -48,8 +48,8 @@ def serializedATN():
         buf.write("\n\63\3\64\3\64\5\64\u01b4\n\64\3\64\2\3\6\65\2\4\6\b")
         buf.write("\n\f\16\20\22\24\26\30\32\34\36 \"$&(*,.\60\62\64\668")
         buf.write(":<>@BDFHJLNPRTVXZ\\^`bdf\2\16\3\2\5\7\3\2\b\t\3\2\20\21")
-        buf.write("\3\2\31\32\3\2$)\3\2./\3\2\60\63\3\2\64\65\3\2\66;\3\2")
-        buf.write("=>\3\2?B\3\2CG\2\u01b2\2h\3\2\2\2\4j\3\2\2\2\6r\3\2\2")
+        buf.write("\3\2\31\32\3\2$)\3\2./\3\2\60\63\3\2\64\65\3\2\66>\3\2")
+        buf.write("@A\3\2BE\3\2FM\2\u01b2\2h\3\2\2\2\4j\3\2\2\2\6r\3\2\2")
         buf.write("\2\b\u0084\3\2\2\2\n\u0086\3\2\2\2\f\u0096\3\2\2\2\16")
         buf.write("\u009b\3\2\2\2\20\u00a1\3\2\2\2\22\u00a5\3\2\2\2\24\u00a7")
         buf.write("\3\2\2\2\26\u00a9\3\2\2\2\30\u00b2\3\2\2\2\32\u00b7\3")
@@ -63,13 +63,13 @@ def serializedATN():
         buf.write("L\u0154\3\2\2\2N\u015f\3\2\2\2P\u0161\3\2\2\2R\u0168\3")
         buf.write("\2\2\2T\u0171\3\2\2\2V\u0178\3\2\2\2X\u0183\3\2\2\2Z\u0187")
         buf.write("\3\2\2\2\\\u018c\3\2\2\2^\u018e\3\2\2\2`\u0197\3\2\2\2")
-        buf.write("b\u01a2\3\2\2\2d\u01af\3\2\2\2f\u01b3\3\2\2\2hi\7L\2\2")
-        buf.write("i\3\3\2\2\2jk\7L\2\2k\5\3\2\2\2lm\b\4\1\2mn\7\3\2\2no")
+        buf.write("b\u01a2\3\2\2\2d\u01af\3\2\2\2f\u01b3\3\2\2\2hi\7R\2\2")
+        buf.write("i\3\3\2\2\2jk\7R\2\2k\5\3\2\2\2lm\b\4\1\2mn\7\3\2\2no")
         buf.write("\5\6\4\2op\7\4\2\2ps\3\2\2\2qs\5\b\5\2rl\3\2\2\2rq\3\2")
         buf.write("\2\2s|\3\2\2\2tu\f\5\2\2uv\t\2\2\2v{\5\6\4\6wx\f\4\2\2")
         buf.write("xy\t\3\2\2y{\5\6\4\5zt\3\2\2\2zw\3\2\2\2{~\3\2\2\2|z\3")
-        buf.write("\2\2\2|}\3\2\2\2}\7\3\2\2\2~|\3\2\2\2\177\u0085\7H\2\2")
-        buf.write("\u0080\u0085\7I\2\2\u0081\u0085\7J\2\2\u0082\u0085\7K")
+        buf.write("\2\2\2|}\3\2\2\2}\7\3\2\2\2~|\3\2\2\2\177\u0085\7N\2\2")
+        buf.write("\u0080\u0085\7O\2\2\u0081\u0085\7P\2\2\u0082\u0085\7Q")
         buf.write("\2\2\u0083\u0085\5\4\3\2\u0084\177\3\2\2\2\u0084\u0080")
         buf.write("\3\2\2\2\u0084\u0081\3\2\2\2\u0084\u0082\3\2\2\2\u0084")
         buf.write("\u0083\3\2\2\2\u0085\t\3\2\2\2\u0086\u008b\7\n\2\2\u0087")
@@ -121,14 +121,14 @@ def serializedATN():
         buf.write("\u00f0\7\36\2\2\u00f0\u00f1\5\2\2\2\u00f1\u00f2\5\6\4")
         buf.write("\2\u00f2\u00f3\7\37\2\2\u00f3\61\3\2\2\2\u00f4\u00f5\7")
         buf.write(" \2\2\u00f5\u00f6\5\2\2\2\u00f6\u00f7\7\34\2\2\u00f7\u00f8")
-        buf.write("\7L\2\2\u00f8\u0101\7\3\2\2\u00f9\u00fe\5\64\33\2\u00fa")
+        buf.write("\7R\2\2\u00f8\u0101\7\3\2\2\u00f9\u00fe\5\64\33\2\u00fa")
         buf.write("\u00fb\7!\2\2\u00fb\u00fd\5\64\33\2\u00fc\u00fa\3\2\2")
         buf.write("\2\u00fd\u0100\3\2\2\2\u00fe\u00fc\3\2\2\2\u00fe\u00ff")
         buf.write("\3\2\2\2\u00ff\u0102\3\2\2\2\u0100\u00fe\3\2\2\2\u0101")
         buf.write("\u00f9\3\2\2\2\u0101\u0102\3\2\2\2\u0102\u0103\3\2\2\2")
         buf.write("\u0103\u0104\7\4\2\2\u0104\u0105\7\37\2\2\u0105\63\3\2")
-        buf.write("\2\2\u0106\u0107\7L\2\2\u0107\u010a\7\34\2\2\u0108\u010b")
-        buf.write("\7L\2\2\u0109\u010b\5\6\4\2\u010a\u0108\3\2\2\2\u010a")
+        buf.write("\2\2\u0106\u0107\7R\2\2\u0107\u010a\7\34\2\2\u0108\u010b")
+        buf.write("\7R\2\2\u0109\u010b\5\6\4\2\u010a\u0108\3\2\2\2\u010a")
         buf.write("\u0109\3\2\2\2\u010b\65\3\2\2\2\u010c\u010d\58\35\2\u010d")
         buf.write("\u010e\7\37\2\2\u010e\u011f\3\2\2\2\u010f\u0110\5<\37")
         buf.write("\2\u0110\u0111\7\37\2\2\u0111\u011f\3\2\2\2\u0112\u0113")
@@ -175,8 +175,8 @@ def serializedATN():
         buf.write("\7\3\2\2\u017a\u017b\5X-\2\u017b\u017c\7!\2\2\u017c\u017d")
         buf.write("\5X-\2\u017d\u017e\7!\2\2\u017e\u017f\5Z.\2\u017f\u0180")
         buf.write("\7\4\2\2\u0180W\3\2\2\2\u0181\u0184\5\f\7\2\u0182\u0184")
-        buf.write("\7<\2\2\u0183\u0181\3\2\2\2\u0183\u0182\3\2\2\2\u0184")
-        buf.write("Y\3\2\2\2\u0185\u0188\5\16\b\2\u0186\u0188\7<\2\2\u0187")
+        buf.write("\7?\2\2\u0183\u0181\3\2\2\2\u0183\u0182\3\2\2\2\u0184")
+        buf.write("Y\3\2\2\2\u0185\u0188\5\16\b\2\u0186\u0188\7?\2\2\u0187")
         buf.write("\u0185\3\2\2\2\u0187\u0186\3\2\2\2\u0188[\3\2\2\2\u0189")
         buf.write("\u018d\5^\60\2\u018a\u018d\5`\61\2\u018b\u018d\5b\62\2")
         buf.write("\u018c\u0189\3\2\2\2\u018c\u018a\3\2\2\2\u018c\u018b\3")
@@ -192,8 +192,8 @@ def serializedATN():
         buf.write("\u01a6\u01a7\5d\63\2\u01a7\u01a8\7!\2\2\u01a8\u01a9\5")
         buf.write("d\63\2\u01a9\u01aa\7!\2\2\u01aa\u01ab\5f\64\2\u01ab\u01ac")
         buf.write("\7\4\2\2\u01acc\3\2\2\2\u01ad\u01b0\5\20\t\2\u01ae\u01b0")
-        buf.write("\7<\2\2\u01af\u01ad\3\2\2\2\u01af\u01ae\3\2\2\2\u01b0")
-        buf.write("e\3\2\2\2\u01b1\u01b4\5\22\n\2\u01b2\u01b4\7<\2\2\u01b3")
+        buf.write("\7?\2\2\u01af\u01ad\3\2\2\2\u01af\u01ae\3\2\2\2\u01b0")
+        buf.write("e\3\2\2\2\u01b1\u01b4\5\22\n\2\u01b2\u01b4\7?\2\2\u01b3")
         buf.write("\u01b1\3\2\2\2\u01b3\u01b2\3\2\2\2\u01b4g\3\2\2\2\36r")
         buf.write("z|\u0084\u0089\u008b\u0096\u009b\u00a1\u00a5\u00b0\u00cd")
         buf.write("\u00d8\u00df\u00fe\u0101\u010a\u011e\u0126\u0134\u0147")
@@ -219,10 +219,11 @@ class FPE_assemblyParser ( Parser ):
                      "','", "'NOP'", "'JMP'", "'JEQ'", "'JNE'", "'JLT'", 
                      "'JLE'", "'JGT'", "'JGE'", "'RESET'", "'SEEK'", "'.'", 
                      "'SET'", "'MOV'", "'NOT'", "'LSH'", "'RSH'", "'LRL'", 
-                     "'RRL'", "'UCMP'", "'SCMP'", "'ADD'", "'SUB'", "'AND'", 
-                     "'OR'", "'XOR'", "'MUL'", "'ACC'", "'PMOV'", "'PNOT'", 
-                     "'PLSH'", "'PRSH'", "'PLRL'", "'PRRL'", "'PAND'", "'POR'", 
-                     "'PXOR'", "'PADD'", "'PSUB'" ]
+                     "'RRL'", "'UCMP'", "'SCMP'", "'ADD'", "'SUB'", "'MUL'", 
+                     "'AND'", "'NAND'", "'OR'", "'NOR'", "'XOR'", "'XNOR'", 
+                     "'ACC'", "'PMOV'", "'PNOT'", "'PLSH'", "'PRSH'", "'PLRL'", 
+                     "'PRRL'", "'PADD'", "'PSUB'", "'PAND'", "'PNAND'", 
+                     "'POR'", "'PNOR'", "'PXOR'", "'PXNOR'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
@@ -241,9 +242,10 @@ class FPE_assemblyParser ( Parser ):
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "DEC_NUM", "BIN_NUM", "OCT_NUM", 
-                      "HEX_NUM", "IDENTIFER", "MUTL_LINE_COMMENT", "SING_LINE_COMMENT", 
-                      "WHITESPACE" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "DEC_NUM", "BIN_NUM", "OCT_NUM", "HEX_NUM", "IDENTIFER", 
+                      "MUTL_LINE_COMMENT", "SING_LINE_COMMENT", "WHITESPACE" ]
 
     RULE_ident_dec = 0
     RULE_ident_ref = 1
@@ -381,14 +383,20 @@ class FPE_assemblyParser ( Parser ):
     T__66=67
     T__67=68
     T__68=69
-    DEC_NUM=70
-    BIN_NUM=71
-    OCT_NUM=72
-    HEX_NUM=73
-    IDENTIFER=74
-    MUTL_LINE_COMMENT=75
-    SING_LINE_COMMENT=76
-    WHITESPACE=77
+    T__69=70
+    T__70=71
+    T__71=72
+    T__72=73
+    T__73=74
+    T__74=75
+    DEC_NUM=76
+    BIN_NUM=77
+    OCT_NUM=78
+    HEX_NUM=79
+    IDENTIFER=80
+    MUTL_LINE_COMMENT=81
+    SING_LINE_COMMENT=82
+    WHITESPACE=83
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -730,7 +738,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 137
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while ((((_la - 25)) & ~0x3f) == 0 and ((1 << (_la - 25)) & ((1 << (FPE_assemblyParser.T__24 - 25)) | (1 << (FPE_assemblyParser.T__26 - 25)) | (1 << (FPE_assemblyParser.T__27 - 25)) | (1 << (FPE_assemblyParser.T__29 - 25)) | (1 << (FPE_assemblyParser.T__31 - 25)) | (1 << (FPE_assemblyParser.T__32 - 25)) | (1 << (FPE_assemblyParser.T__33 - 25)) | (1 << (FPE_assemblyParser.T__34 - 25)) | (1 << (FPE_assemblyParser.T__35 - 25)) | (1 << (FPE_assemblyParser.T__36 - 25)) | (1 << (FPE_assemblyParser.T__37 - 25)) | (1 << (FPE_assemblyParser.T__38 - 25)) | (1 << (FPE_assemblyParser.T__39 - 25)) | (1 << (FPE_assemblyParser.T__40 - 25)) | (1 << (FPE_assemblyParser.T__43 - 25)) | (1 << (FPE_assemblyParser.T__44 - 25)) | (1 << (FPE_assemblyParser.T__45 - 25)) | (1 << (FPE_assemblyParser.T__46 - 25)) | (1 << (FPE_assemblyParser.T__47 - 25)) | (1 << (FPE_assemblyParser.T__48 - 25)) | (1 << (FPE_assemblyParser.T__49 - 25)) | (1 << (FPE_assemblyParser.T__50 - 25)) | (1 << (FPE_assemblyParser.T__51 - 25)) | (1 << (FPE_assemblyParser.T__52 - 25)) | (1 << (FPE_assemblyParser.T__53 - 25)) | (1 << (FPE_assemblyParser.T__54 - 25)) | (1 << (FPE_assemblyParser.T__55 - 25)) | (1 << (FPE_assemblyParser.T__56 - 25)) | (1 << (FPE_assemblyParser.T__58 - 25)) | (1 << (FPE_assemblyParser.T__59 - 25)) | (1 << (FPE_assemblyParser.T__60 - 25)) | (1 << (FPE_assemblyParser.T__61 - 25)) | (1 << (FPE_assemblyParser.T__62 - 25)) | (1 << (FPE_assemblyParser.T__63 - 25)) | (1 << (FPE_assemblyParser.T__64 - 25)) | (1 << (FPE_assemblyParser.T__65 - 25)) | (1 << (FPE_assemblyParser.T__66 - 25)) | (1 << (FPE_assemblyParser.T__67 - 25)) | (1 << (FPE_assemblyParser.T__68 - 25)) | (1 << (FPE_assemblyParser.IDENTIFER - 25)))) != 0):
+            while ((((_la - 25)) & ~0x3f) == 0 and ((1 << (_la - 25)) & ((1 << (FPE_assemblyParser.T__24 - 25)) | (1 << (FPE_assemblyParser.T__26 - 25)) | (1 << (FPE_assemblyParser.T__27 - 25)) | (1 << (FPE_assemblyParser.T__29 - 25)) | (1 << (FPE_assemblyParser.T__31 - 25)) | (1 << (FPE_assemblyParser.T__32 - 25)) | (1 << (FPE_assemblyParser.T__33 - 25)) | (1 << (FPE_assemblyParser.T__34 - 25)) | (1 << (FPE_assemblyParser.T__35 - 25)) | (1 << (FPE_assemblyParser.T__36 - 25)) | (1 << (FPE_assemblyParser.T__37 - 25)) | (1 << (FPE_assemblyParser.T__38 - 25)) | (1 << (FPE_assemblyParser.T__39 - 25)) | (1 << (FPE_assemblyParser.T__40 - 25)) | (1 << (FPE_assemblyParser.T__43 - 25)) | (1 << (FPE_assemblyParser.T__44 - 25)) | (1 << (FPE_assemblyParser.T__45 - 25)) | (1 << (FPE_assemblyParser.T__46 - 25)) | (1 << (FPE_assemblyParser.T__47 - 25)) | (1 << (FPE_assemblyParser.T__48 - 25)) | (1 << (FPE_assemblyParser.T__49 - 25)) | (1 << (FPE_assemblyParser.T__50 - 25)) | (1 << (FPE_assemblyParser.T__51 - 25)) | (1 << (FPE_assemblyParser.T__52 - 25)) | (1 << (FPE_assemblyParser.T__53 - 25)) | (1 << (FPE_assemblyParser.T__54 - 25)) | (1 << (FPE_assemblyParser.T__55 - 25)) | (1 << (FPE_assemblyParser.T__56 - 25)) | (1 << (FPE_assemblyParser.T__57 - 25)) | (1 << (FPE_assemblyParser.T__58 - 25)) | (1 << (FPE_assemblyParser.T__59 - 25)) | (1 << (FPE_assemblyParser.T__61 - 25)) | (1 << (FPE_assemblyParser.T__62 - 25)) | (1 << (FPE_assemblyParser.T__63 - 25)) | (1 << (FPE_assemblyParser.T__64 - 25)) | (1 << (FPE_assemblyParser.T__65 - 25)) | (1 << (FPE_assemblyParser.T__66 - 25)) | (1 << (FPE_assemblyParser.T__67 - 25)) | (1 << (FPE_assemblyParser.T__68 - 25)) | (1 << (FPE_assemblyParser.T__69 - 25)) | (1 << (FPE_assemblyParser.T__70 - 25)) | (1 << (FPE_assemblyParser.T__71 - 25)) | (1 << (FPE_assemblyParser.T__72 - 25)) | (1 << (FPE_assemblyParser.T__73 - 25)) | (1 << (FPE_assemblyParser.T__74 - 25)) | (1 << (FPE_assemblyParser.IDENTIFER - 25)))) != 0):
                 self.state = 135
                 self._errHandler.sync(self)
                 la_ = self._interp.adaptivePredict(self._input,4,self._ctx)
@@ -2070,14 +2078,14 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 273
                 self.match(FPE_assemblyParser.T__28)
                 pass
-            elif token in [FPE_assemblyParser.T__43, FPE_assemblyParser.T__44, FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48, FPE_assemblyParser.T__49, FPE_assemblyParser.T__50, FPE_assemblyParser.T__51, FPE_assemblyParser.T__52, FPE_assemblyParser.T__53, FPE_assemblyParser.T__54, FPE_assemblyParser.T__55, FPE_assemblyParser.T__56]:
+            elif token in [FPE_assemblyParser.T__43, FPE_assemblyParser.T__44, FPE_assemblyParser.T__45, FPE_assemblyParser.T__46, FPE_assemblyParser.T__47, FPE_assemblyParser.T__48, FPE_assemblyParser.T__49, FPE_assemblyParser.T__50, FPE_assemblyParser.T__51, FPE_assemblyParser.T__52, FPE_assemblyParser.T__53, FPE_assemblyParser.T__54, FPE_assemblyParser.T__55, FPE_assemblyParser.T__56, FPE_assemblyParser.T__57, FPE_assemblyParser.T__58, FPE_assemblyParser.T__59]:
                 self.enterOuterAlt(localctx, 4)
                 self.state = 275
                 self.op_alu()
                 self.state = 276
                 self.match(FPE_assemblyParser.T__28)
                 pass
-            elif token in [FPE_assemblyParser.T__58, FPE_assemblyParser.T__59, FPE_assemblyParser.T__60, FPE_assemblyParser.T__61, FPE_assemblyParser.T__62, FPE_assemblyParser.T__63, FPE_assemblyParser.T__64, FPE_assemblyParser.T__65, FPE_assemblyParser.T__66, FPE_assemblyParser.T__67, FPE_assemblyParser.T__68]:
+            elif token in [FPE_assemblyParser.T__61, FPE_assemblyParser.T__62, FPE_assemblyParser.T__63, FPE_assemblyParser.T__64, FPE_assemblyParser.T__65, FPE_assemblyParser.T__66, FPE_assemblyParser.T__67, FPE_assemblyParser.T__68, FPE_assemblyParser.T__69, FPE_assemblyParser.T__70, FPE_assemblyParser.T__71, FPE_assemblyParser.T__72, FPE_assemblyParser.T__73, FPE_assemblyParser.T__74]:
                 self.enterOuterAlt(localctx, 5)
                 self.state = 278
                 self.op_palu()
@@ -2758,7 +2766,7 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 347
                 self.op_alu_2o_0r()
                 pass
-            elif token in [FPE_assemblyParser.T__51, FPE_assemblyParser.T__52, FPE_assemblyParser.T__53, FPE_assemblyParser.T__54, FPE_assemblyParser.T__55, FPE_assemblyParser.T__56]:
+            elif token in [FPE_assemblyParser.T__51, FPE_assemblyParser.T__52, FPE_assemblyParser.T__53, FPE_assemblyParser.T__54, FPE_assemblyParser.T__55, FPE_assemblyParser.T__56, FPE_assemblyParser.T__57, FPE_assemblyParser.T__58, FPE_assemblyParser.T__59]:
                 self.enterOuterAlt(localctx, 4)
                 self.state = 348
                 self.op_alu_2o_1r()
@@ -3013,7 +3021,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 374
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__51) | (1 << FPE_assemblyParser.T__52) | (1 << FPE_assemblyParser.T__53) | (1 << FPE_assemblyParser.T__54) | (1 << FPE_assemblyParser.T__55) | (1 << FPE_assemblyParser.T__56))) != 0)):
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << FPE_assemblyParser.T__51) | (1 << FPE_assemblyParser.T__52) | (1 << FPE_assemblyParser.T__53) | (1 << FPE_assemblyParser.T__54) | (1 << FPE_assemblyParser.T__55) | (1 << FPE_assemblyParser.T__56) | (1 << FPE_assemblyParser.T__57) | (1 << FPE_assemblyParser.T__58) | (1 << FPE_assemblyParser.T__59))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
@@ -3079,10 +3087,10 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 383
                 self.access_fetch()
                 pass
-            elif token in [FPE_assemblyParser.T__57]:
+            elif token in [FPE_assemblyParser.T__60]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 384
-                localctx.internal = self.match(FPE_assemblyParser.T__57)
+                localctx.internal = self.match(FPE_assemblyParser.T__60)
                 pass
             else:
                 raise NoViableAltException(self)
@@ -3134,10 +3142,10 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 387
                 self.access_store()
                 pass
-            elif token in [FPE_assemblyParser.T__57]:
+            elif token in [FPE_assemblyParser.T__60]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 388
-                localctx.internal = self.match(FPE_assemblyParser.T__57)
+                localctx.internal = self.match(FPE_assemblyParser.T__60)
                 pass
             else:
                 raise NoViableAltException(self)
@@ -3191,17 +3199,17 @@ class FPE_assemblyParser ( Parser ):
             self.state = 394
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [FPE_assemblyParser.T__58, FPE_assemblyParser.T__59]:
+            if token in [FPE_assemblyParser.T__61, FPE_assemblyParser.T__62]:
                 self.enterOuterAlt(localctx, 1)
                 self.state = 391
                 self.op_palu_1o_1r()
                 pass
-            elif token in [FPE_assemblyParser.T__60, FPE_assemblyParser.T__61, FPE_assemblyParser.T__62, FPE_assemblyParser.T__63]:
+            elif token in [FPE_assemblyParser.T__63, FPE_assemblyParser.T__64, FPE_assemblyParser.T__65, FPE_assemblyParser.T__66]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 392
                 self.op_palu_1o_1e_1r()
                 pass
-            elif token in [FPE_assemblyParser.T__64, FPE_assemblyParser.T__65, FPE_assemblyParser.T__66, FPE_assemblyParser.T__67, FPE_assemblyParser.T__68]:
+            elif token in [FPE_assemblyParser.T__67, FPE_assemblyParser.T__68, FPE_assemblyParser.T__69, FPE_assemblyParser.T__70, FPE_assemblyParser.T__71, FPE_assemblyParser.T__72, FPE_assemblyParser.T__73, FPE_assemblyParser.T__74]:
                 self.enterOuterAlt(localctx, 3)
                 self.state = 393
                 self.op_palu_2o_1r()
@@ -3261,7 +3269,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 396
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not(_la==FPE_assemblyParser.T__58 or _la==FPE_assemblyParser.T__59):
+            if not(_la==FPE_assemblyParser.T__61 or _la==FPE_assemblyParser.T__62):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
@@ -3335,7 +3343,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 405
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not(((((_la - 61)) & ~0x3f) == 0 and ((1 << (_la - 61)) & ((1 << (FPE_assemblyParser.T__60 - 61)) | (1 << (FPE_assemblyParser.T__61 - 61)) | (1 << (FPE_assemblyParser.T__62 - 61)) | (1 << (FPE_assemblyParser.T__63 - 61)))) != 0)):
+            if not(((((_la - 64)) & ~0x3f) == 0 and ((1 << (_la - 64)) & ((1 << (FPE_assemblyParser.T__63 - 64)) | (1 << (FPE_assemblyParser.T__64 - 64)) | (1 << (FPE_assemblyParser.T__65 - 64)) | (1 << (FPE_assemblyParser.T__66 - 64)))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
@@ -3413,7 +3421,7 @@ class FPE_assemblyParser ( Parser ):
             self.state = 416
             localctx.mnemonic = self._input.LT(1)
             _la = self._input.LA(1)
-            if not(((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & ((1 << (FPE_assemblyParser.T__64 - 65)) | (1 << (FPE_assemblyParser.T__65 - 65)) | (1 << (FPE_assemblyParser.T__66 - 65)) | (1 << (FPE_assemblyParser.T__67 - 65)) | (1 << (FPE_assemblyParser.T__68 - 65)))) != 0)):
+            if not(((((_la - 68)) & ~0x3f) == 0 and ((1 << (_la - 68)) & ((1 << (FPE_assemblyParser.T__67 - 68)) | (1 << (FPE_assemblyParser.T__68 - 68)) | (1 << (FPE_assemblyParser.T__69 - 68)) | (1 << (FPE_assemblyParser.T__70 - 68)) | (1 << (FPE_assemblyParser.T__71 - 68)) | (1 << (FPE_assemblyParser.T__72 - 68)) | (1 << (FPE_assemblyParser.T__73 - 68)) | (1 << (FPE_assemblyParser.T__74 - 68)))) != 0)):
                 localctx.mnemonic = self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
@@ -3483,10 +3491,10 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 427
                 self.bap_fetch()
                 pass
-            elif token in [FPE_assemblyParser.T__57]:
+            elif token in [FPE_assemblyParser.T__60]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 428
-                localctx.internal = self.match(FPE_assemblyParser.T__57)
+                localctx.internal = self.match(FPE_assemblyParser.T__60)
                 pass
             else:
                 raise NoViableAltException(self)
@@ -3538,10 +3546,10 @@ class FPE_assemblyParser ( Parser ):
                 self.state = 431
                 self.bap_store()
                 pass
-            elif token in [FPE_assemblyParser.T__57]:
+            elif token in [FPE_assemblyParser.T__60]:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 432
-                localctx.internal = self.match(FPE_assemblyParser.T__57)
+                localctx.internal = self.match(FPE_assemblyParser.T__60)
                 pass
             else:
                 raise NoViableAltException(self)

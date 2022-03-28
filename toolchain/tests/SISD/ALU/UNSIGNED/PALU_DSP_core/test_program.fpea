@@ -189,7 +189,7 @@
   NOP;
 
   NOP; NOP; NOP; NOP;
-  
+
   PLRL(4, REG[0], 3, REG[ 4]);
   PLRL(4, ACC, 3, REG[ 8]);
   PLRL(4, ACC, 3, REG[12]);
@@ -449,7 +449,7 @@
 
   NOP; NOP; NOP; NOP;
 
-  // Test parallel logic
+  // Test parallel logic operations
   MOV(0b0000, REG[0]);
   MOV(0b1111, REG[1]);
   MOV(0b0000, REG[2]);
@@ -462,6 +462,7 @@
 
   NOP; NOP; NOP; NOP;
 
+  // Test PAND
   PAND(4, REG[0], REG[4], REG[8]);
   NOP; NOP; NOP; NOP;
 
@@ -502,6 +503,47 @@
   NOP; NOP; NOP; NOP;
 
 
+  // Test PNAND
+  PNAND(4, REG[0], REG[4], REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[0], ACC);
+  PNAND(4, ACC, REG[4], REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[4], ACC);
+  PNAND(4, REG[0], ACC, REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[0], ACC);
+  PNAND(4, ACC, ACC, REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  // Test POR
   POR(4, REG[0], REG[4], REG[8]);
   NOP; NOP; NOP; NOP;
 
@@ -541,6 +583,47 @@
   MOV(REG[11], PUT[0]);
   NOP; NOP; NOP; NOP;
 
+  // Test PNOR
+  PNOR(4, REG[0], REG[4], REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[0], ACC);
+  PNOR(4, ACC, REG[4], REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[4], ACC);
+  PNOR(4, REG[0], ACC, REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[0], ACC);
+  PNOR(4, ACC, ACC, REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  // Test PXOR
   PXOR(4, REG[0], REG[4], REG[8]);
   NOP; NOP; NOP; NOP;
 
@@ -572,6 +655,46 @@
 
   PMOV(4, REG[0], ACC);
   PXOR(4, ACC, ACC, REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  // Test PXNOR
+  PXNOR(4, REG[0], REG[4], REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[0], ACC);
+  PXNOR(4, ACC, REG[4], REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[4], ACC);
+  PXNOR(4, REG[0], ACC, REG[8]);
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP; NOP; NOP; NOP;
+
+  PMOV(4, REG[0], ACC);
+  PXNOR(4, ACC, ACC, REG[8]);
   NOP; NOP; NOP; NOP;
 
   MOV(REG[ 8], PUT[0]);

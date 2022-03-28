@@ -35,9 +35,18 @@ def add_inst_config(instr_id, instr_set, config):
         if instr_id in asm_utils.instr_exe_units(instr):
             mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
 
-            if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "JEQ", "JNE", "JGT", "JGE", "JLT", "JLE", ]:
+            if   mnemonic in [
+                "MOV", "LSH", "RSH", "LRL", "RRL",
+                "PMOV", "PLSH", "PRSH", "PLRL", "PRRL",
+                "JEQ", "JNE", "JGT", "JGE", "JLT", "JLE",
+            ]:
                 pass
-            elif mnemonic in ["NOT", "ADD", "MUL", "AND", "OR", "XOR", "SUB", "UCMP", "SCMP", "PNOT", "PAND", "POR", "PXOR", "PADD", "PSUB", ]:
+            elif mnemonic in [
+                "ADD", "MUL", "SUB", "UCMP", "SCMP",
+                "PADD", "PSUB",
+                "NOT", "AND", "NAND", "OR", "NOR", "XOR", "XNOR",
+                "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR",
+            ]:
                 only_passthrough_ops_used = False
             else:
                 raise ValueError("Unsupported mnemonic, " + mnemonic)

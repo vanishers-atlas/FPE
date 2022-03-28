@@ -52,7 +52,7 @@ def run_simulation(files, simulate_dir, part, design_top, sim_top, time):
     if not os.path.exists(simulate_dir):
         os.mkdir(simulate_dir)
 
-    # Run vivado synthesis script
+    # Generate vivado synthesis script
     print("\nPreparing Vivado Sript")
     script = "%s\\run_test.tcl"%(simulate_dir)
     # tcl use / ("/") not \ ("\\") filepath seperator within use .replace("\\", "/") of all filepaths in it
@@ -74,6 +74,7 @@ def run_simulation(files, simulate_dir, part, design_top, sim_top, time):
         f.write("run %s;\n"%(time,))
         f.write("close_sim -force;\n")
 
+    # Run vivado synthesis script
     print("\nRunning Vivado")
     journal = "%s\\test.jou"%(simulate_dir)
     log = "%s\\test.log"%(simulate_dir)

@@ -27,7 +27,7 @@ def add_inst_config(instr_id, instr_set, config):
             results = asm_utils.instr_results(instr)
             required_results = max(required_results, len(results))
 
-            if   mnemonic in ["MOV", "NOT", "ADD", "MUL", "AND", "OR", "XOR", "LSH", "RSH", "LRL", "RRL", "SUB", "UCMP", "SCMP", ]:
+            if   mnemonic in ["MOV", "NOT", "ADD", "MUL", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", "LSH", "RSH", "LRL", "RRL", "SUB", "UCMP", "SCMP", ]:
                 # non-parallel operations
 
                 # Handle acc
@@ -49,7 +49,7 @@ def add_inst_config(instr_id, instr_set, config):
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(result))
             elif mnemonic in ["JEQ", "JNE", "JGT", "JGE", "JLT", "JLE", ]:
                 pass
-            elif mnemonic in ["PMOV", "PNOT", "PAND", "POR", "PXOR", "PLSH", "PRSH", "PLRL", "PRRL",]:
+            elif mnemonic in ["PMOV", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", "PLSH", "PRSH", "PLRL", "PRRL",]:
                 # non-padding-parallel operations
                 num_words = int(mnemonic_parts[-1])
 
@@ -155,7 +155,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                     mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
 
                     # Compute number of words
-                    if mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PADD", "PSUB", "PNOT", "PAND", "POR", "PXOR", ]:
+                    if mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PADD", "PSUB", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                         num_words = int(mnemonic_parts[-1])
                     else:
                         num_words = 1
@@ -163,7 +163,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                     if word < num_words:
                             if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "AND", "OR", "XOR", "ADD", "SUB", ]:
                                 value = map["0#unpadded"]
-                            elif mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", "PAND", "POR", "PXOR", ]:
+                            elif mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                                 value = map["0#unpadded"]
                             elif mnemonic in ["PADD", "PSUB", ]:
                                 value = map["0#single_bit"]

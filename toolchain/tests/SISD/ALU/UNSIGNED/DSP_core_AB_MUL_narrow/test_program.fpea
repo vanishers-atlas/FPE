@@ -349,7 +349,8 @@
   NOP; NOP; NOP; NOP;
 
 
-  // Test logic
+  // Test logic operations
+  // Test AND
   AND(0b0000, 0b0000, PUT[0]);
   AND(0b1111, 0b0000, PUT[0]);
   AND(0b0000, 0b1111, PUT[0]);
@@ -389,6 +390,47 @@
   NOP; NOP; NOP; NOP;
 
 
+  // Test NAND
+  NAND(0b0000, 0b0000, PUT[0]);
+  NAND(0b1111, 0b0000, PUT[0]);
+  NAND(0b0000, 0b1111, PUT[0]);
+  NAND(0b1111, 0b1111, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  NAND(ACC, 0b0000, PUT[0]);
+  MOV(0b1111, ACC);
+  NAND(ACC, 0b0000, PUT[0]);
+  MOV(0b0000, ACC);
+  NAND(ACC, 0b1111, PUT[0]);
+  MOV(0b1111, ACC);
+  NAND(ACC, 0b1111, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  NAND(0b0000, ACC, PUT[0]);
+  MOV(0b0000, ACC);
+  NAND(0b1111, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NAND(0b0000, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NAND(0b1111, ACC, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  NAND(ACC, ACC, PUT[0]);
+  MOV(0b0000, ACC);
+  NAND(ACC, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NAND(ACC, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NAND(ACC, ACC, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+
+  // Test OR
   OR(0b0000, 0b0000, PUT[0]);
   OR(0b1111, 0b0000, PUT[0]);
   OR(0b0000, 0b1111, PUT[0]);
@@ -428,6 +470,47 @@
   NOP; NOP; NOP; NOP;
 
 
+  // Test NOR
+  NOR(0b0000, 0b0000, PUT[0]);
+  NOR(0b1111, 0b0000, PUT[0]);
+  NOR(0b0000, 0b1111, PUT[0]);
+  NOR(0b1111, 0b1111, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  NOR(ACC, 0b0000, PUT[0]);
+  MOV(0b1111, ACC);
+  NOR(ACC, 0b0000, PUT[0]);
+  MOV(0b0000, ACC);
+  NOR(ACC, 0b1111, PUT[0]);
+  MOV(0b1111, ACC);
+  NOR(ACC, 0b1111, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  NOR(0b0000, ACC, PUT[0]);
+  MOV(0b0000, ACC);
+  NOR(0b1111, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NOR(0b0000, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NOR(0b1111, ACC, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  NOR(ACC, ACC, PUT[0]);
+  MOV(0b0000, ACC);
+  NOR(ACC, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NOR(ACC, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  NOR(ACC, ACC, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+
+  // Test XOR
   XOR(0b0000, 0b0000, PUT[0]);
   XOR(0b1111, 0b0000, PUT[0]);
   XOR(0b0000, 0b1111, PUT[0]);
@@ -467,6 +550,47 @@
   NOP; NOP; NOP; NOP;
 
 
+  // Test XNOR
+  XNOR(0b0000, 0b0000, PUT[0]);
+  XNOR(0b1111, 0b0000, PUT[0]);
+  XNOR(0b0000, 0b1111, PUT[0]);
+  XNOR(0b1111, 0b1111, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  XNOR(ACC, 0b0000, PUT[0]);
+  MOV(0b1111, ACC);
+  XNOR(ACC, 0b0000, PUT[0]);
+  MOV(0b0000, ACC);
+  XNOR(ACC, 0b1111, PUT[0]);
+  MOV(0b1111, ACC);
+  XNOR(ACC, 0b1111, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  XNOR(0b0000, ACC, PUT[0]);
+  MOV(0b0000, ACC);
+  XNOR(0b1111, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  XNOR(0b0000, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  XNOR(0b1111, ACC, PUT[0]);
+  NOP;
+
+  MOV(0b0000, ACC);
+  XNOR(ACC, ACC, PUT[0]);
+  MOV(0b0000, ACC);
+  XNOR(ACC, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  XNOR(ACC, ACC, PUT[0]);
+  MOV(0b1111, ACC);
+  XNOR(ACC, ACC, PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+
+  // Test Arithmetic Operations
   // Test ADD
   ADD(0b0000, 0b0000, PUT[0]);
   ADD(0b0001, 0b0001, PUT[0]);

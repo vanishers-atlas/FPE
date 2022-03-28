@@ -15,7 +15,7 @@ architecture arch of testbench is
 	signal	PUT_FIFO_0_data  : std_logic_vector(3 downto 0);
 	signal	PUT_FIFO_0_write : std_logic;
 	signal  PUT_FIFO_0_index : integer := 0;
-	type  PUT_FIFO_0_data_array is array (0 to 287) of std_logic_vector(3 downto 0);
+	type  PUT_FIFO_0_data_array is array (0 to 335) of std_logic_vector(3 downto 0);
 	constant PUT_FIFO_0_test_data : PUT_FIFO_0_data_array :=
 	(
 		-- Test MOV and ACC persistances
@@ -106,17 +106,35 @@ architecture arch of testbench is
 		"0000", "0000", "0000", "1111",
 		"0000", "0000", "1111", "1111",
 
+		-- Test NAND
+		"1111", "1111", "1111", "0000",
+		"1111", "1111", "1111", "0000",
+		"1111", "1111", "1111", "0000",
+		"1111", "1111", "0000", "0000",
+
 		-- Test OR
 		"0000", "1111", "1111", "1111",
 		"0000", "1111", "1111", "1111",
 		"0000", "1111", "1111", "1111",
 		"0000", "0000", "1111", "1111",
 
+		-- Test NOR
+		"1111", "0000", "0000", "0000",
+		"1111", "0000", "0000", "0000",
+		"1111", "0000", "0000", "0000",
+		"1111", "1111", "0000", "0000",
+
 		-- Test XOR
 		"0000", "1111", "1111", "0000",
 		"0000", "1111", "1111", "0000",
 		"0000", "1111", "1111", "0000",
 		"0000", "0000", "0000", "0000",
+
+		-- Test XNOR
+		"1111", "0000", "0000", "1111",
+		"1111", "0000", "0000", "1111",
+		"1111", "0000", "0000", "1111",
+		"1111", "1111", "1111", "1111",
 
 		-- Test ADD
 		"0000", "0010", "1111", "0000",

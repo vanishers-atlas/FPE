@@ -142,7 +142,7 @@ grammar FPE_assembly;
 												'(' alu_operand ',' expr ',' alu_result ')' ;
 			op_alu_2o_0r 		:  mnemonic=( 'UCMP' | 'SCMP' )
 												'(' alu_operand ',' alu_operand ')' ;
-			op_alu_2o_1r 		:  mnemonic=( 'ADD' | 'SUB' | 'AND' | 'OR' | 'XOR' | 'MUL' )
+			op_alu_2o_1r 		:  mnemonic=( 'ADD' | 'SUB' | 'MUL' | 'AND' | 'NAND' | 'OR' | 'NOR' | 'XOR' | 'XNOR')
 												'(' alu_operand ',' alu_operand ',' alu_result ')' ;
 				alu_operand : access_fetch
 										| internal='ACC' ;
@@ -156,7 +156,7 @@ grammar FPE_assembly;
 			op_palu_1o_1e_1r :  mnemonic=( 'PLSH' | 'PRSH' | 'PLRL' | 'PRRL' )
 							'(' expr ',' palu_operand ',' expr ',' palu_result ')' ;
 
-			op_palu_2o_1r 	:  mnemonic=( 'PAND' | 'POR' | 'PXOR' | 'PADD' | 'PSUB'  )
+			op_palu_2o_1r 	:  mnemonic=( 'PADD' | 'PSUB' | 'PAND' | 'PNAND' | 'POR' | 'PNOR' | 'PXOR' | 'PXNOR'  )
 							'('expr ',' palu_operand ',' palu_operand ',' palu_result ')' ;
 
 				palu_operand : bap_fetch

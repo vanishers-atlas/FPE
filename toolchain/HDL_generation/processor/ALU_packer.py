@@ -27,7 +27,7 @@ def add_inst_config(instr_id, instr_set, config):
             mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
             operands = asm_utils.instr_operands(instr)
 
-            if   mnemonic in ["MOV", "NOT", "ADD", "AND", "OR", "XOR", ]:
+            if   mnemonic in ["MOV", "ADD", "NOT", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", ]:
                 # 1non-parallel, commutative operations
 
                 # Handle operands
@@ -132,7 +132,7 @@ def add_inst_config(instr_id, instr_set, config):
                     # Flag up any unknown cases
                     else:
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
-            elif mnemonic in ["PMOV", "PNOT", "PAND", "POR", "PXOR", ]:
+            elif mnemonic in ["PMOV", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                 # non-padding-parallel, commutative operations
 
                 num_words = int(mnemonic_parts[-1])
@@ -325,11 +325,14 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
             values = { }
             for instr in instr_set:
                 mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
-
                 value = 0
                 if instr_id in asm_utils.instr_exe_units(instr):
                     # Compute number of words
-                    if mnemonic in ["PMOV", "PNOT", "PADD", "PMUL", "PAND", "POR", "PXOR", "PLSH", "PRSH", "PLRL", "PRRL", "PSUB", ]:
+                    if mnemonic in [
+                        "PMOV", "PNOT", "PADD", "PSUB", "PMUL",
+                        "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR",
+                        "PLSH", "PRSH", "PLRL", "PRRL",
+                    ]:
                         num_words = int(mnemonic_parts[-1])
                     else:
                         num_words = 1
@@ -360,7 +363,11 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                     mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
 
                     # Compute number of words
-                    if mnemonic in ["PMOV", "PNOT", "PADD", "PMUL", "PAND", "POR", "PXOR", "PLSH", "PRSH", "PLRL", "PRRL", "PSUB", ]:
+                    if mnemonic in [
+                        "PMOV", "PNOT", "PADD", "PSUB", "PMUL",
+                        "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR",
+                        "PLSH", "PRSH", "PLRL", "PRRL",
+                    ]:
                         num_words = int(mnemonic_parts[-1])
                     else:
                         num_words = 1
@@ -373,7 +380,8 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                         else:
                             internal = asm_utils.access_internal(operands[operand])
                             if internal == "ACC":
-                                if  mnemonic in ["MOV", "NOT", "ADD", "SUB", "AND", "OR", "XOR",]:
+                                if  mnemonic in [
+                                    "MOV", "ADD", "SUB", "NOT", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", ]:
                                     # Acc handled within core therefore skip this key
                                     continue
                                 else:
@@ -386,6 +394,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                 except KeyError:
                     values[key] = [instr, ]
             gen_utils.add_control(controls, "exe", instr_prefix + port, values, "std_logic_vector", interface["ports"][port]["width"])
+
 
     # Handle packing_sel controls
     for port in interface["ports"]:
@@ -403,7 +412,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
 
                     if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "AND", "OR", "XOR", "ADD", "SUB", ]:
                         value = map["unpadded"]
-                    elif mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", "PAND", "POR", "PXOR", ]:
+                    elif mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                         value = map["unpadded"]
                     elif mnemonic in ["PADD", ]:
                         value = map["single_zero"]

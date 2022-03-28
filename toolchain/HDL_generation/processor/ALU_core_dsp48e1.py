@@ -37,7 +37,7 @@ def add_inst_config(instr_id, instr_set, config):
             if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", ]:
                 required_operands = max(required_operands, 1)
                 DSP_C_used = True
-            elif mnemonic in ["ADD", "AND", "OR", "XOR", "PAND", "POR", "PXOR", "PADD", ]:
+            elif mnemonic in ["ADD", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", "PADD", "PAND", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                 required_operands = max(required_operands, 2)
                 DSP_C_used = True
                 DSP_AB_used = True
@@ -520,70 +520,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                     op_mode["0111000"].append(instr)
                 except Exception as e:
                     op_mode["0111000"] = [instr, ]
-            elif mnemonic in ["OR", ]:
-                operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
-                operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
 
-                if   not operand_0_is_acc and not operand_1_is_acc:
-                    # P => X and/or Z depening on Y op mod
-                    try:
-                        ALU_mode["1100"].append(instr)
-                    except KeyError:
-                        ALU_mode["1100"] = [instr, ]
-
-                    # Z => C   Y => used with ALU to select or   X => A:B
-                    try:
-                        op_mode["0111011"].append(instr)
-                    except Exception as e:
-                        op_mode["0111011"] = [instr, ]
-                elif not operand_0_is_acc and operand_1_is_acc:
-                    # P => X and/or Z depening on Y op mod
-                    try:
-                        ALU_mode["1100"].append(instr)
-                    except KeyError:
-                        ALU_mode["1100"] = [instr, ]
-
-                    # Z => C   Y => used with ALU to select or   X => P
-                    try:
-                        op_mode["0111010"].append(instr)
-                    except Exception as e:
-                        op_mode["0111010"] = [instr, ]
-                elif operand_0_is_acc and not operand_1_is_acc:
-                    # P => X and/or Z depening on Y op mod
-                    try:
-                        ALU_mode["1100"].append(instr)
-                    except KeyError:
-                        ALU_mode["1100"] = [instr, ]
-
-                    # Z => P   Y => used with ALU to select or   X => A:B
-                    try:
-                        op_mode["0101011"].append(instr)
-                    except Exception as e:
-                        op_mode["0101011"] = [instr, ]
-                elif operand_0_is_acc and operand_1_is_acc:
-                    # P => X and/or Z depening on Y op mod
-                    try:
-                        ALU_mode["1100"].append(instr)
-                    except KeyError:
-                        ALU_mode["1100"] = [instr, ]
-
-                    # Z => P   Y => used with ALU to select or   X => P
-                    try:
-                        op_mode["0101010"].append(instr)
-                    except Exception as e:
-                        op_mode["0101010"] = [instr, ]
-            elif mnemonic in ["POR", ]:
-                # P => X and/or Z depening on Y op mod
-                try:
-                    ALU_mode["1100"].append(instr)
-                except KeyError:
-                    ALU_mode["1100"] = [instr, ]
-
-                # Z => C   Y => used with ALU to select or   X => A:B
-                try:
-                    op_mode["0111011"].append(instr)
-                except Exception as e:
-                    op_mode["0111011"] = [instr, ]
             elif mnemonic in ["AND", ]:
                 operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
                 operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
@@ -648,12 +585,209 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                     op_mode["0110011"].append(instr)
                 except Exception as e:
                     op_mode["0110011"] = [instr, ]
+
+            elif mnemonic in ["NAND", ]:
+                operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
+                operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
+
+                if   not operand_0_is_acc and not operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select and   X => A:B
+                    try:
+                        op_mode["0110011"].append(instr)
+                    except Exception as e:
+                        op_mode["0110011"] = [instr, ]
+                elif not operand_0_is_acc and operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select and   X => P
+                    try:
+                        op_mode["0110010"].append(instr)
+                    except Exception as e:
+                        op_mode["0110010"] = [instr, ]
+                elif operand_0_is_acc and not operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select and   X => A:B
+                    try:
+                        op_mode["0100011"].append(instr)
+                    except Exception as e:
+                        op_mode["0100011"] = [instr, ]
+                elif operand_0_is_acc and operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select and   X => P
+                    try:
+                        op_mode["0100010"].append(instr)
+                    except Exception as e:
+                        op_mode["0100010"] = [instr, ]
+            elif mnemonic in ["PNAND", ]:
+                # P => X and/or Z depening on Y op mod
+                try:
+                    ALU_mode["1110"].append(instr)
+                except KeyError:
+                    ALU_mode["1110"] = [instr, ]
+
+                # Z => C   Y => used with ALU to select and   X => A:B
+                try:
+                    op_mode["0110011"].append(instr)
+                except Exception as e:
+                    op_mode["0110011"] = [instr, ]
+
+            elif mnemonic in ["OR", ]:
+                operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
+                operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
+
+                if   not operand_0_is_acc and not operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1100"].append(instr)
+                    except KeyError:
+                        ALU_mode["1100"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select or   X => A:B
+                    try:
+                        op_mode["0111011"].append(instr)
+                    except Exception as e:
+                        op_mode["0111011"] = [instr, ]
+                elif not operand_0_is_acc and operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1100"].append(instr)
+                    except KeyError:
+                        ALU_mode["1100"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select or   X => P
+                    try:
+                        op_mode["0111010"].append(instr)
+                    except Exception as e:
+                        op_mode["0111010"] = [instr, ]
+                elif operand_0_is_acc and not operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1100"].append(instr)
+                    except KeyError:
+                        ALU_mode["1100"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select or   X => A:B
+                    try:
+                        op_mode["0101011"].append(instr)
+                    except Exception as e:
+                        op_mode["0101011"] = [instr, ]
+                elif operand_0_is_acc and operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1100"].append(instr)
+                    except KeyError:
+                        ALU_mode["1100"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select or   X => P
+                    try:
+                        op_mode["0101010"].append(instr)
+                    except Exception as e:
+                        op_mode["0101010"] = [instr, ]
+            elif mnemonic in ["POR", ]:
+                # P => X and/or Z depening on Y op mod
+                try:
+                    ALU_mode["1100"].append(instr)
+                except KeyError:
+                    ALU_mode["1100"] = [instr, ]
+
+                # Z => C   Y => used with ALU to select or   X => A:B
+                try:
+                    op_mode["0111011"].append(instr)
+                except Exception as e:
+                    op_mode["0111011"] = [instr, ]
+
+            elif mnemonic in ["NOR", ]:
+                operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
+                operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
+
+                if   not operand_0_is_acc and not operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select or   X => A:B
+                    try:
+                        op_mode["0111011"].append(instr)
+                    except Exception as e:
+                        op_mode["0111011"] = [instr, ]
+                elif not operand_0_is_acc and operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select or   X => P
+                    try:
+                        op_mode["0111010"].append(instr)
+                    except Exception as e:
+                        op_mode["0111010"] = [instr, ]
+                elif operand_0_is_acc and not operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select or   X => A:B
+                    try:
+                        op_mode["0101011"].append(instr)
+                    except Exception as e:
+                        op_mode["0101011"] = [instr, ]
+                elif operand_0_is_acc and operand_1_is_acc:
+                    # P => X and/or Z depening on Y op mod
+                    try:
+                        ALU_mode["1110"].append(instr)
+                    except KeyError:
+                        ALU_mode["1110"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select or   X => P
+                    try:
+                        op_mode["0101010"].append(instr)
+                    except Exception as e:
+                        op_mode["0101010"] = [instr, ]
+            elif mnemonic in ["PNOR", ]:
+                # P => X and/or Z depening on Y op mod
+                try:
+                    ALU_mode["1110"].append(instr)
+                except KeyError:
+                    ALU_mode["1110"] = [instr, ]
+
+                # Z => C   Y => used with ALU to select or   X => A:B
+                try:
+                    op_mode["0111011"].append(instr)
+                except Exception as e:
+                    op_mode["0111011"] = [instr, ]
+
             elif mnemonic in ["XOR", ]:
                 operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
                 operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
 
                 if   not operand_0_is_acc and not operand_1_is_acc:
                     #  P => X XOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
                     try:
                         ALU_mode["0100"].append(instr)
                     except KeyError:
@@ -666,6 +800,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                         op_mode["0110011"] = [instr, ]
                 elif not operand_0_is_acc and operand_1_is_acc:
                     #  P => X XOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
                     try:
                         ALU_mode["0100"].append(instr)
                     except KeyError:
@@ -678,18 +813,21 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                         op_mode["0110010"] = [instr, ]
                 elif operand_0_is_acc and not operand_1_is_acc:
                     #  P => X XOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
                     try:
                         ALU_mode["0100"].append(instr)
                     except KeyError:
                         ALU_mode["0100"] = [instr, ]
 
                     # Z => P   Y => 0  X => A:B
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
                     try:
                         op_mode["0100011"].append(instr)
                     except Exception as e:
                         op_mode["0100011"] = [instr, ]
                 elif operand_0_is_acc and operand_1_is_acc:
                     #  P => X XOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
                     try:
                         ALU_mode["0100"].append(instr)
                     except KeyError:
@@ -702,6 +840,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                         op_mode["0100010"] = [instr, ]
             elif mnemonic in ["PXOR", ]:
                 # P => X XOR Z
+                # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
                 try:
                     ALU_mode["0100"].append(instr)
                 except KeyError:
@@ -712,6 +851,76 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                     op_mode["0110011"].append(instr)
                 except Exception as e:
                     op_mode["0110011"] = [instr, ]
+
+            elif mnemonic in ["XNOR", ]:
+                operand_0_is_acc = asm_utils.access_is_internal(operands[0]) and asm_utils.access_internal(operands[0]) == "ACC"
+                operand_1_is_acc = asm_utils.access_is_internal(operands[1]) and asm_utils.access_internal(operands[1]) == "ACC"
+
+                if   not operand_0_is_acc and not operand_1_is_acc:
+                    #  P => X XNOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
+                    try:
+                        ALU_mode["0100"].append(instr)
+                    except KeyError:
+                        ALU_mode["0100"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select xnor  X => A:B
+                    try:
+                        op_mode["0111011"].append(instr)
+                    except Exception as e:
+                        op_mode["0111011"] = [instr, ]
+                elif not operand_0_is_acc and operand_1_is_acc:
+                    #  P => X XNOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
+                    try:
+                        ALU_mode["0100"].append(instr)
+                    except KeyError:
+                        ALU_mode["0100"] = [instr, ]
+
+                    # Z => C   Y => used with ALU to select xnor   X => P
+                    try:
+                        op_mode["0111010"].append(instr)
+                    except Exception as e:
+                        op_mode["0111010"] = [instr, ]
+                elif operand_0_is_acc and not operand_1_is_acc:
+                    #  P => X XNOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
+                    try:
+                        ALU_mode["0100"].append(instr)
+                    except KeyError:
+                        ALU_mode["0100"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select xnor  X => A:B
+                    try:
+                        op_mode["0101011"].append(instr)
+                    except Exception as e:
+                        op_mode["0101011"] = [instr, ]
+                elif operand_0_is_acc and operand_1_is_acc:
+                    #  P => X XNOR Z
+                    # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
+                    try:
+                        ALU_mode["0100"].append(instr)
+                    except KeyError:
+                        ALU_mode["0100"] = [instr, ]
+
+                    # Z => P   Y => used with ALU to select xnor  X => P
+                    try:
+                        op_mode["0101010"].append(instr)
+                    except Exception as e:
+                        op_mode["0101010"] = [instr, ]
+            elif mnemonic in ["PXNOR", ]:
+                # P => X XOR Z
+                # XOR throughfore 01XX, use 0100 as ID doesn't support don't care
+                try:
+                    ALU_mode["0100"].append(instr)
+                except KeyError:
+                    ALU_mode["0100"] = [instr, ]
+
+                # Z => C   Y => used with ALU to select xnor   X => A:B
+                try:
+                    op_mode["0111011"].append(instr)
+                except Exception as e:
+                    op_mode["0111011"] = [instr, ]
 
             # Flag up unhandled mnemonic
             else:
