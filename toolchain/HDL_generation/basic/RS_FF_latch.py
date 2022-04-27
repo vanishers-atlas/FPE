@@ -104,6 +104,9 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 def generate_logic(gen_det, com_det):
 
+    # Declare generics
+    com_det.add_generic("stating_state", "std_logic")
+
     # Declare ports
     com_det.add_port("R", "std_logic", "in")
     com_det.add_port("S", "std_logic", "in")
@@ -112,6 +115,9 @@ def generate_logic(gen_det, com_det):
         com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["has_enable"]:
         com_det.add_port("enable", "std_logic", "in")
+
+
+    com_det.arch_head += "signal state : std_logic := stating_state;\n"
 
     # Generate process start
     if gen_det.config["clocked"]:
@@ -130,11 +136,11 @@ def generate_logic(gen_det, com_det):
         com_det.arch_body += "if enable = '1' then\n\>"
 
     com_det.arch_body += "if R = '1' and S = '0' then\n\>"
-    com_det.arch_body += "Q <= '0';\n"
+    com_det.arch_body += "state <= '0';\n"
     com_det.arch_body += "\<elsif R = '0' and S = '1' then\n\>"
-    com_det.arch_body += "Q <= '1';\n"
+    com_det.arch_body += "state <= '1';\n"
     com_det.arch_body += "\<elsif R = '1' and S = '1' then\n\>"
-    com_det.arch_body += "Q <= 'X';\n"
+    com_det.arch_body += "state <= 'X';\n"
     com_det.arch_body += "\<end if;\n"
 
 
@@ -145,3 +151,5 @@ def generate_logic(gen_det, com_det):
         com_det.arch_body += "\<end if;\n"
 
     com_det.arch_body += "\<end process;\n"
+
+    com_det.arch_body += "Q <= state;\n"

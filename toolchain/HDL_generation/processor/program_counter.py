@@ -190,6 +190,7 @@ def gen_running_FF(gen_det, com_det):
     )
 
     com_det.arch_body += "running_FF : entity work.%s(arch)\>\n"%(RSFF_name, )
+    com_det.arch_body += "generic map ( stating_state => '0')\n"
     com_det.arch_body += "port map (\n\>"
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "S => kickoff and not program_end_reached,\n"
