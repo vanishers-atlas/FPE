@@ -338,6 +338,6 @@ def generate_overwrite_handling():
 
     ARCH_BODY += "-- Compute  overwriting of PC\n"
     ARCH_BODY += "overwrite_int <= match_found_int and not overwrites_reached;\n"
-    ARCH_BODY += "overwrite_PC_enable <= '1' when overwrite_int = '1' else 'L';\n\n"
+    ARCH_BODY += "overwrite_PC_enable <= overwrite_int;\n\n"
 
-    ARCH_BODY += "overwrite_PC_value <= overwrite_value_int when overwrite_int = '1' else (others => 'L');\n\n"
+    ARCH_BODY += "overwrite_PC_value <= overwrite_value_int;\n\n"

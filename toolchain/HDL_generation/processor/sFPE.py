@@ -499,8 +499,6 @@ def gen_predecode_pipeline():
 PC_predeclared_ports = {
     "clock" : "clock",
     "kickoff" : "kickoff",
-    "zero_overhead_value" : "zero_overhead_value_bus",
-    "zero_overhead_overwrite" : "zero_overhead_overwrite_bus",
     "stall" : "stall",
     "ALU_jump" : "ALU_core_jump_taken",
 }
@@ -586,11 +584,10 @@ ZOL_predeclared_ports = {
     "stall" : "stall",
     "PC_value" : "PC_value",
     "PC_running" : "PC_running",
-    "overwrite_PC_enable" : "zero_overhead_overwrite_bus",
-    "overwrite_PC_value" : "zero_overhead_value_bus",
 }
 
 ZOL_declared_ports = [
+    "overwrite_PC_enable", "overwrite_PC_value",
     "seek_check_value", "seek_overwrite_value", "seek_enable",
     "set_overwrites", "set_enable",
 ]
@@ -599,12 +596,7 @@ def gen_zero_overhead_loops():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
     global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
 
-    if len(CONFIG["program_flow"]["ZOLs"]) != 0:
-        INTERFACE["ZOL_overwrites_encoding"] = {}
-
-        # Pull ZOL bused to defauly values
-        ARCH_HEAD += "signal zero_overhead_value_bus  : std_logic_vector(%i downto 0) := (others => 'L');\n"%(CONFIG["program_flow"]["PC_width"] - 1, )
-        ARCH_HEAD += "signal zero_overhead_overwrite_bus : std_logic := 'L';\n"
+    INTERFACE["ZOL_overwrites_encoding"] = {}
 
     # Generate ZOL hardward
     for ZOL_name, ZOL_details in CONFIG["program_flow"]["ZOLs"].items():
@@ -673,6 +665,52 @@ def gen_zero_overhead_loops():
         # Handle pathways and controls
         DATAPATHS = gen_utils.merge_datapaths(DATAPATHS,ZOL.get_inst_pathways(ZOL_name, ZOL_name + "_", CONFIG["instr_set"], interface, ZOL_details, CONFIG["SIMD"]["lanes_names"][0]))
         CONTROLS = gen_utils.merge_controls( CONTROLS, ZOL.get_inst_controls(ZOL_name, ZOL_name + "_", CONFIG["instr_set"], interface, ZOL_details) )
+
+    # Build mux tree for ZOL overwrite and values
+    if len(CONFIG["program_flow"]["ZOLs"].keys()) > 1:
+        _, mux_2 = mux.generate_HDL(
+            {
+                "inputs" : 2
+            },
+            OUTPUT_PATH,
+            module_name=None,
+            concat_naming=False,
+            force_generation=FORCE_GENERATION
+        )
+
+
+        lavel = 0
+        value_width = CONFIG["program_flow"]["PC_width"]
+        mux_ends = [(zol + "_overwrite_PC_enable", zol + "_overwrite_PC_value", ) for zol in CONFIG["program_flow"]["ZOLs"].keys() ]
+        while len(mux_ends) > 1:
+            mux_ends_new = []
+            for pair, ((a_enable, a_value), (b_enable, b_value)) in enumerate(zip(mux_ends[0::2], mux_ends[1::2])):
+                ARCH_HEAD += "signal ZOL_overwrite_%i_%i : std_logic;\n"%(lavel, pair, )
+                ARCH_BODY += "ZOL_overwrite_%i_%i <=  %s or %s;\n"%(lavel, pair, a_enable, b_enable, )
+
+                ARCH_BODY += "ZOL_value_mux_%i_%i : entity work.%s(arch)\>\n"%(lavel, pair, mux_2, )
+                ARCH_BODY += "generic map (data_width => %i)\n"%(value_width, )
+                ARCH_BODY += "port map (\n\>"
+                ARCH_BODY += "sel(0) => %s,\n"%(b_enable, )
+                ARCH_BODY += "data_in_0 => %s,\n"%(a_value, )
+                ARCH_BODY += "data_in_1 => %s,\n"%(b_value, )
+
+                ARCH_HEAD += "signal ZOL_value_mux_%i_%i_out : std_logic_vector(%i downto 0);\n"%(lavel, pair, value_width - 1, )
+                ARCH_BODY += "data_out => ZOL_value_mux_%i_%i_out\n"%(lavel, pair, )
+
+                ARCH_BODY += "\<);\n\<\n"
+
+                mux_ends_new.append(("ZOL_overwrite_%i_%i"%(lavel, pair, ), "ZOL_value_mux_%i_%i_out"%(lavel, pair, ), ) )
+
+            if len(mux_ends) % 2 == 1:
+                mux_ends_new.append(mux_ends[-1])
+
+            mux_ends = mux_ends_new
+            lavel += 1
+
+        # Connect end of mux and or tree to PC
+        ARCH_BODY += "PC_zero_overhead_overwrite <= %s;\n"%(mux_ends[0][0], )
+        ARCH_BODY += "PC_zero_overhead_value <= %s;\n\n"%(mux_ends[0][1], )
 
 def gen_program_memory():
     global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
