@@ -2,7 +2,7 @@
   "signal_padding": "unsigned",
 
   "external_stall" : false,
-  "report_stall" : false,
+  "report_stall" : true,
 
   "SIMD": {
     "lanes": 1
@@ -15,7 +15,7 @@
   "data_memories": {
     "GET": {
       "FIFOs": 1,
-      "FIFO_handshakes": false,
+      "FIFO_handshakes": true,
       "data_width": 4
     },
     "PUT": {

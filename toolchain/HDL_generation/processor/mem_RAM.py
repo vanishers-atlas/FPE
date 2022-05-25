@@ -377,7 +377,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 #####################################################################
 
-hardness_fanin_signals = ["clock", "stall"]
+hardness_fanin_signals = ["clock", "stall_in"]
 hardness_ripple_up_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_word_(\d+)"),
@@ -393,7 +393,7 @@ hardness_internal_signals = [
     re.compile("block_(\d+)_write_(\d+)_enable"),
 ]
 
-subblock_fanin_signals = ["clock", "stall"]
+subblock_fanin_signals = ["clock", "stall_in"]
 subblock_internal_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_data"),
@@ -546,7 +546,7 @@ def gen_ports(gen_det, com_det):
     # Handle common ports
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
 
     # Declare read ports
     for read in range(gen_det.config["reads"]):
@@ -594,7 +594,7 @@ def gen_wordwise_distributed_RAM(gen_det, com_det):
         if gen_det.config["buffer_reads"]:
             com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stallable"]:
-            com_det.arch_body += "read_enable => not stall,\n"
+            com_det.arch_body += "read_enable => not stall_in,\n"
         com_det.arch_body += "read_addr => read_0_addr,\n"
         com_det.arch_body += "read_data => read_0_data,\n"
         com_det.arch_body += "write_addr => write_0_addr,\n"
@@ -634,7 +634,7 @@ def gen_wordwise_distributed_RAM(gen_det, com_det):
         if gen_det.config["buffer_reads"]:
             com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stallable"]:
-            com_det.arch_body += "read_enable => not stall,\n"
+            com_det.arch_body += "read_enable => not stall_in,\n"
         for read in range(0, reads):
             com_det.arch_body += "read_%i_addr => read_%i_addr,\n"%(read, read, )
             com_det.arch_body += "read_%i_data => read_%i_data,\n"%(read, read, )
@@ -872,7 +872,7 @@ def gen_wordwise_block_RAM(gen_det, com_det):
             com_det.arch_body += "port map (\n\>"
             com_det.arch_body += "clock => clock,\n"
             if gen_det.config["stallable"]:
-                com_det.arch_body += "enable => not stall,\n"
+                com_det.arch_body += "enable => not stall_in,\n"
             com_det.arch_body += "data_in  => banks_0_to_%i_read_data,\n"%(mux_output[1], )
             com_det.arch_body += "data_out => read_0_data\n"
             com_det.arch_body += "\<);\n\<\n"
@@ -1019,7 +1019,7 @@ def gen_RAMB18E1(gen_det):
 
     BRAM_BODY += "WEA           => \"00\",\n"
     if gen_det.config["stallable"]:
-        BRAM_BODY += "ENARDEN 		=> not stall,\n"
+        BRAM_BODY += "ENARDEN 		=> not stall_in,\n"
     else:
         BRAM_BODY += "ENARDEN 		=> '1',\n"
 
@@ -1044,7 +1044,7 @@ def gen_RAMB18E1(gen_det):
     BRAM_HEAD += "signal BRAM_BANKNAME_SUBWORDNAME_write_enable : std_logic;\n"
     BRAM_BODY += "WEBWE           => (0 => BRAM_BANKNAME_SUBWORDNAME_write_enable, 1 => BRAM_BANKNAME_SUBWORDNAME_write_enable, others => '0'),\n"
     if gen_det.config["stallable"]:
-        BRAM_BODY += "ENBWREN 		=> not stall,\n"
+        BRAM_BODY += "ENBWREN 		=> not stall_in,\n"
     else:
         BRAM_BODY += "ENBWREN 		=> '1',\n"
 

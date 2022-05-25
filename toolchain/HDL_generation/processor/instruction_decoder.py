@@ -176,7 +176,7 @@ def generate_std_logic_signal(sig_name, value_opcode_table):
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "enable => not stall,\n"
+        ARCH_BODY += "enable => not stall_in,\n"
 
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in(0)  => pre_%s,\n"%(sig_name, )
@@ -254,7 +254,7 @@ def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "enable => not stall,\n"
+        ARCH_BODY += "enable => not stall_in,\n"
 
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => pre_%s,\n"%(sig_name, )
@@ -320,7 +320,8 @@ def generate_input_signals_delay(stage):
         {
             "width" : CONFIG["instr_decoder"]["instr_width"],
             "depth" : 1,
-            "stallable" : CONFIG["stallable"],
+            "has_enable" : CONFIG["stallable"],
+            "inited" : False,
         },
         OUTPUT_PATH,
         module_name=None,
@@ -333,7 +334,7 @@ def generate_input_signals_delay(stage):
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "enable => not stall_in,\n"
 
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => %s,\n"%(INPUT_SIGNALS["instr"], )
@@ -349,7 +350,8 @@ def generate_input_signals_delay(stage):
         {
             "width" : 1,
             "depth" : 1,
-            "stallable" : CONFIG["stallable"],
+            "has_enable" : CONFIG["stallable"],
+            "inited" : False,
         },
         OUTPUT_PATH,
         module_name=None,
@@ -362,7 +364,7 @@ def generate_input_signals_delay(stage):
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "enable => not stall_in,\n"
 
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in(0) => %s,\n"%(INPUT_SIGNALS["enable"], )
@@ -445,8 +447,8 @@ def generate_input_ports():
     INPUT_SIGNALS["OPCODE"] = "input_opcode"
 
     if CONFIG["stallable"]:
-        INTERFACE["ports"]["stall"] = {
-            "name" : "stall" ,
+        INTERFACE["ports"]["stall_in"] = {
+            "name" : "stall_in" ,
             "type" : "std_logic",
             "direction" : "in",
         }

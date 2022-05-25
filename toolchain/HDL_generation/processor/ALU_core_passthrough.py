@@ -118,7 +118,7 @@ def gen_passthrough_core(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     com_det.add_port("acc_enable", "std_logic", "in")
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
 
     com_det.add_port("operand_0", "std_logic_vector", "in", gen_det.config["operand_widths"][0])
     com_det.add_port("result_0", "std_logic_vector", "out", gen_det.config["operand_widths"][0])
@@ -144,7 +144,7 @@ def gen_passthrough_core(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
     com_det.arch_body += "clock => clock,\n"
     if gen_det.config["stallable"]:
-        com_det.arch_body += "enable => acc_enable and not stall,\n"
+        com_det.arch_body += "enable => acc_enable and not stall_in,\n"
     else:
         com_det.arch_body += "enable => acc_enable,\n"
     com_det.arch_body += "data_in => operand_0,\n"

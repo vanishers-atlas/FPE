@@ -303,8 +303,8 @@ def generate_overwrites_value():
         if not CONFIG["stallable"]:
             ARCH_BODY += "enable => set_enable,\n"
         else:
-            ARCH_BODY += "enable => set_enable and not stall,\n"
-            INTERFACE["ports"]["stall"] = {
+            ARCH_BODY += "enable => set_enable and not stall_in,\n"
+            INTERFACE["ports"]["stall_in"] = {
                 "type" : "std_logic",
                 "direction" : "in",
             }

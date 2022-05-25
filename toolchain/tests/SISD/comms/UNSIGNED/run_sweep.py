@@ -11,30 +11,30 @@ from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
     import put_single_channel
+    import put_single_channel_stalling
     import put_single_channel_FIFO_handshakes
 
     import get_single_channel
-    import get_single_channel_put_FIFO_handshakes
-    import get_single_channel_get_FIFO_handshakes
-    import get_single_channel_both_FIFO_handshakes
+    import get_single_channel_stalling
+    import get_single_channel_FIFO_handshakes
 else:
     from . import put_single_channel
+    from . import put_single_channel_stalling
     from . import put_single_channel_FIFO_handshakes
 
     from . import get_single_channel
-    from . import get_single_channel_put_FIFO_handshakes
-    from . import get_single_channel_get_FIFO_handshakes
-    from . import get_single_channel_both_FIFO_handshakes
+    from . import get_single_channel_stalling
+    from . import get_single_channel_FIFO_handshakes
 
 
 test_sets = [
     put_single_channel,
-    #put_single_channel_FIFO_handshakes,
+    put_single_channel_stalling,
+    put_single_channel_FIFO_handshakes,
 
     get_single_channel,
-    #get_single_channel_put_FIFO_handshakes,
-    #get_single_channel_get_FIFO_handshakes,
-    #get_single_channel_both_FIFO_handshakes,
+    get_single_channel_stalling,
+    #get_single_channel_FIFO_handshakes,
 ]
 
 def run_sweep(path="."):

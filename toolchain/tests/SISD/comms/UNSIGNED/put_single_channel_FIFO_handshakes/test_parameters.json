@@ -1,22 +1,29 @@
 {
-    "SIMD": {
-        "lanes": 1
-    },
+  "signal_padding": "unsigned",
 
-    "data_memories": {
-        "IMM": {},
-        "PUT": {
-            "data_width": 4,
-            "FIFO_handshakes": true,
-            "FIFOs": 1
-        }
-    },
+  "external_stall" : false,
+  "report_stall" : true,
 
-    "execute_units": {
-        "ALU": {
-            "data_width": 5
-        }
-    },
+  "SIMD": {
+    "lanes": 1
+  },
 
-    "signal_padding": "unsigned"
+  "instr_decoder"  : { },
+
+  "address_sources": { },
+
+  "data_memories": {
+    "IMM": {},
+    "PUT": {
+      "data_width": 4,
+      "FIFO_handshakes": true,
+      "FIFOs": 1
+    }
+  },
+
+  "execute_units": {
+    "ALU": {
+      "data_width": 5
+    }
+  }
 }

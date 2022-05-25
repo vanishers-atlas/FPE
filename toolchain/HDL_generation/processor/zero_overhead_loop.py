@@ -167,7 +167,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         }
 
         if CONFIG["stallable"]:
-            INTERFACE["ports"]["stall"] = {
+            INTERFACE["ports"]["stall_in"] = {
                 "type" : "std_logic",
                 "direction" : "in",
             }
@@ -185,7 +185,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 #####################################################################
 
-fanin_PC_interface_ports = [ "clock", "stall", ]
+fanin_PC_interface_ports = [ "clock", "stall_in", ]
 ripple_up_PC_interface_ports = [
     "PC_value", "PC_running",
     "overwrite_PC_value", "overwrite_PC_enable",
@@ -258,7 +258,7 @@ def generate_PC_interface():
 
 #####################################################################
 
-fanin_tracker_ports = [ "clock", "stall", "PC_running"]
+fanin_tracker_ports = [ "clock", "stall_in", "PC_running"]
 ripple_up_tracker_ports = [ "set_overwrites", "set_enable", ]
 internal_tracker_ports = [ "match_found", "overwrites_reached", ]
 

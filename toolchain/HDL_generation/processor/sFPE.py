@@ -23,6 +23,7 @@ from FPE.toolchain.HDL_generation.processor import instruction_decoder as ID
 from FPE.toolchain.HDL_generation.processor import program_counter as PC
 from FPE.toolchain.HDL_generation.processor import zero_overhead_loop as ZOL
 
+from FPE.toolchain.HDL_generation.basic import register
 from FPE.toolchain.HDL_generation.basic import delay
 from FPE.toolchain.HDL_generation.basic import mux
 
@@ -32,9 +33,28 @@ def preprocess_config(config_in):
     config_out = {}
 
     # Handle stallable
-    config_out["stallable"] = False
+    assert type(config_in["report_stall"]) == bool, "report_stall must be bool"
+    config_out["report_stall"] = config_in["report_stall"]
 
-      # Include standard pipeline stages
+    assert type(config_in["external_stall"]) == bool, "external_stall must be bool"
+    config_out["external_stall"] = config_in["external_stall"]
+    config_out["stallable"] = config_in["external_stall"]
+
+    # This sections may need moved into their subcomponents if stalling condition become more complex
+    if "GET" in config_in["data_memories"].keys():
+        assert type(config_in["data_memories"]["GET"]["FIFO_handshakes"]) == bool, "data_memories.GET.FIFO_handshakes must be bool"
+        if config_in["data_memories"]["GET"]["FIFO_handshakes"] == True:
+            config_out["stallable"] = True
+
+    if "PUT" in config_in["data_memories"].keys():
+        assert type(config_in["data_memories"]["PUT"]["FIFO_handshakes"]) == bool, "data_memories.PUT.FIFO_handshakes must be bool"
+        if config_in["data_memories"]["PUT"]["FIFO_handshakes"] == True:
+            config_out["stallable"] = True
+
+    assert not config_out["report_stall"] or config_out["report_stall"] and config_out["stallable"], "Cant report_stall in a non-stalling FPE"
+
+    # Construct pipeline stages
+    # Start with basic pipeline
     config_out["pipeline_stage"] = ["PM", "ID", "FETCH", "EXE", "STORE"]
 
     # Handle SIMD section of config
@@ -87,16 +107,6 @@ def preprocess_config(config_in):
     assert type(config_in["data_memories"]) == dict, "data_memories must be a dict"
     config_out["data_memories"] = copy.deepcopy(config_in["data_memories"])
 
-    if "GET" in config_in["data_memories"].keys():
-        assert type(config_out["data_memories"]["GET"]["FIFO_handshakes"]) == bool, "data_memories.GET.FIFO_handshakes must be bool"
-        if config_out["data_memories"]["GET"]["FIFO_handshakes"] == True:
-            config_out["stallable"] = True
-
-    if "PUT" in config_in["data_memories"].keys():
-        assert type(config_out["data_memories"]["PUT"]["FIFO_handshakes"]) == bool, "data_memories.PUT.FIFO_handshakes must be bool"
-        if config_out["data_memories"]["PUT"]["FIFO_handshakes"] == True:
-            config_out["stallable"] = True
-
 
     # Handle execute_units section of config
     assert type(config_in["execute_units"]) == dict, "execute_units must be a dict"
@@ -109,6 +119,7 @@ def preprocess_config(config_in):
 
 
     return config_out
+
 
 def handle_module_name(module_name, config):
     if module_name == None:
@@ -175,6 +186,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         gen_datapath_muxes()
         gen_instr_decoder()
         gen_running_delays()
+        gen_stall_signal()
 
         # Save code to file
         gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
@@ -193,10 +205,61 @@ def gen_non_pipelined_signals():
         "type" : "std_logic",
     }
 
-    # Create and pull down stall signal
+    # Create first stall signal
     if CONFIG["stallable"]:
+        CONFIG["stall_sources"] = []
         ARCH_HEAD += "signal stall : std_logic;\n"
 
+    # Handle reporing stall
+    if CONFIG["report_stall"]:
+        INTERFACE["ports"]["report_stall"] = {
+            "direction" : "out",
+            "type" : "std_logic",
+        }
+        ARCH_BODY += "report_stall <= stall;\n"
+
+def gen_stall_signal():
+    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
+    global INTERFACE, IMPORTS, DATAPATHS, CONTROLS, ARCH_HEAD, ARCH_BODY
+
+    # Handle external stall ifpresent
+    if CONFIG["external_stall"]:
+        INTERFACE["ports"]["external_stall"] = {
+            "direction" : "in",
+            "type" : "std_logic",
+        }
+
+        reg_interface, reg_name = register.generate_HDL(
+            {
+                "has_async_force"  : False,
+                "has_sync_force"   : False,
+                "has_enable"    : False,
+                "force_on_init" : False
+            },
+            output_path=OUTPUT_PATH,
+            module_name=None,
+            concat_naming=False,
+            force_generation=FORCE_GENERATION
+        )
+
+        ARCH_HEAD += "signal external_stall_buffered  : std_logic;\n"
+
+        ARCH_BODY += "external_stall_buffer : entity work.%s(arch)\>\n"%(reg_name, )
+        ARCH_BODY += "generic map (data_width => 1)\n"
+        ARCH_BODY += "port map (\n\>"
+        ARCH_BODY += "clock => clock,\n"
+        ARCH_BODY += "data_in (0) => external_stall,\n"
+        ARCH_BODY += "data_out(0) => external_stall_buffered\n"
+        ARCH_BODY += "\<);\n\<\n"
+
+        CONFIG["stall_sources"].append("external_stall_buffered")
+
+    # Create first stall signal
+    if CONFIG["stallable"]:
+        assert len(CONFIG["stall_sources"]) != 0, "Stall without sources"
+        ARCH_BODY += "stall <= %s;\n"%(
+            " or ".join(CONFIG["stall_sources"])
+        )
 
 #####################################################################
 
@@ -206,7 +269,7 @@ exe_lib_lookup = {
 
 exe_predeclared_ports = {
     "clock" : "clock",
-    "stall" : "stall",
+    "stall_in" : "stall",
 }
 
 def gen_execute_units():
@@ -237,7 +300,7 @@ def gen_execute_units():
                     "stallable" : CONFIG["stallable"],
                 }
             )
-            interface, name = exe_lib_lookup[exe].generate_HDL(
+            sub_interface, sub_name = exe_lib_lookup[exe].generate_HDL(
                 config,
                 OUTPUT_PATH,
                 module_name=module_name,
@@ -245,19 +308,19 @@ def gen_execute_units():
                 force_generation=FORCE_GENERATION
             )
 
-            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, name)
+            ARCH_BODY += "\n%s : entity work.%s(arch)\>\n"%(inst, sub_name)
 
             ARCH_BODY += "port map (\>\n"
 
             # Handle predeclared ports
             for port, signal in exe_predeclared_ports.items():
-                if port in interface["ports"]:
+                if port in sub_interface["ports"]:
                     ARCH_BODY += "%s => %s,\n"%(port, signal, )
 
             # Handle non-predeclared ports
-            for port in sorted(interface["ports"].keys()):
+            for port in sorted(sub_interface["ports"].keys()):
                 if port not in exe_predeclared_ports.keys():
-                    detail = interface["ports"][port]
+                    detail = sub_interface["ports"][port]
                     try:
                         ARCH_HEAD += "signal %s_%s : %s(%i downto 0);\n"%(inst, port, detail["type"], detail["width"] -1, )
                     except KeyError:
@@ -268,10 +331,13 @@ def gen_execute_units():
             ARCH_BODY += "\<\n);\n"
             ARCH_BODY += "\<\n"
 
-            # Handle pathways and controls
-            DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, exe_lib_lookup[exe].get_inst_pathways(exe, inst + "_", CONFIG["instr_set"], interface, config, lane) )
-            CONTROLS = gen_utils.merge_controls( CONTROLS, exe_lib_lookup[exe].get_inst_controls(exe, inst + "_", CONFIG["instr_set"], interface, config) )
+            # Check for stall out port
+            if "stall_out" in sub_interface["ports"].keys():
+                CONFIG["stall_sources"].append("%s_stall_out"%(inst, ))
 
+            # Handle pathways and controls
+            DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, exe_lib_lookup[exe].get_inst_pathways(exe, inst + "_", CONFIG["instr_set"], sub_interface, config, lane) )
+            CONTROLS = gen_utils.merge_controls( CONTROLS, exe_lib_lookup[exe].get_inst_controls(exe, inst + "_", CONFIG["instr_set"], sub_interface, config) )
 
 #####################################################################
 
@@ -287,7 +353,7 @@ mem_lib_lookup = {
 
 mem_predeclared_ports_all_mems = {
     "clock" : "clock",
-    "stall" : "stall",
+    "stall_in" : "stall",
 }
 
 mem_predeclared_ports_per_mem = {
@@ -386,6 +452,11 @@ def gen_data_memories():
 
             ARCH_BODY += "\<\n"
 
+            # Check for stall out port
+            if "stall_out" in sub_interface["ports"].keys():
+                CONFIG["stall_sources"].append("%s_stall_out"%(inst, ))
+
+
             # Handle pathways and controls
             DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, mem_lib_lookup[mem].get_inst_pathways(mem, inst + "_", CONFIG["instr_set"], sub_interface, config, lane))
             CONTROLS = gen_utils.merge_controls( CONTROLS, mem_lib_lookup[mem].get_inst_controls(mem, inst + "_", CONFIG["instr_set"], sub_interface, config) )
@@ -394,7 +465,7 @@ def gen_data_memories():
 
 addr_sources_predeclared_ports = {
     "clock" : "clock" ,
-    "stall" : "stall"
+    "stall_in" : "stall",
 }
 
 def gen_addr_sources():
@@ -480,6 +551,10 @@ def gen_addr_sources():
 
             ARCH_BODY += "\<\n"
 
+            # Check for stall out port
+            if "stall_out" in sub_interface["ports"].keys():
+                CONFIG["stall_sources"].append("%s_stall_out"%(inst, ))
+
             # Handle pathways and controls
             DATAPATHS = gen_utils.merge_datapaths(DATAPATHS, BAM.get_inst_pathways(bam, inst + "_", CONFIG["instr_set"], interface, config, lane) )
             CONTROLS = gen_utils.merge_controls( CONTROLS, BAM.get_inst_controls(bam, inst + "_", CONFIG["instr_set"], interface, config) )
@@ -498,8 +573,8 @@ def gen_predecode_pipeline():
 
 PC_predeclared_ports = {
     "clock" : "clock",
+    "stall_in" : "stall",
     "kickoff" : "kickoff",
-    "stall" : "stall",
     "ALU_jump" : "ALU_core_jump_taken",
 }
 
@@ -581,7 +656,7 @@ def gen_program_counter():
 # Key is port name, value signal name
 ZOL_predeclared_ports = {
     "clock" : "clock",
-    "stall" : "stall",
+    "stall_in" : "stall",
     "PC_value" : "PC_value",
     "PC_running" : "PC_running",
 }
@@ -753,7 +828,7 @@ def gen_program_memory():
     ARCH_BODY += "port map (\>\n"
     ARCH_BODY += "clock => clock,\n"
     if CONFIG["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "stall_in => stall,\n"
     ARCH_BODY += "read_0_addr => PM_addr,\n"
     ARCH_BODY += "read_0_data => PM_data\n"
     ARCH_BODY += "\<);\n"
@@ -775,7 +850,7 @@ def gen_datapath_muxes():
 
 ID_predeclared_ports = {
     "clock" : "clock",
-    "stall" : "stall"
+    "stall_in" : "stall",
 }
 
 ID_non_fanout_ports = [
@@ -871,7 +946,8 @@ def gen_running_delays():
         {
             "width" : 1,
             "depth" : 1,
-            "stallable" : CONFIG["stallable"],
+            "has_enable" : CONFIG["stallable"],
+            "inited" : True,
         },
         OUTPUT_PATH,
         module_name=None,
@@ -882,10 +958,13 @@ def gen_running_delays():
     for i, (stage_in, stage_out) in enumerate(zip(CONFIG["pipeline_stage"][:-1], CONFIG["pipeline_stage"][1:])):
         ARCH_BODY += "running_delay_%i : entity work.%s(arch)\>\n"%(i, DELAY_NAME, )
 
+        ARCH_BODY += "generic map (init_value => 0)\n"
+        
         ARCH_BODY += "port map (\n\>"
+
         ARCH_BODY += "clock => clock,\n"
         if CONFIG["stallable"]:
-            ARCH_BODY += "stall => stall,\n"
+            ARCH_BODY += "enable => not stall,\n"
         ARCH_BODY += "data_in (0) => running_%s,\n"%(stage_in, )
         ARCH_BODY += "data_out(0) => running_%s\n"%(stage_out, )
         ARCH_BODY += "\<);\<\n\n"

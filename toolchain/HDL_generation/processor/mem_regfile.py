@@ -239,7 +239,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         com_det.add_import("ieee", "std_logic_1164", "all")
         com_det.add_port("clock", "std_logic", "in")
         if gen_det.config["stallable"]:
-            com_det.add_port("stall", "std_logic", "in")
+            com_det.add_port("stall_in", "std_logic", "in")
 
         if "BAPA" in gen_det.config.keys():
             gen_BAPA_regfile(gen_det, com_det)
@@ -255,7 +255,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 #####################################################################
 
-hardness_fanin_signals = ["clock", "stall"]
+hardness_fanin_signals = ["clock", "stall_in"]
 hardness_ripple_up_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_word_(\d+)"),
@@ -271,7 +271,7 @@ hardness_internal_signals = [
     re.compile("block_(\d+)_write_(\d+)_enable"),
 ]
 
-subblock_fanin_signals = ["clock", "stall"]
+subblock_fanin_signals = ["clock", "stall_in"]
 subblock_internal_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_data"),
@@ -482,7 +482,7 @@ def gen_reads(gen_det, com_det):
             com_det.arch_body += "port map (\n\>"
 
             if gen_det.config["stallable"]:
-                com_det.arch_body += "enable  => not stall,\n"
+                com_det.arch_body += "enable  => not stall_in,\n"
 
             com_det.arch_body += "clock => clock,\n"
             com_det.arch_body += "data_in  => read_%i_buffer_in,\n"%(read, )

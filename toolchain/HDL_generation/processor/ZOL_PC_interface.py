@@ -153,7 +153,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
         # Include stall port if needed
         if CONFIG["stallable"]:
-            INTERFACE["ports"]["stall"] = {
+            INTERFACE["ports"]["stall_in"] = {
                 "type" : "std_logic",
                 "direction" : "in"
             }
@@ -250,7 +250,7 @@ def generate_check_and_overwrite_values():
         if not CONFIG["stallable"]:
             ARCH_BODY += "enable => seek_enable,\n"
         else:
-            ARCH_BODY += "enable => seek_enable and not stall,\n"
+            ARCH_BODY += "enable => seek_enable and not stall_in,\n"
 
         ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "data_in  => seek_check_value,\n"
@@ -273,7 +273,7 @@ def generate_check_and_overwrite_values():
         if not CONFIG["stallable"]:
             ARCH_BODY += "enable => seek_enable,\n"
         else:
-            ARCH_BODY += "enable => seek_enable and not stall,\n"
+            ARCH_BODY += "enable => seek_enable and not stall_in,\n"
 
         ARCH_BODY += "clock => clock,\n"
         ARCH_BODY += "data_in  => seek_overwrite_value,\n"
@@ -310,7 +310,7 @@ def generate_PC_check_handling():
     if not CONFIG["stallable"]:
         ARCH_BODY += "match_found_int <= PC_running and PC_equality_result;\n"
     else:
-        ARCH_BODY += "match_found_int <= '1' when PC_running and PC_equality_result and not stall;\n"
+        ARCH_BODY += "match_found_int <= '1' when PC_running and PC_equality_result and not stall_in;\n"
     ARCH_BODY += "match_found <= match_found_int;\n"
 
 

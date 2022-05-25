@@ -1,8 +1,8 @@
 {
   "signal_padding": "unsigned",
 
-  "external_stall" : false,
-  "report_stall" : false,
+  "external_stall" : true,
+  "report_stall" : true,
 
   "SIMD": {
     "lanes": 1
@@ -13,21 +13,17 @@
   "address_sources": { },
 
   "data_memories": {
-    "GET": {
-      "FIFOs": 1,
-      "FIFO_handshakes": false,
-      "data_width": 4
-    },
+    "IMM": {},
     "PUT": {
-      "FIFOs": 1,
+      "data_width": 4,
       "FIFO_handshakes": false,
-      "data_width": 4
-      }
+      "FIFOs": 1
+    }
   },
 
   "execute_units": {
     "ALU": {
-      "data_width": 4
+      "data_width": 5
     }
   }
 }

@@ -14,6 +14,9 @@ class extractor(ParseTreeListener):
         this.para_file = {
             "signal_padding" : None,
 
+            "external_stall" : None,
+            "report_stall" : None,
+
             "SIMD" : {
                 "lanes" : None,
             },

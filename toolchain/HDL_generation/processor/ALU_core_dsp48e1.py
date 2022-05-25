@@ -1055,7 +1055,7 @@ def handle_ports(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     com_det.add_port("acc_enable", "std_logic", "in")
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
 
     for operand in range(gen_det.config["required_operands"]):
         com_det.add_port("operand_%i"%(operand, ), "std_logic_vector", "in", gen_det.config["operand_widths"][operand])
@@ -1381,7 +1381,7 @@ def gen_DSP_slice(gen_det, com_det):
     com_det.arch_body  += "CEM  => '0',\n"
 
     if gen_det.config["stallable"]:
-        com_det.arch_body  += "CEP  => acc_enable and not stall,\n"
+        com_det.arch_body  += "CEP  => acc_enable and not stall_in,\n"
     else:
         com_det.arch_body  += "CEP  => acc_enable,\n"
 
@@ -1477,7 +1477,7 @@ def handle_statuses_and_jumping(gen_det, com_det):
 
             com_det.add_port("hold_operand_signs", "std_logic", "in")
             if gen_det.config["stallable"]:
-                com_det.arch_body  += "enable  => hold_operand_signs and not stall,\n"
+                com_det.arch_body  += "enable  => hold_operand_signs and not stall_in,\n"
             else:
                 com_det.arch_body  += "enable  => hold_operand_signs,\n"
 
@@ -1577,7 +1577,7 @@ def handle_statuses_and_jumping(gen_det, com_det):
 
         com_det.add_port("update_statuses", "std_logic", "in")
         if gen_det.config["stallable"]:
-            com_det.arch_body  += "enable  => update_statuses and not stall,\n"
+            com_det.arch_body  += "enable  => update_statuses and not stall_in,\n"
         else:
             com_det.arch_body  += "enable  => update_statuses,\n"
 

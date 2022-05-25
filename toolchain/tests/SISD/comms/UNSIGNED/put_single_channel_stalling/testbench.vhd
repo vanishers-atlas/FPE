@@ -9,9 +9,9 @@ architecture arch of testbench is
 	signal 	clock : std_logic := '0';
 	signal	kickoff : std_logic := '0';
 	signal	running : std_logic;
+	signal  external_stall : std_logic;
 	signal  report_stall : std_logic;
 
-	signal	PUT_FIFO_0_ready : std_logic;
 	signal	PUT_FIFO_0_write : std_logic;
 	signal	PUT_FIFO_0_data  : std_logic_vector(3 downto 0);
 	signal  PUT_FIFO_0_index : integer := 0;
@@ -31,28 +31,28 @@ architecture arch of testbench is
 begin
   UUT : entity work.test_FPE_inst(arch)
 		port map (
-			PUT_FIFO_0_ready => PUT_FIFO_0_ready,
 			PUT_FIFO_0_write => PUT_FIFO_0_write,
 			PUT_FIFO_0_data  => PUT_FIFO_0_data,
 			clock => clock,
 			kickoff => kickoff,
 			running => running,
+			external_stall => external_stall,
 			report_stall => report_stall
 		);
 
-	-- Clock generate
-	process
-	begin
-		loop
-			clock <= not clock;
-			wait for 50 ns;
-		end loop;
-	end process;
+  -- Clock generate
+  process
+  begin
+    loop
+      clock <= not clock;
+      wait for 50 ns;
+    end loop;
+  end process;
 
-	-- Kickoff generationw
+  -- Kickoff generation
 	process
 	begin
-		kickoff <= '0';
+  	kickoff <= '0';
 		wait for 250 ns;
 		kickoff <= '1';
 		wait until rising_edge(running);
@@ -61,20 +61,32 @@ begin
 		wait;
 	end process;
 
-	-- FIFO ready generation
+	-- External stall generation
 	process
 	begin
-		PUT_FIFO_0_ready <= '0';
+		external_stall <= '0';
 		wait for 500 ns;
 		wait until falling_edge(clock);
 		loop
-			PUT_FIFO_0_ready <= '1';
+			external_stall <= '1';
 			wait for 400 ns;
 			wait until falling_edge(clock);
-			PUT_FIFO_0_ready <= '0';
+			external_stall <= '0';
 			wait for 400 ns;
 			wait until falling_edge(clock);
 		end loop;
+	end process;
+
+	-- Check external stall leads to a reported stall
+	process(clock)
+	begin
+		if falling_edge(clock) then
+			if external_stall = '1' then
+				assert report_stall = '1'
+					report "external_stall not raising reported stall"
+					severity error;
+			end if;
+		end if;
 	end process;
 
 	-- Check output
@@ -84,11 +96,6 @@ begin
 			-- Check expecting output
 			assert(0 <= PUT_FIFO_0_index and PUT_FIFO_0_index < PUT_FIFO_0_test_data'Length)
 				report "Unexpected output"
-				severity error;
-
-			-- Check output 'FIFO' is ready for data
-			assert(PUT_FIFO_0_ready = '1')
-				report "Output while 'FIFO' wasn't ready"
 				severity error;
 
 			-- Check not stalling output

@@ -36,22 +36,31 @@ begin
 			running => running
 		);
 
-  -- Clock generate process
-  process
-  begin
-    loop
-      clock <= not clock;
-      wait for 50 ns;
-    end loop;
-  end process;
+	-- Clock generate
+	process
+	begin
+		loop
+			clock <= not clock;
+			wait for 50 ns;
+		end loop;
+	end process;
 
-  -- Sigbal kickoff after 250 ns
-  kickoff <= '1' after 250 ns, '0' after 350 ns;
+	-- Kickoff generation
+	process
+	begin
+		kickoff <= '0';
+		wait for 250 ns;
+		kickoff <= '1';
+		wait until rising_edge(running);
+		wait for 200 ns;
+		kickoff <= '0';
+		wait;
+	end process;
 
 	-- Check output
 	process (clock)
 	begin
-		if rising_edge(clock) and PUT_FIFO_0_write = '1' then
+		if falling_edge(clock) and PUT_FIFO_0_write = '1' then
 			-- Check expecting output
 			assert(0 <= PUT_FIFO_0_index and PUT_FIFO_0_index < PUT_FIFO_0_test_data'Length)
 				report "Unexpected output"

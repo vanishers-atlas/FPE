@@ -203,7 +203,7 @@ def gen_running_FF(gen_det, com_det):
 def gen_value_reg(gen_det, com_det):
 
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
 
     reg_interface, reg_name = register.generate_HDL(
         {
@@ -228,7 +228,7 @@ def gen_value_reg(gen_det, com_det):
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "force => program_end_reached,\n"
     if gen_det.config["stallable"]:
-        com_det.arch_body += "enable  => running_internal and stall,\n"
+        com_det.arch_body += "enable  => running_internal and not stall_in,\n"
     else:
         com_det.arch_body += "enable  => running_internal,\n"
 

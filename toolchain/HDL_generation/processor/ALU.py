@@ -208,11 +208,11 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 def gen_common_ports(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
 
 #####################################################################
 
-packer_fanin_signals = ["clock", "stall"]
+packer_fanin_signals = ["clock", "stall_in"]
 packer_ripple_up_signals = [
     ( re.compile("fetched_(\d+)_word_(\d+)"), lambda m : "packer_fetched_%s_word_%s"%(m.group(1), m.group(2), ) ),
     ( re.compile("input_(\d+)_(\d+)_source_sel"), lambda m : "packer_input_%s_%s_source_sel"%(m.group(1), m.group(2), ) ),
@@ -299,7 +299,7 @@ def gen_packer(gen_det, com_det):
 
 #####################################################################
 
-core_fanin_signals = ["clock", "stall"]
+core_fanin_signals = ["clock", "stall_in"]
 core_ripple_up_signals = [
     ( re.compile("acc_enable")      , lambda m : "core_acc_enable" ),
     ( re.compile("update_statuses") , lambda m : "core_update_statuses" ),
@@ -394,7 +394,7 @@ def gen_core(gen_det, com_det):
 
 #####################################################################
 
-unpacker_fanin_signals = ["clock", "stall", ]
+unpacker_fanin_signals = ["clock", "stall_in", ]
 unpacker_ripple_up_signals = [
     ( re.compile("enable"), lambda m : "unpacker_enable" ),
     ( re.compile("stored_(\d+)_word_(\d+)"), lambda m : "result_%s_word_%s"%(m.group(1), m.group(2), ) ),
@@ -473,7 +473,7 @@ def gen_unpacker(gen_det, com_det):
 
 #####################################################################
 
-shifter_fanin_signals = ["clock", "stall", ]
+shifter_fanin_signals = ["clock", "stall_in", ]
 shifter_ripple_up_signals = [
     ( re.compile("fetched_word_(\d+)"), lambda m : "shifter_fetched_word_%s"%(m.group(1), ) ),
     ( re.compile("word_(\d+)_operand_sel"), lambda m : "shifter_word_%s_operand_sel"%(m.group(1), ) ),

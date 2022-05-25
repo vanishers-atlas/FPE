@@ -282,7 +282,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         }
 
         if CONFIG["stallable"]:
-            INTERFACE["ports"]["stall"] = {
+            INTERFACE["ports"]["stall_in"] = {
                 "type" : "std_logic",
                 "direction" : "in",
             }
@@ -373,7 +373,7 @@ def gen_reads():
             ARCH_BODY += "port map (\n\>"
             ARCH_BODY += "clock => clock,\n"
             if CONFIG["stallable"]:
-                ARCH_BODY += "enable  => not stall,\n"
+                ARCH_BODY += "enable  => not stall_in,\n"
             ARCH_BODY += "data_in  => read_%i_word_%i_reg_in,\n"%(read, word,)
             ARCH_BODY += "data_out => read_%i_word_%i\n"%(read, word,)
             ARCH_BODY += "\<);\n\<\n"

@@ -127,7 +127,7 @@ def run_sweep_leaf(
         True   # Force generation of all files, to make sure any changes are included
     )
 
-    #return None
+    return None
 
 
     # Symulate testbench

@@ -239,7 +239,7 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
         }
 
         if CONFIG["stallable"]:
-            INTERFACE["ports"]["stall"] = {
+            INTERFACE["ports"]["stall_in"] = {
                 "type" : "std_logic",
                 "direction" : "in",
             }
@@ -371,7 +371,7 @@ def generate_outset_adder_acc():
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "enable => ( step_forward or step_backward ) and not stall,\n"
+        ARCH_BODY += "enable => ( step_forward or step_backward ) and not stall_in,\n"
     else:
         ARCH_BODY += "enable => step_forward or step_backward,\n"
 
@@ -412,7 +412,8 @@ def generate_base_adders():
         {
             "width" : CONFIG["addr_width"],
             "depth" : 2,
-            "stallable" : CONFIG["stallable"]
+            "stallable" : CONFIG["stallable"],
+            "inited" : False,
         },
         OUTPUT_PATH,
         module_name=None,
@@ -425,7 +426,7 @@ def generate_base_adders():
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+        ARCH_BODY += "stall => stall_in,\n"
 
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => addr_0_fetch_internal,\n"
