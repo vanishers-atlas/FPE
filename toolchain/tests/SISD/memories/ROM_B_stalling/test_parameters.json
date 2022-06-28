@@ -1,0 +1,31 @@
+{
+    "report_stall": true,
+    "external_stall": true,
+
+    "SIMD": {
+        "lanes": 1
+    },
+    "address_sources": {},
+    "data_memories": {
+        "PUT": {
+            "FIFOs": 1,
+            "FIFO_handshakes": false,
+            "data_width": 4
+        },
+        "ROM_B": {
+            "data_width": 4,
+            "depth": 16,
+            "type": "DIST"
+        }
+    },
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    },
+    "instr_decoder": {},
+    "program_flow": {
+        "ZOLs": {}
+    },
+    "signal_padding": "unsigned"
+}

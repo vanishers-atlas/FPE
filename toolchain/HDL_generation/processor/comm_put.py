@@ -313,7 +313,7 @@ def gen_stalling_logic():
             # This code may need reworking, depending on how vivado handles many termed logic expressions
             ARCH_BODY += "generated_stall <= %s;\n"%(
                 " or ".join([
-                    "(FIFO_%i_write_buffer_out and not FIFOs_ready_buffered(%i))"%(FIFO, FIFO, )
+                    "(FIFO_%i_write_buffer_out and not FIFO_%i_ready)"%(FIFO, FIFO, )
                     for FIFO in range(CONFIG["FIFOs"])
                 ]),
             )

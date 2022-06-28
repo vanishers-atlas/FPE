@@ -477,6 +477,8 @@ def gen_ports(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
         com_det.add_port("stall_in", "std_logic", "in")
+        com_det.arch_head += "signal stall : std_logic;\n"
+        com_det.arch_body += "stall <= stall_in;\n"
 
     # Declare read ports
     for read in range(gen_det.config["reads"]):
@@ -516,7 +518,8 @@ def gen_wordwise_distributed_ROM(gen_det, com_det):
         com_det.arch_body += "port map (\n\>"
         com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stallable"]:
-            com_det.arch_body += "read_enable => not stall_in,\n"
+            com_det.arch_body += "read_enable => not stall,\n"
+
         com_det.arch_body += ",\n".join([
             "read_%i_addr => read_%i_addr,\nread_%i_data => read_%i_data"%(
                 read, read, read, read,

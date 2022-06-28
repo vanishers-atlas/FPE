@@ -1,6 +1,9 @@
 {
     "signal_padding": "unsigned",
 
+    "external_stall" : false,
+    "report_stall" : false,
+
     "SIMD": {
         "lanes": 1
     },

@@ -240,6 +240,8 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         com_det.add_port("clock", "std_logic", "in")
         if gen_det.config["stallable"]:
             com_det.add_port("stall_in", "std_logic", "in")
+            com_det.arch_head += "signal stall : std_logic;\n"
+            com_det.arch_body += "stall <= stall_in;\n"
 
         if "BAPA" in gen_det.config.keys():
             gen_BAPA_regfile(gen_det, com_det)

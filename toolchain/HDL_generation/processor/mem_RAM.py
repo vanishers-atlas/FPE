@@ -547,6 +547,8 @@ def gen_ports(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
         com_det.add_port("stall_in", "std_logic", "in")
+        com_det.arch_head += "signal stall : std_logic;\n"
+        com_det.arch_body += "stall <= stall_in;\n"
 
     # Declare read ports
     for read in range(gen_det.config["reads"]):

@@ -209,10 +209,15 @@ def gen_common_ports(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
         com_det.add_port("stall_in", "std_logic", "in")
+        com_det.arch_head += "signal stall : std_logic;\n"
+        com_det.arch_body += "stall <= stall_in;\n"
 
 #####################################################################
 
-packer_fanin_signals = ["clock", "stall_in"]
+packer_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 packer_ripple_up_signals = [
     ( re.compile("fetched_(\d+)_word_(\d+)"), lambda m : "packer_fetched_%s_word_%s"%(m.group(1), m.group(2), ) ),
     ( re.compile("input_(\d+)_(\d+)_source_sel"), lambda m : "packer_input_%s_%s_source_sel"%(m.group(1), m.group(2), ) ),
@@ -247,9 +252,9 @@ def gen_packer(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
 
     # Handle fanin signals
-    for signal in packer_fanin_signals:
-        if signal in sub_interface["ports"]:
-            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+    for port, signal in packer_fanin_signals.items():
+        if port in sub_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(port, signal)
 
     # Handle ripple up signals
     for rule, transform in packer_ripple_up_signals:
@@ -299,7 +304,10 @@ def gen_packer(gen_det, com_det):
 
 #####################################################################
 
-core_fanin_signals = ["clock", "stall_in"]
+core_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 core_ripple_up_signals = [
     ( re.compile("acc_enable")      , lambda m : "core_acc_enable" ),
     ( re.compile("update_statuses") , lambda m : "core_update_statuses" ),
@@ -342,9 +350,9 @@ def gen_core(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
 
     # Handle fanin signals
-    for signal in core_fanin_signals:
-        if signal in sub_interface["ports"]:
-            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+    for port, signal in packer_fanin_signals.items():
+        if port in sub_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(port, signal)
 
     # Handle ripple up signals
     for rule, transform in core_ripple_up_signals:
@@ -394,7 +402,10 @@ def gen_core(gen_det, com_det):
 
 #####################################################################
 
-unpacker_fanin_signals = ["clock", "stall_in", ]
+unpacker_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 unpacker_ripple_up_signals = [
     ( re.compile("enable"), lambda m : "unpacker_enable" ),
     ( re.compile("stored_(\d+)_word_(\d+)"), lambda m : "result_%s_word_%s"%(m.group(1), m.group(2), ) ),
@@ -427,9 +438,9 @@ def gen_unpacker(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
 
     # Handle fanin signals
-    for signal in unpacker_fanin_signals:
-        if signal in sub_interface["ports"]:
-            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+    for port, signal in packer_fanin_signals.items():
+        if port in sub_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(port, signal)
 
     # Handle ripple up signals
     for rule, transform in unpacker_ripple_up_signals:
@@ -473,7 +484,10 @@ def gen_unpacker(gen_det, com_det):
 
 #####################################################################
 
-shifter_fanin_signals = ["clock", "stall_in", ]
+shifter_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 shifter_ripple_up_signals = [
     ( re.compile("fetched_word_(\d+)"), lambda m : "shifter_fetched_word_%s"%(m.group(1), ) ),
     ( re.compile("word_(\d+)_operand_sel"), lambda m : "shifter_word_%s_operand_sel"%(m.group(1), ) ),
@@ -507,9 +521,9 @@ def gen_shifter(gen_det, com_det):
         com_det.arch_body += "port map (\n\>"
 
         # Handle fanin signals
-        for signal in shifter_fanin_signals:
-            if signal in sub_interface["ports"]:
-                com_det.arch_body += "%s => %s,\n"%(signal, signal)
+        for port, signal in packer_fanin_signals.items():
+            if port in sub_interface["ports"]:
+                com_det.arch_body += "%s => %s,\n"%(port, signal)
 
         # Handle ripple up signals
         for rule, transform in shifter_ripple_up_signals:

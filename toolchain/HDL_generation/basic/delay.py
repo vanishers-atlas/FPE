@@ -179,7 +179,9 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
                         "type" : "integer"
                     },
                 ]
-            ARCH_HEAD += "type data_array is array(%i downto 0) of std_logic_vector(%i downto 0)  := std_logic_vector(to_unsigned(init_value, %i));\n"%(CONFIG["depth"] - 1, CONFIG["width"] - 1, CONFIG["depth"], )
+                ARCH_HEAD += "type data_array is array(%i downto 0) of std_logic_vector(%i downto 0)  := std_logic_vector(to_unsigned(init_value, %i));\n"%(CONFIG["depth"] - 1, CONFIG["width"] - 1, CONFIG["depth"], )
+            else:
+                ARCH_HEAD += "type data_array is array(%i downto 0) of std_logic_vector(%i downto 0);\n"%(CONFIG["depth"] - 1, CONFIG["width"] - 1,  )
             ARCH_HEAD += "signal data : data_array;\n"
 
             ARCH_BODY += "process (clock)\>\n"

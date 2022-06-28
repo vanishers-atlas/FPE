@@ -2,6 +2,10 @@
     "SIMD": {
         "lanes": 1
     },
+
+    "external_stall" : false,
+    "report_stall" : false,
+
     "address_sources": {},
     "data_memories": {
         "IMM": {},

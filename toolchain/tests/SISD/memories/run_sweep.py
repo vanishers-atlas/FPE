@@ -8,18 +8,43 @@ if __name__ == "__main__":
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import UNSIGNED
-    import SIGNED
-else:
-    from . import UNSIGNED
-    from . import SIGNED
+    import ROM_A
+    import ROM_A_stalling
+    import ROM_B
+    import ROM_B_stalling
+    import DUAL_ROM
+    import DUAL_ROM_stalling
 
+    import RAM
+    import RAM_stalling
+    import REG
+    import REG_stalling
+else:
+    from . import ROM_A
+    from . import ROM_A_stalling
+    from . import ROM_B
+    from . import ROM_B_stalling
+    from . import DUAL_ROM
+    from . import DUAL_ROM_stalling
+
+    from . import RAM
+    from . import RAM_stalling
+    from . import REG
+    from . import REG_stalling
 
 test_sets = [
-    UNSIGNED,
-    SIGNED,
-]
+    ROM_A,
+    ROM_A_stalling,
+    ROM_B,
+    ROM_B_stalling,
+    DUAL_ROM,
+    DUAL_ROM_stalling,
 
+    RAM,
+    RAM_stalling,
+    REG,
+    REG_stalling,
+]
 
 def run_sweep(path="."):
 

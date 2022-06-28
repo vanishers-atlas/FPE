@@ -229,30 +229,7 @@ def gen_stall_signal():
             "type" : "std_logic",
         }
 
-        reg_interface, reg_name = register.generate_HDL(
-            {
-                "has_async_force"  : False,
-                "has_sync_force"   : False,
-                "has_enable"    : False,
-                "force_on_init" : False
-            },
-            output_path=OUTPUT_PATH,
-            module_name=None,
-            concat_naming=False,
-            force_generation=FORCE_GENERATION
-        )
-
-        ARCH_HEAD += "signal external_stall_buffered  : std_logic;\n"
-
-        ARCH_BODY += "external_stall_buffer : entity work.%s(arch)\>\n"%(reg_name, )
-        ARCH_BODY += "generic map (data_width => 1)\n"
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in (0) => external_stall,\n"
-        ARCH_BODY += "data_out(0) => external_stall_buffered\n"
-        ARCH_BODY += "\<);\n\<\n"
-
-        CONFIG["stall_sources"].append("external_stall_buffered")
+        CONFIG["stall_sources"].append("external_stall")
 
     # Create first stall signal
     if CONFIG["stallable"]:
@@ -552,7 +529,7 @@ def gen_addr_sources():
             ARCH_BODY += "\<\n"
 
             # Check for stall out port
-            if "stall_out" in sub_interface["ports"].keys():
+            if "stall_out" in interface["ports"].keys():
                 CONFIG["stall_sources"].append("%s_stall_out"%(inst, ))
 
             # Handle pathways and controls
@@ -959,7 +936,7 @@ def gen_running_delays():
         ARCH_BODY += "running_delay_%i : entity work.%s(arch)\>\n"%(i, DELAY_NAME, )
 
         ARCH_BODY += "generic map (init_value => 0)\n"
-        
+
         ARCH_BODY += "port map (\n\>"
 
         ARCH_BODY += "clock => clock,\n"
