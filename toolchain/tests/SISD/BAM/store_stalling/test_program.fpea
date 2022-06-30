@@ -1,0 +1,89 @@
+{
+  RESET BAM[0];
+  NOP;
+
+  MOV (0x0, RAM[BAM[0]<FORWARD>]);
+  MOV (0x1, RAM[BAM[0]<FORWARD>]);
+  MOV (0x2, RAM[BAM[0]<FORWARD>]);
+  MOV (0x3, RAM[BAM[0]<FORWARD>]);
+  MOV (0x4, RAM[BAM[0]<FORWARD>]);
+  MOV (0x5, RAM[BAM[0]<FORWARD>]);
+  MOV (0x6, RAM[BAM[0]<FORWARD>]);
+  MOV (0x7, RAM[BAM[0]<FORWARD>]);
+  MOV (0x8, RAM[BAM[0]<FORWARD>]);
+  MOV (0x9, RAM[BAM[0]<FORWARD>]);
+  MOV (0xA, RAM[BAM[0]<FORWARD>]);
+  MOV (0xB, RAM[BAM[0]<FORWARD>]);
+  MOV (0xC, RAM[BAM[0]<FORWARD>]);
+  MOV (0xD, RAM[BAM[0]<FORWARD>]);
+  MOV (0xE, RAM[BAM[0]<FORWARD>]);
+  MOV (0xF, RAM[BAM[0]]);
+
+  MOV (RAM[0x0], PUT[0]);
+  MOV (RAM[0x1], PUT[0]);
+  MOV (RAM[0x2], PUT[0]);
+  MOV (RAM[0x3], PUT[0]);
+  MOV (RAM[0x4], PUT[0]);
+  MOV (RAM[0x5], PUT[0]);
+  MOV (RAM[0x6], PUT[0]);
+  MOV (RAM[0x7], PUT[0]);
+  MOV (RAM[0x8], PUT[0]);
+  MOV (RAM[0x9], PUT[0]);
+  MOV (RAM[0xA], PUT[0]);
+  MOV (RAM[0xB], PUT[0]);
+  MOV (RAM[0xC], PUT[0]);
+  MOV (RAM[0xD], PUT[0]);
+  MOV (RAM[0xE], PUT[0]);
+  MOV (RAM[0xF], PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MOV (0x0, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x1, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x2, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x3, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x4, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x5, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x6, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x7, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x8, RAM[BAM[0]<BACKWARD>]);
+  MOV (0x9, RAM[BAM[0]<BACKWARD>]);
+  MOV (0xA, RAM[BAM[0]<BACKWARD>]);
+  MOV (0xB, RAM[BAM[0]<BACKWARD>]);
+  MOV (0xC, RAM[BAM[0]<BACKWARD>]);
+  MOV (0xD, RAM[BAM[0]<BACKWARD>]);
+  MOV (0xE, RAM[BAM[0]<BACKWARD>]);
+  MOV (0xF, RAM[BAM[0]]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+  MOV (RAM[0x0], PUT[0]);
+  MOV (RAM[0x1], PUT[0]);
+  MOV (RAM[0x2], PUT[0]);
+  MOV (RAM[0x3], PUT[0]);
+  MOV (RAM[0x4], PUT[0]);
+  MOV (RAM[0x5], PUT[0]);
+  MOV (RAM[0x6], PUT[0]);
+  MOV (RAM[0x7], PUT[0]);
+  MOV (RAM[0x8], PUT[0]);
+  MOV (RAM[0x9], PUT[0]);
+  MOV (RAM[0xA], PUT[0]);
+  MOV (RAM[0xB], PUT[0]);
+  MOV (RAM[0xC], PUT[0]);
+  MOV (RAM[0xD], PUT[0]);
+  MOV (RAM[0xE], PUT[0]);
+  MOV (RAM[0xF], PUT[0]);
+
+  NOP;
+  NOP;
+  NOP;
+  NOP;
+
+
+}

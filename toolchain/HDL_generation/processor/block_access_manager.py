@@ -429,7 +429,7 @@ def generate_base_adders():
     ARCH_BODY += "port map (\n\>"
 
     if CONFIG["stallable"]:
-        ARCH_BODY += "enable => stall,\n"
+        ARCH_BODY += "enable => not stall,\n"
 
     ARCH_BODY += "clock => clock,\n"
     ARCH_BODY += "data_in  => addr_0_fetch_internal,\n"

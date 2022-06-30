@@ -10,16 +10,25 @@ from FPE.toolchain.tests import utils
 
 
 if __name__ == "__main__":
-    import basic
-    import basic_stalling
+    import fetch
+    import store
+
+    import fetch_stalling
+    import store_stalling
 else:
-    from . import basic
-    from . import basic_stalling
+    from . import fetch
+    from . import store
+
+    from . import fetch_stalling
+    from . import store_stalling
 
 
 test_sets = [
-    basic,
-    basic_stalling,
+    fetch,
+    store,
+
+    fetch_stalling,
+    store_stalling,
 ]
 
 def run_sweep(path="."):

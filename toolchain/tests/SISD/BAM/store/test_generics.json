@@ -1,0 +1,5 @@
+{
+  "BAM_0_base": 0,
+  "BAM_0_increment": 1,
+  "ROM_A_init_mif": "..\\ROM.mem"
+}
