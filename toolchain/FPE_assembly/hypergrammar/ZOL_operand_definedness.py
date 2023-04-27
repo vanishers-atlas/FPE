@@ -19,7 +19,7 @@ class extractor(ParseTreeListener):
 
     def enterOp_ZOL(this, ctx):
         exe_com = asm_utils.token_to_text(ctx.children[0].exe_com.IDENTIFER())
-        assert(exe_com in this.program_context["components"]["ZOLs"].keys())
+        assert(exe_com in this.program_context["components"]["declared_ZOLs"].keys())
 
     def enterOp_ZOL_seek(this, ctx):
         loop_label = asm_utils.token_to_text(ctx.loop_label.IDENTIFER())
@@ -27,7 +27,7 @@ class extractor(ParseTreeListener):
 
         exe_com = asm_utils.token_to_text(ctx.exe_com.IDENTIFER())
         try:
-            if this.program_context["components"]["ZOLs"][exe_com]["parameters"]["seekable"].lower() != "true":
+            if this.program_context["components"]["declared_ZOLs"][exe_com]["parameters"]["seekable"] != True:
                 raise SyntaxError("%s can't be seeked as parameter seekable isn't true"%(
                     exe_com
                 ))
@@ -43,7 +43,7 @@ class extractor(ParseTreeListener):
     def enterOp_ZOL_set(this, ctx):
         exe_com = asm_utils.token_to_text(ctx.exe_com.IDENTIFER())
         try:
-            if this.program_context["components"]["ZOLs"][exe_com]["parameters"]["settable"].lower() != "true":
+            if this.program_context["components"]["declared_ZOLs"][exe_com]["parameters"]["settable"] != True:
                 raise SyntaxError("%s can't be set as parameter settable isn't true"%(
                     exe_com
                 ))

@@ -73,8 +73,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -83,101 +83,67 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = config
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, config)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+        # Init component_details
+        com_det = gen_utils.component_details()
 
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = {
-            "generics" : {
-                "overwrites" : {
-                    "type" : "std_logic_vector",
-                    "width": 5*CONFIG["cascades"],
-                },
-            },
-            "ports" : {
-                "clock" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                },
-                "match_found" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                },
-                "overwrites_reached" : {
-                    "type" : "std_logic",
-                    "direction" : "out",
-                },
-            },
-            "overwrites_encoding" : {
+        com_det.add_generic("overwrites", "std_logic_vector", 5*gen_det.config["cascades"])
+        com_det.add_port("clock", "std_logic", "in")
+        com_det.add_port("match_found", "std_logic", "in")
+        com_det.add_port("overwrites_reached", "std_logic", "out")
+
+        com_det.add_interface_item("overwrites_encoding",
+            {
                 "type"  : "unsigned",
-                "width" : 5*CONFIG["cascades"]
+                "width" : 5*gen_det.config["cascades"]
             }
-        }
+        )
 
         # Include required libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            },
-            {
-                "library" : "UNISIM",
-                "package" : "vcomponents",
-                "parts" : "all"
-            },
-        ]
-
+        com_det.add_import("ieee", "std_logic_1164", "all")
+        com_det.add_import("UNISIM", "vcomponents", "all")
 
         # Generation Module Code
-        generate_state_machine()
-        generate_stepdown_SRLs()
-        generate_counter_SRLs()
-        generate_overwrites_reached_logic()
+        generate_state_machine(gen_det, com_det)
+        generate_stepdown_SRLs(gen_det, com_det)
+        generate_counter_SRLs(gen_det, com_det)
+        generate_overwrites_reached_logic(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def generate_state_machine():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    if CONCAT_NAMING:
-        module_name = MODULE_NAME + "_FSM"
+def generate_state_machine(gen_det, com_det):
+    if gen_det.concat_naming:
+        module_name = gen_det.module_name + "_FSM"
     else:
         module_name = None
 
     sub_interface, sub_name = ZOL_inverted_SR_FSM.generate_HDL(
         {},
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=module_name,
-        concat_naming=CONCAT_NAMING,
-        force_generation=FORCE_GENERATION
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
 
     assert len(sub_interface["generics"]) == 0
-    # ARCH_BODY += "generic map ()\n"
+    # com_det.arch_body += "generic map ()\n"
 
     assert len(sub_interface["ports"]) == 4
     assert "clock" in sub_interface["ports"].keys()
@@ -185,124 +151,115 @@ def generate_state_machine():
     assert "not_tracking" in sub_interface["ports"].keys()
     assert "overwrites_reached" in sub_interface["ports"].keys()
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    ARCH_HEAD += "signal not_tracking : std_logic;\n"
+    com_det.arch_head += "signal not_tracking : std_logic;\n"
 
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "match_found  => match_found,\n"
-    ARCH_BODY += "overwrites_reached => overwrites_reached_int,\n"
-    ARCH_BODY += "not_tracking  => not_tracking\n"
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "match_found  => match_found,\n"
+    com_det.arch_body += "overwrites_reached => overwrites_reached_int,\n"
+    com_det.arch_body += "not_tracking  => not_tracking\n"
 
-    ARCH_BODY += "\<);\n\<\n"
+    com_det.arch_body += "\<);\n\<\n"
 
 
-def generate_stepdown_SRLs():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    ARCH_BODY += "-- Cascade Iteration Tracker Stepdown Ladder\n"
+def generate_stepdown_SRLs(gen_det, com_det):
+    com_det.arch_body += "-- Cascade Iteration Tracker Stepdown Ladder\n"
 
     # Handle Cascade stepdown ladder
-    ARCH_HEAD += "signal stepdown_0 : std_logic;\n"
-    ARCH_BODY += "stepdown_0 <= match_found;\n\n"
+    com_det.arch_head += "signal stepdown_0 : std_logic;\n"
+    com_det.arch_body += "stepdown_0 <= match_found;\n\n"
 
-    for rang in range(CONFIG["cascades"] - 1):
+    for rang in range(gen_det.config["cascades"] - 1):
         # Instantiate SRL for stepping down one stepdown to next
-        ARCH_BODY += "stepdown_SRL_%i : SRLC32E\>\n"%(rang, )
+        com_det.arch_body += "stepdown_SRL_%i : SRLC32E\>\n"%(rang, )
 
-        ARCH_BODY += "generic map ( init => X\"00000001\")\n"
+        com_det.arch_body += "generic map ( init => X\"00000001\")\n"
 
-        ARCH_BODY += "port map (\>\n"
+        com_det.arch_body += "port map (\>\n"
 
-        ARCH_BODY += "A => \"11111\",\n"
+        com_det.arch_body += "A => \"11111\",\n"
 
-        ARCH_HEAD += "signal stepdown_SRL_%i_out : std_logic;\n"%(rang, )
-        ARCH_BODY += "D => stepdown_SRL_%i_out,\n"%(rang, )
+        com_det.arch_head += "signal stepdown_SRL_%i_out : std_logic;\n"%(rang, )
+        com_det.arch_body += "D => stepdown_SRL_%i_out,\n"%(rang, )
 
-        ARCH_BODY += "Q => open,\n"
-        ARCH_BODY += "Q31 => stepdown_SRL_%i_out,\n"%(rang, )
+        com_det.arch_body += "Q => open,\n"
+        com_det.arch_body += "Q31 => stepdown_SRL_%i_out,\n"%(rang, )
 
-        ARCH_BODY += "clk =>clock,\n"
+        com_det.arch_body += "clk =>clock,\n"
 
-        ARCH_HEAD += "signal stepdown_SRL_%i_enable : std_logic := '0';\n"%(rang, )
-        ARCH_BODY += "ce => stepdown_SRL_%i_enable,\n"%(rang, )
+        com_det.arch_head += "signal stepdown_SRL_%i_enable : std_logic := '0';\n"%(rang, )
+        com_det.arch_body += "ce => stepdown_SRL_%i_enable,\n"%(rang, )
 
-        ARCH_BODY.drop_last_X(2)
-        ARCH_BODY += "\n\<);\<\n\n"
+        com_det.arch_body.drop_last_X(2)
+        com_det.arch_body += "\n\<);\<\n\n"
 
         # Generate SRL enable signal
-        ARCH_BODY += "stepdown_SRL_%i_enable <= stepdown_%i and not (%s);\n\n"%(
+        com_det.arch_body += "stepdown_SRL_%i_enable <= stepdown_%i and not (%s);\n\n"%(
             rang, rang,
             " and ".join([
                 "counter_SRL_%i_out"%(c, )
-                for c in range(rang + 1, CONFIG["cascades"])
+                for c in range(rang + 1, gen_det.config["cascades"])
             ])
         )
 
         # Process SRL output into stepdown
-        ARCH_HEAD += "signal stepdown_%i : std_logic;\n"%(rang + 1, )
-        ARCH_BODY += "stepdown_%i <= stepdown_SRL_%i_out and stepdown_%i;\n\n"%(rang + 1, rang, rang)
+        com_det.arch_head += "signal stepdown_%i : std_logic;\n"%(rang + 1, )
+        com_det.arch_body += "stepdown_%i <= stepdown_SRL_%i_out and stepdown_%i;\n\n"%(rang + 1, rang, rang)
 
 
-def generate_counter_SRLs():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_counter_SRLs(gen_det, com_det):
     # Handle Cascade counters
-    ARCH_BODY += "-- Cascade Iteration Tracker Counters\n"
+    com_det.arch_body += "-- Cascade Iteration Tracker Counters\n"
 
-    for counter in range(CONFIG["cascades"]):
+    for counter in range(gen_det.config["cascades"]):
           # Instantiate SRL for stepping down one stepdown to next
-          ARCH_BODY += "counter_SRL_%i : SRLC32E\>\n"%(counter, )
+          com_det.arch_body += "counter_SRL_%i : SRLC32E\>\n"%(counter, )
 
-          ARCH_BODY += "generic map ( init => X\"00000001\")\n"
+          com_det.arch_body += "generic map ( init => X\"00000001\")\n"
 
-          ARCH_BODY += "port map (\>\n"
+          com_det.arch_body += "port map (\>\n"
 
-          ARCH_BODY += "A => overwrites(%i downto %i),\n"%(5*counter + 4, 5*counter)
+          com_det.arch_body += "A => overwrites(%i downto %i),\n"%(5*counter + 4, 5*counter)
 
-          ARCH_HEAD += "signal counter_SRL_%i_out : std_logic;\n"%(counter, )
-          ARCH_BODY += "Q => counter_SRL_%i_out,\n"%(counter, )
-          ARCH_BODY += "D => counter_SRL_%i_out,\n"%(counter, )
+          com_det.arch_head += "signal counter_SRL_%i_out : std_logic;\n"%(counter, )
+          com_det.arch_body += "Q => counter_SRL_%i_out,\n"%(counter, )
+          com_det.arch_body += "D => counter_SRL_%i_out,\n"%(counter, )
 
-          ARCH_BODY += "Q31 => open,\n"
+          com_det.arch_body += "Q31 => open,\n"
 
-          ARCH_BODY += "clk =>clock,\n"
+          com_det.arch_body += "clk =>clock,\n"
 
-          ARCH_HEAD += "signal counter_SRL_%i_enable : std_logic := '0';\n"%(counter, )
-          ARCH_BODY += "ce => counter_SRL_%i_enable,\n"%(counter, )
+          com_det.arch_head += "signal counter_SRL_%i_enable : std_logic := '0';\n"%(counter, )
+          com_det.arch_body += "ce => counter_SRL_%i_enable,\n"%(counter, )
 
-          ARCH_BODY.drop_last_X(2)
-          ARCH_BODY += "\n\<);\<\n\n"
+          com_det.arch_body.drop_last_X(2)
+          com_det.arch_body += "\n\<);\<\n\n"
 
           # Generate SRL enable signal
-          ARCH_BODY += "counter_SRL_%i_enable <= (\n\>(counter_SRL_%i_out and not_tracking)\n"%(counter, counter, )
-          ARCH_BODY += "or (stepdown_%i and not counter_SRL_%i_out"%(counter, counter,)
+          com_det.arch_body += "counter_SRL_%i_enable <= (\n\>(counter_SRL_%i_out and not_tracking)\n"%(counter, counter, )
+          com_det.arch_body += "or (stepdown_%i and not counter_SRL_%i_out"%(counter, counter,)
           # Add all higher order counters to enable,
-          if counter + 1 < CONFIG["cascades"]:
-               ARCH_BODY += " and %s"%(
+          if counter + 1 < gen_det.config["cascades"]:
+               com_det.arch_body += " and %s"%(
                 " and ".join([
                     "counter_SRL_%i_out"%(c, )
-                    for c in range(counter + 1, CONFIG["cascades"])
+                    for c in range(counter + 1, gen_det.config["cascades"])
                 ])
               )
-          ARCH_BODY += ")\<\n);\n\n"
+          com_det.arch_body += ")\<\n);\n\n"
 
 
-def generate_overwrites_reached_logic():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_overwrites_reached_logic(gen_det, com_det):
     # Generate overwrites_reached
     # Connect output of final SRLC32E to overwrites_reached
-    ARCH_BODY += "-- Cascade Iteration Tracker overwrites_reached computation\n"
-    ARCH_HEAD += "signal overwrites_reached_int : std_logic;\n"
+    com_det.arch_body += "-- Cascade Iteration Tracker overwrites_reached computation\n"
+    com_det.arch_head += "signal overwrites_reached_int : std_logic;\n"
 
-    ARCH_BODY += "overwrites_reached_int <= (%s);\n\n"%(
+    com_det.arch_body += "overwrites_reached_int <= (%s);\n\n"%(
         " and ".join([
             "counter_SRL_%i_out"%(c, )
-            for c in range(CONFIG["cascades"])
+            for c in range(gen_det.config["cascades"])
         ])
     )
-    ARCH_BODY += "overwrites_reached <=  overwrites_reached_int;\n"
+    com_det.arch_body += "overwrites_reached <=  overwrites_reached_int;\n"

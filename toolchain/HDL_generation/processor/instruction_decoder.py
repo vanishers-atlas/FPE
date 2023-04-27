@@ -14,7 +14,7 @@ from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
 from FPE.toolchain.HDL_generation.basic import delay
-from FPE.toolchain.HDL_generation.basic import register
+from FPE.toolchain.HDL_generation.basic import dist_ROM
 
 #####################################################################
 
@@ -46,8 +46,6 @@ def preprocess_config(config_in):
 
     # Handle program_flow section of config
     config_out["program_flow"] = {}
-    assert(type(config_in["program_flow"]["ZOLs"]) == type({}))
-    config_out["program_flow"]["ZOLs"] = copy.deepcopy(config_in["program_flow"]["ZOLs"])
 
     # Handle instruction decoder section of config
     config_out["instr_decoder"] = {}
@@ -82,8 +80,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -92,498 +90,408 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = preprocess_config(config)
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
     # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : { }, "generics" : { } }
+        # Init component_details
+        com_det = gen_utils.component_details()
 
         # Include extremely commom libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all",
-            },
-            {
-                "library" : "ieee",
-                "package" : "numeric_std",
-                "parts" : "all",
-            },
-        ]
+        com_det.add_import("ieee", "std_logic_1164", "all")
+        com_det.add_import("ieee", "numeric_std", "all")
 
         # Generation Module Code
-        define_decode_table_type()
-        compute_instr_sections()
-        generate_input_ports()
-        generate_fetch_signals()
-        generate_exe_signals()
-        generate_store_signals()
+        define_decode_table_type(gen_det, com_det)
+        compute_instr_sections(gen_det, com_det)
+        generate_input_ports(gen_det, com_det)
+        generate_fetch_signals(gen_det, com_det)
+        generate_exe_signals(gen_det, com_det)
+        generate_store_signals(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def generate_std_logic_signal(sig_name, value_opcode_table):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
+def generate_input_signals_delay(gen_det, com_det, stage):
 
-    # Declare control port
-    INTERFACE["ports"][sig_name] = {
-        "type" : "std_logic",
-        "direction" : "out",
-    }
-
-    # Buffer port
-    interface, reg = register.generate_HDL(
-        {
-            "has_async_force"  : False,
-            "has_sync_force"   : False,
-            "has_enable"    : CONFIG["stallable"],
-            "force_on_init" : False
-        },
-        OUTPUT_PATH,
-        module_name=None,
-        concat_naming=False,
-        force_generation=FORCE_GENERATION
-    )
-
-    ARCH_HEAD += "signal pre_%s : std_logic;\n"%(sig_name, )
-
-    ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(sig_name, reg, )
-
-    ARCH_BODY += "generic map (data_width => 1)\n"
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["stallable"]:
-        ARCH_BODY += "enable => not stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in(0)  => pre_%s,\n"%(sig_name, )
-    ARCH_BODY += "data_out(0) => %s\n"%(sig_name, )
-
-    ARCH_BODY += "\<);\n\<"
-
-    # Built decode table
-    opcode_value_table = {}
-    for opcode in range(2**INSTR_SECTIONS["opcode"]["width"]):
-        values = [
-            value
-            for value, opcodes in value_opcode_table.items()
-            if  opcode in opcodes
-        ]
-
-        if   len(values) == 0:
-            opcode_value_table[opcode] = 'U'
-        elif len(values) == 1:
-            opcode_value_table[opcode] = values[0]
-        else:
-            raise ValueError("Multiple values, %s, for signal, %s, for opcode, %i]"%(
-                    str(values),
-                    sig_name,
-                    opcode,
-                )
-            )
-
-    # Add decode table
-    ARCH_HEAD += "constant %s_decode_table : decode_table := (\>\n"%(sig_name, )
-    # Working decode table, in as rows of 8 values
-    for i in range(2**max([INSTR_SECTIONS["opcode"]["width"] - 3, 0])):
-        for j in range(2**min([INSTR_SECTIONS["opcode"]["width"], 3])):
-            ARCH_HEAD += "\'%s\',\t"%(opcode_value_table[8*i + j])
-        ARCH_HEAD += "\n"
-    ARCH_HEAD.drop_last_X(3)
-    ARCH_HEAD += "\n\<);\n\n"
-
-    ARCH_BODY += "pre_%s <= 'U' when %s /= '1' else %s_decode_table(%s);\n\n"%(sig_name, INPUT_SIGNALS["enable"], sig_name, INPUT_SIGNALS["OPCODE"])
-
-def generate_std_logic_vector_signal(sig_name, vec_len, value_opcode_table):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
-
-    assert(vec_len >= 0)
-
-    # Declare control port
-    INTERFACE["ports"][sig_name] = {
-        "type" : "std_logic_vector",
-        "width": vec_len,
-        "direction" : "out",
-    }
-
-    # Buffer port
-    interface, reg = register.generate_HDL(
-        {
-            "has_async_force"  : False,
-            "has_sync_force"   : False,
-            "has_enable"    : CONFIG["stallable"],
-            "force_on_init" : False
-        },
-        OUTPUT_PATH,
-        module_name=None,
-        concat_naming=False,
-        force_generation=FORCE_GENERATION
-    )
-
-    ARCH_HEAD += "signal pre_%s : std_logic_vector(%i downto 0);\n"%(sig_name, vec_len - 1)
-
-    ARCH_BODY += "%s_buffer : entity work.%s(arch)\>\n"%(sig_name, reg, )
-
-    ARCH_BODY += "generic map (data_width => %i)\n"%(vec_len, )
-
-    ARCH_BODY += "port map (\n\>"
-
-    if CONFIG["stallable"]:
-        ARCH_BODY += "enable => not stall,\n"
-
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => pre_%s,\n"%(sig_name, )
-    ARCH_BODY += "data_out => %s\n"%(sig_name, )
-
-    ARCH_BODY += "\<);\n\<"
-
-    # Built decode table
-    opcode_value_table = {}
-    for opcode in range(2**INSTR_SECTIONS["opcode"]["width"]):
-        values = [
-            list(value)
-            for value, opcodes in value_opcode_table.items()
-            if  opcode in opcodes
-        ]
-
-        if   len(values) == 0:
-            opcode_value_table[opcode] = ['U']*vec_len
-        elif len(values) == 1:
-            opcode_value_table[opcode] = list(values[0])
-            # Reverse as bit are number right to the left not left to right
-            opcode_value_table[opcode].reverse()
-
-        else:
-            raise ValueError("Multiple values, %s, for signal, %s, for opcode, %i]"%(
-                    str(values),
-                    sig_name,
-                    opcode,
-                )
-            )
-
-    # Add decode table
-    for bit in range(vec_len):
-        ARCH_HEAD += "constant %s_bit_%i_decode_table : decode_table := (\>\n"%(sig_name, bit, )
-        # Working decode table, in as rows of 8 values
-        for i in range(2**max([INSTR_SECTIONS["opcode"]["width"] - 3, 0])):
-            for j in range(2**min([INSTR_SECTIONS["opcode"]["width"], 3])):
-                ARCH_HEAD += "\'%s\',\t"%(opcode_value_table[8*i + j][bit])
-            ARCH_HEAD += "\n"
-        ARCH_HEAD.drop_last_X(3)
-        ARCH_HEAD += "\n\<);\n"
-
-        ARCH_BODY += "pre_%s(%i) <= 'U' when %s /= '1' else %s_bit_%i_decode_table(%s);\n"%(
-            sig_name,
-            bit,
-            INPUT_SIGNALS["enable"],
-            sig_name,
-            bit,
-            INPUT_SIGNALS["OPCODE"]
-        )
-
-    ARCH_HEAD += "\n"
-    ARCH_BODY += "\n"
-
-def generate_input_signals_delay(stage):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
-
-    ARCH_HEAD += "signal %s_instr_delay_out : std_logic_vector(%i downto 0);\n"%(stage, CONFIG["instr_decoder"]["instr_width"]  - 1, )
+    com_det.arch_head += "signal %s_instr_delay_out : std_logic_vector(%i downto 0);\n"%(stage, gen_det.config["instr_decoder"]["instr_width"]  - 1, )
 
     interface, name = delay.generate_HDL(
         {
-            "width" : CONFIG["instr_decoder"]["instr_width"],
+            "width" : gen_det.config["instr_decoder"]["instr_width"],
             "depth" : 1,
-            "stallable" : CONFIG["stallable"],
+            "has_enable" : gen_det.config["stallable"],
+            "inited" : False,
         },
-        OUTPUT_PATH,
+        gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "%s_instr_delay : entity work.%s(arch)\>\n"%(stage, name)
+    com_det.arch_body += "%s_instr_delay : entity work.%s(arch)\>\n"%(stage, name)
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    if CONFIG["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+    if gen_det.config["stallable"]:
+        com_det.arch_body += "enable => not stall_in,\n"
 
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in  => %s,\n"%(INPUT_SIGNALS["instr"], )
-    ARCH_BODY += "data_out => %s_instr_delay_out\n"%(stage, )
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "data_in  => %s,\n"%(gen_det.input_signals["instr"], )
+    com_det.arch_body += "data_out => %s_instr_delay_out\n"%(stage, )
 
-    ARCH_BODY += "\<);\<\n\n"
+    com_det.arch_body += "\<);\<\n\n"
 
-    INPUT_SIGNALS["instr"] = "%s_instr_delay_out"%(stage, )
+    gen_det.input_signals["instr"] = "%s_instr_delay_out"%(stage, )
 
-    ARCH_HEAD += "signal %s_enable_delay_out : std_logic;\n"%(stage, )
+    com_det.arch_head += "signal %s_enable_delay_out : std_logic;\n"%(stage, )
 
     interface, name = delay.generate_HDL(
         {
             "width" : 1,
             "depth" : 1,
-            "stallable" : CONFIG["stallable"],
+            "has_enable" : gen_det.config["stallable"],
+            "inited" : False,
         },
-        OUTPUT_PATH,
+        gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "%s_enable_delay : entity work.%s(arch)\>\n"%(stage, name)
+    com_det.arch_body += "%s_enable_delay : entity work.%s(arch)\>\n"%(stage, name)
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    if CONFIG["stallable"]:
-        ARCH_BODY += "stall => stall,\n"
+    if gen_det.config["stallable"]:
+        com_det.arch_body += "enable => not stall_in,\n"
 
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "data_in(0) => %s,\n"%(INPUT_SIGNALS["enable"], )
-    ARCH_BODY += "data_out(0) => %s_enable_delay_out\n"%(stage, )
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "data_in(0) => %s,\n"%(gen_det.input_signals["enable"], )
+    com_det.arch_body += "data_out(0) => %s_enable_delay_out\n"%(stage, )
 
-    ARCH_BODY += "\<);\<\n\n"
+    com_det.arch_body += "\<);\<\n\n"
 
-    INPUT_SIGNALS["enable"] = "%s_enable_delay_out"%(stage, )
+    gen_det.input_signals["enable"] = "%s_enable_delay_out"%(stage, )
 
-    ARCH_HEAD += "signal %s_opcode : integer;\n\n"%(stage, )
-    ARCH_BODY += "%s_opcode <= to_integer(unsigned(%s(%s)));\n\n"%(
+    com_det.arch_head += "signal %s_opcode : integer;\n\n"%(stage, )
+    com_det.arch_body += "%s_opcode <= to_integer(unsigned(%s(%s)));\n\n"%(
         stage,
-        INPUT_SIGNALS["instr"],
-        INSTR_SECTIONS["opcode"]["range"],
+        gen_det.input_signals["instr"],
+        gen_det.instr_sections["opcode"]["range"],
     )
-    INPUT_SIGNALS["OPCODE"] = "%s_opcode"%(stage, )
+    gen_det.input_signals["opcode"] = "%s_opcode"%(stage, )
+
+
+def init_decoder_rom(gen_det, com_det):
+    return {
+        "slices" : {},
+        "next_bit" : 0,
+        "content": { instr : "" for instr in gen_det.config["instr_set"] },
+    }
+
+def handle_std_logic_signal(gen_det, com_det, decoder_rom, sig_name, control_values):
+    # Handle fanout and port creation
+    com_det.add_port(sig_name, "std_logic", "out")
+    decoder_rom["slices"][sig_name] = decoder_rom["next_bit"]
+    decoder_rom["next_bit"] += 1
+
+    # Default any missing instrs to 0
+    for instr in gen_det.config["instr_set"]:
+        match_found = False
+        for instrs in control_values.values():
+            if instr in instrs:
+                match_found = True
+                break
+        if match_found == False:
+            control_values["0"].append(instr)
+
+    # Append control_values to decoder_rom
+    for value, instrs in control_values.items():
+        for instr in instrs:
+            decoder_rom["content"][instr] += value
+
+def handle_std_logic_vector_signal(gen_det, com_det, decoder_rom, sig_name, vec_len, control_values):
+    # Handle fanout and port creation
+    com_det.add_port(sig_name, "std_logic_vector", "out", vec_len)
+    decoder_rom["slices"][sig_name] = (decoder_rom["next_bit"], decoder_rom["next_bit"] + vec_len - 1)
+    decoder_rom["next_bit"] += vec_len
+
+    # Default any missing instrs to all 0s
+    for instr in gen_det.config["instr_set"]:
+        match_found = False
+        for instrs in control_values.values():
+            if instr in instrs:
+                match_found = True
+                break
+        if match_found == False:
+            try:
+                control_values["0"*vec_len].append(instr)
+            except Exception as e:
+                control_values["0"*vec_len] = [instr, ]
+
+    # Append control_values to decoder_rom
+    for value, instrs in control_values.items():
+        for instr in instrs:
+            decoder_rom["content"][instr] += value[::-1]
+
+def implement_decoder_rom(gen_det, com_det, decoder_rom, stage):
+
+    rom_width = decoder_rom["next_bit"]
+    rom_interface, rom_name = dist_ROM.generate_HDL(
+        {
+            "depth" : len(decoder_rom["content"]),
+            "reads" : 1,
+            "width" : rom_width,
+            "synchronous" : False,
+            "has_enable" : False,
+            "init_type" : "GENERIC_STD"
+        },
+        output_path=gen_det.output_path,
+        module_name=None,
+        concat_naming=False,
+        force_generation=gen_det.force_generation
+    )
+
+    com_det.arch_head += "signal control_signals_%s : std_logic_vector(%i downto 0);\n"%(stage, rom_width- 1, )
+    com_det.arch_head += "signal control_signals_%s_buffered : std_logic_vector(%i downto 0);\n"%(stage, rom_width- 1, )
+
+    # Instancate ROM
+    com_det.arch_body += "decode_ROM_%s : entity work.%s(arch)\>\n"%(stage, rom_name,)
+
+    com_det.arch_body += "generic map (\>\n"
+    rev_instr_set = {v : k for k, v in gen_det.config["instr_set"].items()}
+    for addr in range(2**rom_interface["addr_width"]):
+        try:
+            com_det.arch_body += "init_%i => \"%s\",\n"%(addr, decoder_rom["content"][rev_instr_set[addr]][::-1], )
+        except Exception as e:
+            com_det.arch_body += "init_%i => \"%s\",\n"%(addr, "0"*rom_width, )
+    com_det.arch_body.drop_last_X(2)
+    com_det.arch_body += "\n\<)\n"
+
+    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "read_0_addr => %s(%s),\n"%(gen_det.input_signals["instr"], gen_det.instr_sections["opcode"]["range"], )
+    com_det.arch_body += "read_0_data => control_signals_%s\n"%(stage, )
+
+    com_det.arch_body += "\<);\n\<\n"
+
+    # Instancate buffer
+    interface, name = delay.generate_HDL(
+        {
+            "width" : rom_width,
+            "depth" : 1,
+            "has_enable" : gen_det.config["stallable"],
+            "inited" : False,
+        },
+        gen_det.output_path,
+        module_name=None,
+        concat_naming=False,
+        force_generation=gen_det.force_generation
+    )
+
+    com_det.arch_body += "control_signals_%s_delay : entity work.%s(arch)\>\n"%(stage, name)
+
+    com_det.arch_body += "port map (\n\>"
+
+    if gen_det.config["stallable"]:
+        com_det.arch_body += "enable => not stall_in,\n"
+
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "data_in  => control_signals_%s,\n"%(stage, )
+    com_det.arch_body += "data_out => control_signals_%s_buffered\n"%(stage, )
+
+    com_det.arch_body += "\<);\<\n\n"
+
+    # Slice up ROM output and connect to control ports
+    for port, slice in decoder_rom["slices"].items():
+        if   type(slice) == int:
+            com_det.arch_body += "%s <= control_signals_%s_buffered(%i);\n"%(port, stage, slice, )
+        elif type(slice) == tuple:
+            com_det.arch_body += "%s <= control_signals_%s_buffered(%i downto %i);\n"%(port, stage, slice[1], slice[0], )
+        else:
+            raise ValueError("unknown slice type")
+
 
 #####################################################################
 
-def define_decode_table_type():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    ARCH_HEAD += "type decode_table is array(0 to %i) of std_logic;\n\n"%(
-        2**CONFIG["instr_decoder"]["opcode_width"] - 1,
+def define_decode_table_type(gen_det, com_det):
+    com_det.arch_head += "type decode_table is array(0 to %i) of std_logic;\n\n"%(
+        2**gen_det.config["instr_decoder"]["opcode_width"] - 1,
     )
 
-def compute_instr_sections():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global DELAY_INTERFACE, DELAY_NAME
-    global INPUT_SIGNALS, INSTR_SECTIONS
-
-    INSTR_SECTIONS = {}
+def compute_instr_sections(gen_det, com_det):
+    gen_det.instr_sections = {}
 
     # Handle opcode
-    INSTR_SECTIONS["opcode"] = {
-        "width" : CONFIG["instr_decoder"]["opcode_width"],
-        "range" : "%i downto %i"%(CONFIG["instr_decoder"]["instr_width"] - 1,  CONFIG["instr_decoder"]["instr_width"] - CONFIG["instr_decoder"]["opcode_width"])
+    gen_det.instr_sections["opcode"] = {
+        "width" : gen_det.config["instr_decoder"]["opcode_width"],
+        "range" : "%i downto %i"%(gen_det.config["instr_decoder"]["instr_width"] - 1,  gen_det.config["instr_decoder"]["instr_width"] - gen_det.config["instr_decoder"]["opcode_width"])
     }
 
     # Section off addrs
-    INSTR_SECTIONS["addrs"] = []
-    addr_start = CONFIG["instr_decoder"]["instr_width"] - CONFIG["instr_decoder"]["opcode_width"]
-    for width in CONFIG["instr_decoder"]["addr_widths"]:
-        INSTR_SECTIONS["addrs"].append( {
+    gen_det.instr_sections["addrs"] = []
+    addr_start = gen_det.config["instr_decoder"]["instr_width"] - gen_det.config["instr_decoder"]["opcode_width"]
+    for width in gen_det.config["instr_decoder"]["addr_widths"]:
+        gen_det.instr_sections["addrs"].append( {
             "width" : width,
             "range" : "%i downto %i"%(addr_start - 1,  addr_start - width)
         } )
         addr_start -= width
 
-def generate_input_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
+def generate_input_ports(gen_det, com_det):
 
-    INTERFACE["ports"]["clock"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
-    INTERFACE["ports"]["enable"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
-    INTERFACE["ports"]["instr"] = {
-        "type" : "std_logic_vector",
-        "width": CONFIG["instr_decoder"]["instr_width"],
-        "direction" : "in",
-    }
+    com_det.add_port("clock", "std_logic", "in")
+    com_det.add_port("enable", "std_logic", "in")
+    com_det.add_port("instr", "std_logic_vector", "in", gen_det.config["instr_decoder"]["instr_width"])
 
-    INPUT_SIGNALS = {}
-    INPUT_SIGNALS["instr"] = "instr"
-    INPUT_SIGNALS["enable"] = "enable"
+    gen_det.input_signals = {}
+    gen_det.input_signals["instr"] = "instr"
+    gen_det.input_signals["enable"] = "enable"
 
-    ARCH_HEAD += "signal input_opcode : integer;\n\n"
-    ARCH_BODY += "input_opcode <= to_integer(unsigned(%s(%s)));\n\n"%(
-        INPUT_SIGNALS["instr"],
-        INSTR_SECTIONS["opcode"]["range"],
+    com_det.arch_head += "signal input_opcode : integer;\n\n"
+    com_det.arch_body += "input_opcode <= to_integer(unsigned(%s(%s)));\n\n"%(
+        gen_det.input_signals["instr"],
+        gen_det.instr_sections["opcode"]["range"],
     )
-    INPUT_SIGNALS["OPCODE"] = "input_opcode"
+    gen_det.input_signals["opcode"] = "input_opcode"
 
-    if CONFIG["stallable"]:
-        INTERFACE["ports"]["stall"] = {
-            "name" : "stall" ,
-            "type" : "std_logic",
-            "direction" : "in",
-        }
+    if gen_det.config["stallable"]:
+        com_det.add_port("stall_in", "std_logic", "in")
 
 
-def generate_fetch_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
+def generate_fetch_signals(gen_det, com_det):
 
     ####################################################################
     # Compute then buffer controls based on opcode
     ####################################################################
+    decoder_rom = init_decoder_rom(gen_det, com_det)
 
     # Handle fetch signals defined using new control method
-    for control_signal, control_details in gen_utils.get_controls(CONFIG["controls"], "fetch").items():
+    for control_signal, control_details in gen_utils.get_controls(gen_det.config["controls"], "fetch").items():
         # Extract control_details
         control_values = control_details["values"]
         control_type = control_details["type"]
 
-        value_opcode_table = {}
-        for value, instrs in control_values.items():
-            value_opcode_table[value] = [CONFIG["instr_set"][instr] for instr in instrs]
-
         if   control_type == "std_logic":
-            generate_std_logic_signal(control_signal, value_opcode_table)
+            handle_std_logic_signal(gen_det, com_det, decoder_rom, control_signal, control_values)
         elif control_type == "std_logic_vector":
             control_width = control_details["width"]
-            generate_std_logic_vector_signal(control_signal, control_width, value_opcode_table)
+            handle_std_logic_vector_signal(gen_det, com_det, decoder_rom, control_signal, control_width, control_values)
         else:
             raise ValueError("Unknown control_type, " + control_type)
 
+    if len(gen_utils.get_controls(gen_det.config["controls"], "fetch")) != 0:
+        implement_decoder_rom(gen_det, com_det, decoder_rom, "fetch")
+
     ####################################################################
-    # Buffer INPUT_SIGNALS for next stage
+    # Buffer gen_det.input_signals for next stage
     ####################################################################
-    generate_input_signals_delay("fetch")
+    generate_input_signals_delay(gen_det, com_det, "fetch")
 
     ####################################################################
     # Output controls that are directly part of instr
     ####################################################################
 
     # Handle fetch addrs
-    for addr, dic in enumerate(INSTR_SECTIONS["addrs"]):
+    for addr, dic in enumerate(gen_det.instr_sections["addrs"]):
         width = dic["width"]
         section = dic["range"]
 
-        INTERFACE["ports"]["addr_%i_fetch"%(addr)] = {
-            "type" : "std_logic_vector",
-            "width": width,
-            "direction" : "out",
-        }
+        com_det.add_port("addr_%i_fetch"%(addr), "std_logic_vector", "out", width)
 
-        ARCH_BODY += "addr_%i_fetch <= %s(%s);\n"%(addr, INPUT_SIGNALS["instr"], section)
-    ARCH_BODY += "\n"
+        com_det.arch_body += "addr_%i_fetch <= %s(%s);\n"%(addr, gen_det.input_signals["instr"], section)
+    com_det.arch_body += "\n"
 
-def generate_exe_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
+def generate_exe_signals(gen_det, com_det):
 
     ####################################################################
     # Compute then buffer controls based on opcode
     ####################################################################
+    decoder_rom = init_decoder_rom(gen_det, com_det)
 
     # Handle exe signals defined using new control method
-    for control_signal, control_details in gen_utils.get_controls(CONFIG["controls"], "exe").items():
+    for control_signal, control_details in gen_utils.get_controls(gen_det.config["controls"], "exe").items():
         # Extract control_details
         control_values = control_details["values"]
         control_type = control_details["type"]
 
-        value_opcode_table = {}
-        for value, instrs in control_values.items():
-            value_opcode_table[value] = [CONFIG["instr_set"][instr] for instr in instrs]
-
         if   control_type == "std_logic":
-            generate_std_logic_signal(control_signal, value_opcode_table)
+            handle_std_logic_signal(gen_det, com_det, decoder_rom, control_signal, control_values)
         elif control_type == "std_logic_vector":
             control_width = control_details["width"]
-            generate_std_logic_vector_signal(control_signal, control_width, value_opcode_table)
+            handle_std_logic_vector_signal(gen_det, com_det, decoder_rom, control_signal, control_width, control_values)
         else:
             raise ValueError("Unknown control_type, " + control_type)
 
+    if False:
+        # Handle uncondional jumping signal
+        if any([ asm_utils.instr_mnemonic(instr) == "JMP" for instr in gen_det.config["instr_set"]]):
+            sig_name = "jump_uncondional"
+            value_opcode_table = { "1" : [], "0" : []}
+            for instr_id, instr_val in gen_det.config["instr_set"].items():
+                if asm_utils.instr_mnemonic(instr_id) == "JMP":
+                    value_opcode_table["1"].append(instr_val)
+                else:
+                    value_opcode_table["0"].append(instr_val)
 
-    # # Handle uncondional jumping signal
-    # if any([ asm_utils.instr_mnemonic(instr) == "JMP" for instr in CONFIG["instr_set"]]):
-    #     sig_name = "jump_uncondional"
-    #     value_opcode_table = { "1" : [], "0" : []}
-    #     for instr_id, instr_val in CONFIG["instr_set"].items():
-    #         if asm_utils.instr_mnemonic(instr_id) == "JMP":
-    #             value_opcode_table["1"].append(instr_val)
-    #         else:
-    #             value_opcode_table["0"].append(instr_val)
-    #
-    #     # Check the signal varies
-    #     value_opcode_table = {
-    #         k : v
-    #         for k, v in value_opcode_table.items()
-    #         if len(v) > 0
-    #     }
-    #     if len(value_opcode_table) > 1:
-    #         generate_std_logic_signal(sig_name, value_opcode_table)
-    #
-    # # Handle condional jumping signals
-    # statuses = set()
-    # for instr in CONFIG["instr_set"]:
-    #     if "ALU" in asm_utils.instr_exe_units(instr) and "PC" in asm_utils.instr_exe_units(instr):
-    #         statuses.add(jump_status_map[ asm_utils.instr_mnemonic(instr)])
-    # exe = "ALU"
-    # for statuses in statuses:
-    #     for status in statuses:
-    #         sig_name = "jump_%s_%s"%(exe, status)
-    #         value_opcode_table = { "1" : [], "0" : []}
-    #         for instr_id, instr_val in CONFIG["instr_set"].items():
-    #             mnemonic = asm_utils.instr_mnemonic(instr_id)
-    #
-    #             if (
-    #                 mnemonic in jump_mnemonic_jump_statuses_map # instr in a jump
-    #                 and jump_mnemonic_jump_statuses_map[mnemonic]["exe"] == exe # jump uses status(es) from curr exe unit
-    #                 and status in jump_mnemonic_jump_statuses_map[mnemonic]["statuses"] # jump uses current status
-    #             ):
-    #                 value_opcode_table["1"].append(instr_val)
-    #             else:
-    #                 value_opcode_table["0"].append(instr_val)
-    #
-    #         # Check the signal varies
-    #         value_opcode_table = {
-    #             k : v
-    #             for k, v in value_opcode_table.items()
-    #             if len(v) > 0
-    #         }
-    #         if len(value_opcode_table) > 1:
-    #             generate_std_logic_signal(sig_name, value_opcode_table)
+            # Check the signal varies
+            value_opcode_table = {
+                k : v
+                for k, v in value_opcode_table.items()
+                if len(v) > 0
+            }
+            if len(value_opcode_table) > 1:
+                handle_std_logic_signal(gen_det, com_det, decoder_rom, sig_name, control_values)
+
+        # Handle condional jumping signals
+        statuses = set()
+        for instr in gen_det.config["instr_set"]:
+            if "ALU" in asm_utils.instr_exe_units(instr) and "PC" in asm_utils.instr_exe_units(instr):
+                statuses.add(jump_status_map[ asm_utils.instr_mnemonic(instr)])
+        exe = "ALU"
+        for statuses in statuses:
+            for status in statuses:
+                sig_name = "jump_%s_%s"%(exe, status)
+                value_opcode_table = { "1" : [], "0" : []}
+                for instr_id, instr_val in gen_det.config["instr_set"].items():
+                    mnemonic = asm_utils.instr_mnemonic(instr_id)
+
+                    if (
+                        mnemonic in jump_mnemonic_jump_statuses_map # instr in a jump
+                        and jump_mnemonic_jump_statuses_map[mnemonic]["exe"] == exe # jump uses status(es) from curr exe unit
+                        and status in jump_mnemonic_jump_statuses_map[mnemonic]["statuses"] # jump uses current status
+                    ):
+                        value_opcode_table["1"].append(instr_val)
+                    else:
+                        value_opcode_table["0"].append(instr_val)
+
+                # Check the signal varies
+                value_opcode_table = {
+                    k : v
+                    for k, v in value_opcode_table.items()
+                    if len(v) > 0
+                }
+                if len(value_opcode_table) > 1:
+                    handle_std_logic_signal(gen_det, com_det, decoder_rom, sig_name, control_values)
+
+    if len(gen_utils.get_controls(gen_det.config["controls"], "exe")) != 0:
+        implement_decoder_rom(gen_det, com_det, decoder_rom, "exe")
 
     ####################################################################
-    # Buffer INPUT_SIGNALS for next stage
+    # Buffer gen_det.input_signals for next stage
     ####################################################################
-    generate_input_signals_delay("exe")
+    generate_input_signals_delay(gen_det, com_det, "exe")
 
     ####################################################################
     # Output controls that are directly part of instr
@@ -593,54 +501,46 @@ exe_update_mnemonics_map = {
     "ALU" :  ["UCMP", "SCMP", ],
 }
 
-def generate_store_signals():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-    global INPUT_SIGNALS, INSTR_SECTIONS
+def generate_store_signals(gen_det, com_det):
 
     ####################################################################
     # Compute then buffer controls based on opcode
     ####################################################################
+    decoder_rom = init_decoder_rom(gen_det, com_det)
 
     # Handle exe signals defined using new control method
-    for control_signal, control_details in gen_utils.get_controls(CONFIG["controls"], "store").items():
+    for control_signal, control_details in gen_utils.get_controls(gen_det.config["controls"], "store").items():
         # Extract control_details
         control_values = control_details["values"]
         control_type = control_details["type"]
 
-        value_opcode_table = {}
-        for value, instrs in control_values.items():
-            value_opcode_table[value] = [CONFIG["instr_set"][instr] for instr in instrs]
-
         if   control_type == "std_logic":
-            generate_std_logic_signal(control_signal, value_opcode_table)
+            handle_std_logic_signal(gen_det, com_det, decoder_rom, control_signal, control_values)
         elif control_type == "std_logic_vector":
             control_width = control_details["width"]
-            generate_std_logic_vector_signal(control_signal, control_width, value_opcode_table)
+            handle_std_logic_vector_signal(gen_det, com_det, decoder_rom, control_signal, control_width, control_values)
         else:
             raise ValueError("Unknown control_type, " + control_type)
 
+    if len(gen_utils.get_controls(gen_det.config["controls"], "store")) != 0:
+        implement_decoder_rom(gen_det, com_det, decoder_rom, "store")
 
     ####################################################################
-    # Buffer INPUT_SIGNALS for next stage
+    # Buffer gen_det.input_signals for next stage
     ####################################################################
-    generate_input_signals_delay("store")
+    generate_input_signals_delay(gen_det, com_det, "store")
 
     ####################################################################
     # Output controls that are directly part of instr
     ####################################################################
 
     # Handle store addrs
-    for addr, dic in enumerate(INSTR_SECTIONS["addrs"]):
+    for addr, dic in enumerate(gen_det.instr_sections["addrs"]):
         width = dic["width"]
         section = dic["range"]
 
-        INTERFACE["ports"]["addr_%i_store"%(addr)] = {
-            "type" : "std_logic_vector",
-            "width": width,
-            "direction" : "out",
-        }
+        com_det.add_port("addr_%i_store"%(addr), "std_logic_vector", "out", width)
 
 
-        ARCH_BODY += "addr_%i_store <= %s(%s);\n"%(addr, INPUT_SIGNALS["instr"], section)
-    ARCH_BODY += "\n"
+        com_det.arch_body += "addr_%i_store <= %s(%s);\n"%(addr, gen_det.input_signals["instr"], section)
+    com_det.arch_body += "\n"

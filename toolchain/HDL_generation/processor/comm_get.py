@@ -11,13 +11,13 @@ from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.basic import register
 from FPE.toolchain.HDL_generation.basic import mux
+from FPE.toolchain.HDL_generation.basic import register
+from FPE.toolchain.HDL_generation.basic import RS_FF_latch as RS
 
 #####################################################################
 
 def add_inst_config(instr_id, instr_set, config):
-
     reads = 0
     for instr in instr_set:
         fetch_mems = [ asm_utils.access_mem(access) for access in asm_utils.instr_fetches(instr) ]
@@ -104,8 +104,8 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
         values = { "0" : [], "1" : [], }
 
         for instr in instr_set:
-            fetches = asm_utils.instr_fetches(instr)
-            if fetches.count(instr_id) > read:
+            fetch_mems = [asm_utils.access_mem(fetch) for fetch in asm_utils.instr_fetches(instr)]
+            if fetch_mems.count(instr_id) > read:
                 values["1"].append(instr)
             else:
                 values["0"].append(instr)
@@ -171,8 +171,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -181,225 +181,146 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
-    # Moves parameters into global scope
-    CONFIG = preprocess_config(config)
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
+
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
     # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : { }, "generics" : { } }
+        # Init component_details
+        com_det = gen_utils.component_details()
 
         # Include extremely commom libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            },
-            {
-                "library" : "ieee",
-                "package" : "Numeric_Std",
-                "parts" : "all"
-            }
-        ]
+        com_det.add_import("ieee", "std_logic_1164", "all")
+        com_det.add_import("ieee", "Numeric_Std", "all")
 
         # Generation Module Code
-        gen_ports()
-        gen_stalling_logic()
-        gen_FIFO_adv_logic()
-        gen_read_data_logic()
+        gen_ports(gen_det, com_det)
+        gen_stalling_logic(gen_det, com_det)
+        gen_FIFO_adv_logic(gen_det, com_det)
+        gen_read_data_logic(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def gen_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def gen_ports(gen_det, com_det):
     # Decalre clock and runnning ports
-    INTERFACE["ports"]["clock"] = {
-        "type" : "std_logic",
-        "direction" : "in"
-    }
-    INTERFACE["ports"]["running"] = {
-        "type" : "std_logic",
-        "direction" : "in"
-    }
+    com_det.add_port("clock", "std_logic", "in")
+    com_det.add_port("running", "std_logic", "in")
 
     # Handle FIFO ports
-    for FIFO in range(CONFIG["FIFOs"]):
-        INTERFACE["ports"]["FIFO_%i_data"%(FIFO, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["data_width"],
-            "direction" : "in"
-        }
-        INTERFACE["ports"]["FIFO_%i_adv"%(FIFO, )] = {
-            "type" : "std_logic",
-            "direction" : "out"
-        }
-        if CONFIG["FIFO_handshakes"]:
-            INTERFACE["ports"]["FIFO_%i_valid"%(FIFO, )] = {
-                "type" : "std_logic",
-                "direction" : "in"
-            }
+    for FIFO in range(gen_det.config["FIFOs"]):
+        com_det.add_port("FIFO_%i_data"%(FIFO, ), "std_logic_vector", "in", gen_det.config["data_width"])
+        com_det.add_port("FIFO_%i_adv"%(FIFO, ), "std_logic", "out")
+        if gen_det.config["FIFO_handshakes"]:
+            com_det.add_port("FIFO_%i_valid"%(FIFO, ), "std_logic", "in")
 
     # Handle read ports
-    for read in range(CONFIG["reads"]):
-        INTERFACE["ports"]["read_%i_addr"%(read, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["addr_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["read_%i_data"%(read, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["data_width"],
-            "direction" : "out",
-        }
-        INTERFACE["ports"]["read_%i_adv"%(read, )] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
-        if CONFIG["FIFO_handshakes"]:
-            INTERFACE["ports"]["read_%i_enable"%(read, )] = {
-                "type" : "std_logic",
-                "direction" : "in",
-            }
+    for read in range(gen_det.config["reads"]):
+        com_det.add_port("read_%i_addr"%(read, ), "std_logic_vector", "in", gen_det.config["addr_width"])
+        com_det.add_port("read_%i_data"%(read, ), "std_logic_vector", "out", gen_det.config["data_width"])
+        com_det.add_port("read_%i_adv"%(read, ), "std_logic", "in")
+        if gen_det.config["FIFO_handshakes"]:
+            com_det.add_port("read_%i_enable"%(read, ), "std_logic", "in")
 
     # Handle stalling ports
-    if   CONFIG["stall_type"] == "ACTIVE":
-        INTERFACE["ports"]["stall"] = {
-            "type" : "std_logic",
-            "direction" : "inout"
-        }
-    elif CONFIG["stall_type"] == "PASSIVE":
-        INTERFACE["ports"]["stall"] = {
-            "type" : "std_logic",
-            "direction" : "in"
-        }
+    if gen_det.config["stall_type"] != "NONE":
+        com_det.add_port("stall_in", "std_logic", "in")
 
-def gen_stalling_logic():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    if   gen_det.config["stall_type"] == "ACTIVE":
+        com_det.add_port("stall_out", "std_logic", "out")
 
-    if CONFIG["FIFO_handshakes"] :
-        ARCH_BODY += "-- FIFO_handshakes stall logic\n"
+def gen_stalling_logic(gen_det, com_det):
+    # Generate FIFO validation logic
+    if gen_det.config["stall_type"] != "NONE":
+        com_det.arch_head += "signal stall : std_logic;\n"
 
-        ARCH_HEAD += "signal FIFO_handshake_stall : std_logic;\n"
-        ARCH_BODY += "stall <= '1' when FIFO_handshake_stall = '1' else 'L';\n"
+        if gen_det.config["stall_type"] == "PASSIVE":
+            com_det.arch_body += "stall <= stall_in;\n"
+        elif gen_det.config["stall_type"] == "ACTIVE":
 
-        if CONFIG["FIFOs"] == 1:
-            # This code may need reworking, depending on how vivado handles many termed logic expressions
-            ARCH_BODY += "FIFO_handshake_stall <= %s;\n"%(
-                " or ".join([
-                    "(read_%i_enable and not FIFO_0_valid)"%(i, )
-                    for i in range(CONFIG["reads"])
-                ]),
-            )
-        else:#CONFIG["FIFOs"] >  1:
-            mux_interface, mux_name = mux.generate_HDL(
-                {
-                    "inputs" : CONFIG["FIFOs"]
-                },
-                OUTPUT_PATH,
-                module_name=None,
-                concat_naming=False,
-                force_generation=FORCE_GENERATION
-            )
+            com_det.arch_body += "\n-- FIFO_handshakes stall logic\n"
 
-            for read in range(CONFIG["reads"]):
-                ARCH_HEAD += "signal read_%i_FIFO_valid : std_logic;\n"%(read, )
+            com_det.arch_head += "signal generated_stall : std_logic;\n"
 
-                ARCH_BODY += "read_%i_FIFO_valid_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
+            com_det.arch_body += "stall <= stall_in or generated_stall;\n"
+            com_det.arch_body += "stall_out <= generated_stall;\n"
 
-                ARCH_BODY += "generic map (data_width => 1)\n"
+            if gen_det.config["FIFOs"] == 1:
+                # This code may need reworking, depending on how vivado handles many termed logic expressions
+                com_det.arch_body += "generated_stall <= running and %s;\n"%(
+                    " or ".join([
+                        "(read_%i_enable and not FIFO_0_valid)"%(i, )
+                        for i in range(gen_det.config["reads"])
+                    ]),
+                )
+            else:#gen_det.config["FIFOs"] >  1:
+                mux_interface, mux_name = mux.generate_HDL(
+                    {
+                        "inputs" : gen_det.config["FIFOs"]
+                    },
+                    output_path=gen_det.output_path,
+                    module_name=None,
+                    concat_naming=False,
+                    force_generation=gen_det.force_generation
+                )
 
-                ARCH_BODY += "port map (\n\>"
-                ARCH_BODY += "sel => read_%i_addr,\n"%(read, )
-                for i in range(0, CONFIG["FIFOs"]):
-                    ARCH_BODY += "data_in_%i(0) => FIFO_%i_valid,\n"%(i, i, )
-                for i in range(CONFIG["FIFOs"], mux_interface["number_inputs"]):
-                    ARCH_BODY += "data_in_%i(0) => '0',\n"%(i, )
-                ARCH_BODY += "data_out(0) => read_%i_FIFO_valid\n"%(read, )
+                for read in range(gen_det.config["reads"]):
+                    com_det.arch_head += "signal read_%i_FIFO_valid : std_logic;\n"%(read, )
 
-                ARCH_BODY += "\<);\n\<\n"
+                    com_det.arch_body += "read_%i_FIFO_valid_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
 
-            # This code may need reworking, depending on how vivado handles many termed logic expressions
-            ARCH_BODY += "FIFO_handshake_stall <= %s;\n"%(
-                " or ".join([
-                    "(read_%i_enable and not read_%i_FIFO_valid)"%(i, i, )
-                    for i in range(CONFIG["reads"])
-                ]),
-            )
+                    com_det.arch_body += "generic map (data_width => 1)\n"
 
-def gen_FIFO_adv_logic():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "sel => read_%i_addr,\n"%(read, )
+                    for i in range(0, gen_det.config["FIFOs"]):
+                        com_det.arch_body += "data_in_%i(0) => FIFO_%i_validated,\n"%(i, i, )
+                    for i in range(gen_det.config["FIFOs"], mux_interface["number_inputs"]):
+                        com_det.arch_body += "data_in_%i(0) => '0',\n"%(i, )
+                    com_det.arch_body += "data_out(0) => read_%i_FIFO_valid\n"%(read, )
 
-    # Generate FIFO_adv buffer
-    reg_interface, reg_name = register.generate_HDL(
-        {
-            "has_async_force" : False,
-            "has_sync_force" : False,
-            "has_enable"    : False,
-            "force_on_init" : False
-        },
-        OUTPUT_PATH,
-        module_name=None,
-        concat_naming=False,
-        force_generation=FORCE_GENERATION
-    )
+                    com_det.arch_body += "\<);\n\<\n"
 
-    # instance FIFO_adv buffers
-    ARCH_HEAD += "\n-- FIFO advance signals\n"
-    ARCH_BODY += "\n-- FIFO advance buffers\n"
-    for FIFO in range(CONFIG["FIFOs"]):
-        ARCH_HEAD += "signal FIFO_%i_adv_buffer_in, FIFO_%i_adv_buffer_out : std_logic;\n"%(FIFO, FIFO, )
+                # This code may need reworking, depending on how vivado handles many termed logic expressions
+                com_det.arch_body += "generated_stall <= running and %s;\n"%(
+                    " or ".join([
+                        "(read_%i_enable and not read_%i_FIFO_valid)"%(i, i, )
+                        for i in range(gen_det.config["reads"])
+                    ]),
+                )
 
-        ARCH_BODY += "FIFO_%i_adv_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
-
-        ARCH_BODY += "generic map (data_width => 1)\n"
-
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in(0) => FIFO_%i_adv_buffer_in,\n"%(FIFO, )
-        ARCH_BODY += "data_out(0) => FIFO_%i_adv_buffer_out\n"%(FIFO, )
-        ARCH_BODY += "\<);\n\<\n"
-
+def gen_FIFO_adv_logic(gen_det, com_det):
     # FIFO_adv logic
-    ARCH_BODY += "\n-- FIFO advance logic\n"
-    if CONFIG["FIFOs"] == 1:
+    com_det.arch_body += "\n-- FIFO advance logic\n"
+    if gen_det.config["FIFOs"] == 1:
+        com_det.arch_head += "signal FIFO_0_adv_internal : std_logic;\n"
+
         # This code may need reworking, depending on how vivado handles many termed logic expressions
-        ARCH_BODY += "FIFO_0_adv_buffer_in <= running and %s;\n"%(
+        com_det.arch_body += "FIFO_0_adv_internal <= running and %s;\n"%(
             " or ".join([
                 "read_%i_adv"%(i, )
-                for i in range(CONFIG["reads"])
+                for i in range(gen_det.config["reads"])
             ]),
         )
-
-        if CONFIG["stall_type"] != "NONE":
-            ARCH_BODY += "FIFO_0_adv <= (not stall) and FIFO_0_adv_buffer_out;\n"
+        if gen_det.config["stall_type"] == "NONE":
+            com_det.arch_body += "FIFO_0_adv <= FIFO_0_adv_internal;\n"
         else:
-            ARCH_BODY += "FIFO_0_adv <= FIFO_0_adv_buffer_out;\n"
+            com_det.arch_body += "FIFO_0_adv <= FIFO_0_adv_internal and not stall;\n"
 
-    else:#CONFIG["FIFOs"] >  1:
-        for FIFO in range(CONFIG["FIFOs"]):
-            ARCH_BODY += "FIFO_%i_adv_buffer_in <= running and %s;\n"%(
+    else:#gen_det.config["FIFOs"] >  1:
+        for FIFO in range(gen_det.config["FIFOs"]):
+            com_det.arch_head += "signal FIFO_%i_adv_internal : std_logic;\n"%(FIFO, )
+            com_det.arch_body += "FIFO_%i_adv_internal <= running and %s;\n"%(
                 FIFO,
                 " or ".join([
                     "(read_%i_adv and %s)"%(
@@ -407,81 +328,81 @@ def gen_FIFO_adv_logic():
                         " and ".join([
                             "read_%i_addr(%i)"%(read, bit, ) if FIFO&2**bit
                             else "(not read_%i_addr(%i))"%(read, bit, )
-                            for bit in range(CONFIG["addr_width"])
+                            for bit in range(gen_det.config["addr_width"])
                         ])
                     )
-                    for read in range(CONFIG["reads"])
+                    for read in range(gen_det.config["reads"])
                 ]),
             )
 
-            if CONFIG["stall_type"] != "NONE":
-                ARCH_BODY += "FIFO_%i_adv <= (not stall) and FIFO_%i_adv_buffer_out;\n"%(FIFO, FIFO, )
+            if gen_det.config["stall_type"] == "NONE":
+                com_det.arch_body += "FIFO_%i_adv <= FIFO_%i_adv_internal;\n"%(FIFO, FIFO, )
             else:
-                ARCH_BODY += "FIFO_%i_adv <= FIFO_%i_adv_buffer_out;\n"%(FIFO, FIFO, )
+                com_det.arch_body += "FIFO_%i_adv <= FIFO_%i_adv_internal and not stall ;\n"%(FIFO, FIFO, )
 
-def gen_read_data_logic():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
 
+def gen_read_data_logic(gen_det, com_det):
     # Generate read_data buffer
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force" : False,
             "has_sync_force" : False,
-            "has_enable"   : CONFIG["stall_type"] != "NONE",
+            "has_enable"   : gen_det.config["stall_type"] != "NONE",
             "force_on_init" : False
         },
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
     # Generate read_data buffers
-    ARCH_HEAD += "\n-- read data signals\n"
-    ARCH_BODY += "\n-- read data buffers\n"
-    for read in range(CONFIG["reads"]):
-        ARCH_HEAD += "signal read_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(read, CONFIG["data_width"] - 1)
+    com_det.arch_head += "\n-- read data signals\n"
+    com_det.arch_body += "\n-- read data buffers\n"
+    for read in range(gen_det.config["reads"]):
+        com_det.arch_head += "signal read_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(read, gen_det.config["data_width"] - 1)
 
-        ARCH_BODY += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+        com_det.arch_body += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
 
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        if CONFIG["stall_type"] != "NONE":
-            ARCH_BODY += "enable => not stall,\n"
-        ARCH_BODY += "data_in  => read_%i_data_buffer_in,\n"%(read, )
-        ARCH_BODY += "data_out => read_%i_data\n"%(read, )
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "clock => clock,\n"
+        if gen_det.config["stall_type"] == "PASSIVE":
+                com_det.arch_body += "enable => not stall,\n"
+        elif gen_det.config["stall_type"] == "ACTIVE":
+            com_det.arch_body += "enable => read_%i_enable and not stall,\n"%(read, )
+        com_det.arch_body += "data_in  => read_%i_data_buffer_in,\n"%(read, )
+        com_det.arch_body += "data_out => read_%i_data\n"%(read, )
+        com_det.arch_body += "\<);\n\<\n"
 
     # read_data assignment logic
-    ARCH_BODY += "\n-- read_data assignment logic\n"
-    if CONFIG["FIFOs"] == 1:
-        for read in range(CONFIG["reads"]):
-            ARCH_BODY += "read_%i_data_buffer_in <= FIFO_0_data;\n"%(read, )
-    else:#CONFIG["FIFOs"] >  1:
+    com_det.arch_body += "\n-- read_data assignment logic\n"
+    if gen_det.config["FIFOs"] == 1:
+        for read in range(gen_det.config["reads"]):
+            com_det.arch_body += "read_%i_data_buffer_in <= FIFO_0_data;\n"%(read, )
+    else:#gen_det.config["FIFOs"] >  1:
         mux_interface, mux_name = mux.generate_HDL(
             {
-                "inputs" : CONFIG["FIFOs"]
+                "inputs" : gen_det.config["FIFOs"]
             },
-            OUTPUT_PATH,
+            output_path=gen_det.output_path,
             module_name=None,
             concat_naming=False,
-            force_generation=FORCE_GENERATION
+            force_generation=gen_det.force_generation
         )
 
-        for read in range(CONFIG["reads"]):
-            ARCH_BODY += "read_%i_data_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
+        for read in range(gen_det.config["reads"]):
+            com_det.arch_body += "read_%i_data_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
 
-            ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+            com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-            ARCH_BODY += "port map (\n\>"
-            ARCH_BODY += "sel => read_%i_addr,\n"%(read, )
-            for i in range(0, CONFIG["FIFOs"]):
-                ARCH_BODY += "data_in_%i => FIFO_%i_data,\n"%(i, i, )
-            for i in range(CONFIG["FIFOs"], mux_interface["number_inputs"]):
-                ARCH_BODY += "data_in_%i => (others => '0'),\n"%(i, )
-            ARCH_BODY += "data_out => read_%i_data_buffer_in\n"%(read, )
+            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "sel => read_%i_addr,\n"%(read, )
+            for i in range(0, gen_det.config["FIFOs"]):
+                com_det.arch_body += "data_in_%i => FIFO_%i_data,\n"%(i, i, )
+            for i in range(gen_det.config["FIFOs"], mux_interface["number_inputs"]):
+                com_det.arch_body += "data_in_%i => (others => '0'),\n"%(i, )
+            com_det.arch_body += "data_out => read_%i_data_buffer_in\n"%(read, )
 
-            ARCH_BODY += "\<);\n\<\n"
+            com_det.arch_body += "\<);\n\<\n"

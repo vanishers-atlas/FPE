@@ -17,6 +17,7 @@ from FPE.toolchain.HDL_generation.basic import dist_ROM
 from FPE.toolchain.HDL_generation.basic import register
 from FPE.toolchain.HDL_generation.basic import mux
 
+from FPE.toolchain.HDL_generation.processor  import mem_BAPA_harness
 
 from warnings import warn
 
@@ -47,6 +48,7 @@ def add_inst_config(instr_id, instr_set, config):
 
 read_addr_patern = re.compile("read_(\d+)_addr")
 read_data_patern = re.compile("read_(\d+)_data")
+
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
     pathways = gen_utils.init_datapaths()
 
@@ -146,6 +148,10 @@ def preprocess_config(config_in):
 
     assert type(config_in["buffer_reads"]) == bool, "buffer_reads must be a bool"
     config_out["buffer_reads"] = config_in["buffer_reads"]
+
+    if "BAPA" in config_in.keys():
+        if __debug__: mem_BAPA_harness.preprocess_config(config_in["BAPA"])
+        config_out["BAPA"] = config_in["BAPA"]
 
     # Check data type
     assert(type(config_in["type"]) == type(""))
@@ -289,9 +295,14 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         com_det.add_import("ieee", "std_logic_1164", "all")
 
         if "BAPA" in gen_det.config.keys():
+            com_det.add_port("clock", "std_logic", "in")
+            if gen_det.config["stallable"]:
+                com_det.add_port("stall_in", "std_logic", "in")
+                com_det.arch_head += "signal stall : std_logic;\n"
+                com_det.arch_body += "stall <= stall_in;\n"
+
             gen_BAPA_ROM(gen_det, com_det)
         else:
-
             gen_ports(gen_det, com_det)
 
             if   gen_det.config["type"] == "DIST":
@@ -308,29 +319,25 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 #####################################################################
 
-hardness_fanin_signals = ["clock", "stall"]
-hardness_ripple_up_signals = [
+hardness_fanin_signals = ["clock", "stall_in"]
+hardness_ripple_up_addrs = [
     re.compile("read_(\d+)_addr"),
+]
+hardness_ripple_up_signals = [
     re.compile("read_(\d+)_word_(\d+)"),
-    re.compile("write_(\d+)_addr"),
-    re.compile("write_(\d+)_word_(\d+)"),
-    re.compile("write_(\d+)_enable_(\d+)"),
 ]
 hardness_internal_signals = [
     re.compile("block_(\d+)_read_(\d+)_addr"),
     re.compile("block_(\d+)_read_(\d+)_data"),
-    re.compile("block_(\d+)_write_(\d+)_addr"),
-    re.compile("block_(\d+)_write_(\d+)_data"),
-    re.compile("block_(\d+)_write_(\d+)_enable"),
 ]
 
-subblock_fanin_signals = ["clock", "stall"]
+subblock_fanin_signals = ["clock", "stall_in"]
+subblock_ripple_up_generics = [
+    re.compile("init_mif"),
+]
 subblock_internal_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_data"),
-    re.compile("write_(\d+)_addr"),
-    re.compile("write_(\d+)_data"),
-    re.compile("write_(\d+)_enable"),
 ]
 
 def gen_BAPA_ROM(gen_det, com_det):
@@ -354,8 +361,8 @@ def gen_BAPA_ROM(gen_det, com_det):
         module_name = None
 
     harness_interface, harness_name = mem_BAPA_harness.generate_HDL(
-        gen_det.config["BAPA"],
-        gen_det.output_path,
+        config=gen_det.config["BAPA"],
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -376,6 +383,20 @@ def gen_BAPA_ROM(gen_det, com_det):
         if signal in harness_interface["ports"]:
             com_det.arch_body += "%s => %s,\n"%(signal, signal)
 
+    # Handle ripple up addrs
+    for rule in hardness_ripple_up_addrs:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            width = gen_det.config["addr_width"]
+            com_det.add_port(port, "std_logic_vector", details["direction"], width)
+
+            # Connect harness port to rippled port
+            if subblock_config["depth"] == 1:
+                com_det.arch_body += "%s => \"0\" & %s,\n"%(port, port)
+            else:
+                com_det.arch_body += "%s => %s,\n"%(port, port)
+
     # Handle ripple up signals
     for rule in hardness_ripple_up_signals:
         for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
@@ -383,9 +404,7 @@ def gen_BAPA_ROM(gen_det, com_det):
 
             # Handle generic controlled ports
             if details["type"].startswith("std_logic_vector("):
-                if details["type"].startswith("std_logic_vector(block_addr_width"):
-                    width = gen_det.config["addr_width"]
-                elif details["type"].startswith("std_logic_vector(data_width"):
+                if details["type"].startswith("std_logic_vector(data_width"):
                     width = gen_det.config["data_width"]
                 else:
                     raise ValueError("Unknown std_logic_vector type in harness interface, " + details["type"])
@@ -435,8 +454,8 @@ def gen_BAPA_ROM(gen_det, com_det):
         module_name = None
 
     subblock_interface, subblock_name = generate_HDL(
-        subblock_config,
-        gen_det.output_path,
+        config=subblock_config,
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -446,9 +465,21 @@ def gen_BAPA_ROM(gen_det, com_det):
     for subblock in range(num_subblocks):
         com_det.arch_body += "subblock_%i : entity work.%s(arch)\>\n"%(subblock, subblock_name, )
 
-        if subblock_interface["generics"]:
+        if len(subblock_interface["generics"]) != 0:
             com_det.arch_body += "generic map (\>\n"
-            raise NotImplementedError()
+
+            # Handle ripple up generics
+            for rule in subblock_ripple_up_generics:
+                for generic in [generic for generic in subblock_interface["generics"].keys() if rule.fullmatch(generic) ]:
+                    details = subblock_interface["generics"][generic]
+
+                    ripped_generic = "subblock_%i_%s"%(subblock, generic,)
+                    com_det.add_generic(ripped_generic, details["type"])
+
+                    # Connect harness port to rippled port
+                    com_det.arch_body += "%s => %s,\n"%(generic, ripped_generic)
+
+            com_det.arch_body.drop_last_X(2)
             com_det.arch_body += "\<)\n"
 
         com_det.arch_body += "port map (\n\>"
@@ -477,7 +508,9 @@ def gen_ports(gen_det, com_det):
     # Handle common ports
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
+        com_det.arch_head += "signal stall : std_logic;\n"
+        com_det.arch_body += "stall <= stall_in;\n"
 
     # Declare read ports
     for read in range(gen_det.config["reads"]):
@@ -496,11 +529,11 @@ def gen_wordwise_distributed_ROM(gen_det, com_det):
             {
                 "depth" : gen_det.config["depth"],
                 "reads" : gen_det.config["reads"],
-                "synchronous" : True,
+                "synchronous" : gen_det.config["buffer_reads"],
                 "has_enable" : gen_det.config["stallable"],
                 "init_type" : "MIF"
             },
-            gen_det.output_path,
+            output_path=gen_det.output_path,
             module_name=None,
             concat_naming=False,
             force_generation=gen_det.force_generation
@@ -515,9 +548,11 @@ def gen_wordwise_distributed_ROM(gen_det, com_det):
         com_det.arch_body += "\<)\n"
 
         com_det.arch_body += "port map (\n\>"
-        com_det.arch_body += "clock => clock,\n"
+        if gen_det.config["buffer_reads"]:
+            com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stallable"]:
             com_det.arch_body += "read_enable => not stall,\n"
+
         com_det.arch_body += ",\n".join([
             "read_%i_addr => read_%i_addr,\nread_%i_data => read_%i_data"%(
                 read, read, read, read,
@@ -543,7 +578,6 @@ def gen_wordwise_block_ROM(gen_det, com_det):
         # Generate template code for all subwords in an addr_1ank
         BANK_HEAD = gen_utils.indented_string()
         BANK_BODY = gen_utils.indented_string()
-        print("Greating template addr_Bank")
 
         # Declare bank wide addr and data signals
         for read in range(gen_det.config["reads"]):
@@ -558,7 +592,6 @@ def gen_wordwise_block_ROM(gen_det, com_det):
 
         # Include BRAMs each all subwords
         for subword in range(gen_det.config["subwords"]):
-            print("Handling subword %i of %i"%(subword, gen_det.config["subwords"] - 1, ))
             BANK_HEAD += str(BRAM_HEAD).replace("SUBWORDNAME", str(subword))
             BANK_BODY += str(BRAM_BODY).replace("SUBWORDNAME", str(subword))
 
@@ -598,14 +631,13 @@ def gen_wordwise_block_ROM(gen_det, com_det):
             {
                 "inputs" : 2
             },
-            gen_det.output_path,
+            output_path=gen_det.output_path,
             module_name=None,
             concat_naming=False,
             force_generation=gen_det.force_generation
         )
         mux_outputs = [[]]
         for bank in range(gen_det.config["addr_banks"]):
-            print("Handling bank %i of %i"%(bank, gen_det.config["addr_banks"] - 1, ))
             com_det.arch_head += str(BANK_HEAD).replace("BANKNAME", str(bank))
             com_det.arch_body += str(BANK_BODY).replace("BANKNAME", str(bank))
 
@@ -718,7 +750,7 @@ def gen_wordwise_block_ROM(gen_det, com_det):
                     "has_enable"   : gen_det.config["stallable"],
                     "force_on_init" : False
                 },
-                gen_det.output_path,
+                output_path=gen_det.output_path,
                 module_name=None,
                 concat_naming=False,
                 force_generation=gen_det.force_generation
@@ -732,7 +764,7 @@ def gen_wordwise_block_ROM(gen_det, com_det):
                 com_det.arch_body += "port map (\n\>"
                 com_det.arch_body += "clock => clock,\n"
                 if gen_det.config["stallable"]:
-                    com_det.arch_body += "enable => not stall,\n"
+                    com_det.arch_body += "enable => not stall_in,\n"
                 com_det.arch_body += "data_in  => banks_0_to_%i_data_%i,\n"%(mux_output[1], read, )
                 com_det.arch_body += "data_out => read_%i_data\n"%(read, )
                 com_det.arch_body += "\<);\n\<\n"
@@ -881,7 +913,7 @@ def gen_RAMB18E1(gen_det, reads):
 
     BRAM_BODY += "WEA           => \"00\",\n"
     if gen_det.config["stallable"]:
-        BRAM_BODY += "ENARDEN 		=> not stall,\n"
+        BRAM_BODY += "ENARDEN 		=> not stall_in,\n"
     else:
         BRAM_BODY += "ENARDEN 		=> '1',\n"
 
@@ -906,7 +938,7 @@ def gen_RAMB18E1(gen_det, reads):
 
         BRAM_BODY += "WEBWE           => \"0000\",\n"
         if gen_det.config["stallable"]:
-            BRAM_BODY += "ENBWREN 		=> not stall,\n"
+            BRAM_BODY += "ENBWREN 		=> not stall_in,\n"
         else:
             BRAM_BODY += "ENBWREN 		=> '1',\n"
 

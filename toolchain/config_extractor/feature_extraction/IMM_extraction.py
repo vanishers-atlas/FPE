@@ -19,6 +19,7 @@ class extractor(ParseTreeListener):
     def get_updated_config(this):
         if len(this.values) > 0:
             this.config["data_memories"]["IMM"] = {}
+            this.config["data_memories"]["IMM"]["cross_lane"] = True
             this.config["data_memories"]["IMM"]["type"] = "DIST"
             this.config["data_memories"]["IMM"]["depth"] = len(this.values)
             this.config["data_memories"]["IMM"]["data_width"] = this.data_width

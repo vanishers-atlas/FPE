@@ -31,13 +31,10 @@ def extract_config(assembly_file, parameter_file, config_file):
     # Take rollcall of components used in FPE
     extractor = parameter_rollcall.extractor(program_context)
     walker.walk(extractor, program_context["program_tree"])
-    pare_from_file, para_from_context = extractor.return_findings()
+    pare_from_file = extractor.return_findings()
 
     # Handle parameters from parameter file
     config = handle_parameter_file(parameter_file, pare_from_file)
-
-    # Handle parameters from context
-    config = handle_parameter_context(program_context, para_from_context, config)
 
     # Computer widths derived from parameters
     compute_widths(config)
@@ -108,50 +105,6 @@ def check_for_none(data):
             return True
     return False
 
-##############################################################################
-
-def handle_parameter_context(program_context, para_from_context, config):
-
-    # Handle ZOLs parameters
-    for ZOL_name, details in program_context["components"]["ZOLs"].items():
-        ZOL_ctx = details["ctx"]
-        ZOL_type = details["type"]
-        given_para = details["parameters"]
-        required_para = para_from_context["ZOLs"][ZOL_name]
-
-        # Create dict in config
-        config["program_flow"]["ZOLs"][ZOL_name] = {
-            "tracker_type" : ZOL_type
-        }
-
-        # Merge in parameters
-        for para_name, para_value in given_para.items():
-            # Check parameter is required
-            if para_name in required_para.keys():
-                # handle para_value according to required_para type
-                if   required_para[para_name] == "int":
-                    config["program_flow"]["ZOLs"][ZOL_name][para_name] = int(para_value)
-                elif required_para[para_name] == "bool":
-
-                    if   type(para_value) == str and para_value.lower() == "true":
-                        config["program_flow"]["ZOLs"][ZOL_name][para_name] = True
-                    elif type(para_value) == str and para_value.lower() == "false":
-                        config["program_flow"]["ZOLs"][ZOL_name][para_name] = False
-                    else:
-                        raise ValueError("Parameter %s must be true or false, %s"%(
-                            para_name, asm_utils.ctx_start(ZOL_ctx)
-                        ))
-                else:
-                    raise TypeError("Unknown type, %s, for parameter %s"%(
-                        required_para[para_name], para_name
-                    ))
-                pass
-            else:
-                raise ValueError("Unknown parameter, %s, given in ZOL_%s declaration at %s"%(
-                    para_name, ZOL_type, asm_utils.ctx_start(ZOL_ctx)
-                ))
-
-    return config
 
 ##############################################################################
 

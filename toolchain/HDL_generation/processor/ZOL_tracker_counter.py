@@ -125,8 +125,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -135,106 +135,69 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = config
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, config)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+        # Init component_details
+        com_det = gen_utils.component_details()
 
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = {
-            "generics" : {},
-            "ports" : {
-                "clock" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                },
-                "match_found" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                },
-                "overwrites_reached" : {
-                    "type" : "std_logic",
-                    "direction" : "out",
-                },
-                "PC_running" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                }
-            },
-            "overwrites_encoding" : {
+        com_det.add_port("clock", "std_logic", "in")
+        com_det.add_port("PC_running", "std_logic", "in")
+        com_det.add_port("match_found", "std_logic", "in")
+        com_det.add_port("overwrites_reached", "std_logic", "out")
+
+        com_det.add_interface_item("overwrites_encoding",
+            {
                 "type"  : "unsigned",
-                "width" : CONFIG["bits"]
+                "width" : gen_det.config["bits"]
             }
-        }
+        )
 
         # Include required libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            },
-            {
-                "library" : "UNISIM",
-                "package" : "vcomponents",
-                "parts" : "all"
-            },
-            {
-                "library" : "ieee",
-                "package" : "numeric_std",
-                "parts"   : "all"
-            }
-        ]
-
+        com_det.add_import("ieee", "std_logic_1164", "all")
+        com_det.add_import("ieee", "numeric_std", "all")
+        com_det.add_import("UNISIM", "vcomponents", "all")
 
         # Generation Module Code
-        generate_state_machine()
-        generate_overwrites_value()
-        generate_counter_reg()
-        generate_decrementer()
-        generate_overwrites_reached()
+        generate_state_machine(gen_det, com_det)
+        generate_overwrites_value(gen_det, com_det)
+        generate_counter_reg(gen_det, com_det)
+        generate_decrementer(gen_det, com_det)
+        generate_overwrites_reached(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def generate_state_machine():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    if CONCAT_NAMING:
-        module_name = MODULE_NAME + "_FSM"
+def generate_state_machine(gen_det, com_det):
+    if gen_det.concat_naming:
+        module_name = gen_det.module_name + "_FSM"
     else:
         module_name = None
 
     sub_interface, sub_name = ZOL_setup_pulse_FSM.generate_HDL(
         {},
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=module_name,
-        concat_naming=CONCAT_NAMING,
-        force_generation=FORCE_GENERATION
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
 
     assert len(sub_interface["generics"]) == 0
-    # ARCH_BODY += "generic map ()\n"
+    # com_det.arch_body += "generic map ()\n"
 
     assert len(sub_interface["ports"]) == 5
     assert "clock" in sub_interface["ports"]
@@ -244,40 +207,27 @@ def generate_state_machine():
     assert "setup" in sub_interface["ports"]
     assert "PC_running" in sub_interface["ports"]
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    ARCH_HEAD += "signal setup : std_logic;\n"
+    com_det.arch_head += "signal setup : std_logic;\n"
 
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "match_found  => match_found,\n"
-    ARCH_BODY += "overwrites_reached => overwrites_reached_int,\n"
-    ARCH_BODY += "PC_running  => PC_running,\n"
-    ARCH_BODY += "setup  => setup\n"
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "match_found  => match_found,\n"
+    com_det.arch_body += "overwrites_reached => overwrites_reached_int,\n"
+    com_det.arch_body += "PC_running  => PC_running,\n"
+    com_det.arch_body += "setup  => setup\n"
 
-    ARCH_BODY += "\<);\n\<\n"
+    com_det.arch_body += "\<);\n\<\n"
 
 
-def generate_overwrites_value():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    if not CONFIG["settable"]:
+def generate_overwrites_value(gen_det, com_det):
+    if not gen_det.config["settable"]:
         # overwrites is fixeds therefore use generic
-        INTERFACE["generics"]["overwrites"] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["bits"],
-        }
+        com_det.add_generic("overwrites", "std_logic_vector", gen_det.config["bits"])
     else:
         # overwrites is settable therefore use registor and port
-        INTERFACE["ports"]["set_overwrites"] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["bits"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["set_enable"] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
+        com_det.add_port("set_overwrites", "std_logic_vector", "in", gen_det.config["bits"])
+        com_det.add_port("set_enable", "std_logic", "in")
 
         reg_interface, reg_name = register.generate_HDL(
             {
@@ -286,42 +236,36 @@ def generate_overwrites_value():
                 "has_enable"    : True,
                 "force_on_init" : False
             },
-            OUTPUT_PATH,
+            output_path=gen_det.output_path,
             module_name=None,
             concat_naming=False,
-            force_generation=FORCE_GENERATION
+            force_generation=gen_det.force_generation
         )
 
-        ARCH_BODY += "-- overwrites register\n"
+        com_det.arch_body += "-- overwrites register\n"
 
-        ARCH_BODY += "overwrites_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "overwrites_reg : entity work.%s(arch)\>\n"%(reg_name, )
 
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["bits"], )
+        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-        ARCH_BODY += "port map (\n\>"
+        com_det.arch_body += "port map (\n\>"
 
-        if not CONFIG["stallable"]:
-            ARCH_BODY += "enable => set_enable,\n"
+        if not gen_det.config["stallable"]:
+            com_det.arch_body += "enable => set_enable,\n"
         else:
-            ARCH_BODY += "enable => set_enable and not stall,\n"
-            INTERFACE["ports"]["stall"] = {
-                "type" : "std_logic",
-                "direction" : "in",
-            }
+            com_det.add_port("stall_in", "std_logic", "in")
+            com_det.arch_body += "enable => set_enable and not stall_in,\n"
 
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => set_overwrites,\n"
+        com_det.arch_body += "clock => clock,\n"
+        com_det.arch_body += "data_in  => set_overwrites,\n"
 
-        ARCH_HEAD += "signal overwrites : std_logic_vector(%i downto 0);\n"%(CONFIG["bits"] - 1)
-        ARCH_BODY += "data_out => overwrites\n"
+        com_det.arch_head += "signal overwrites : std_logic_vector(%i downto 0);\n"%(gen_det.config["bits"] - 1)
+        com_det.arch_body += "data_out => overwrites\n"
 
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "\<);\n\<\n"
 
 
-def generate_counter_reg():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_counter_reg(gen_det, com_det):
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force"  : False,
@@ -329,94 +273,88 @@ def generate_counter_reg():
             "has_enable"    : True,
             "force_on_init" : False
         },
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "-- counter register\n"
+    com_det.arch_body += "-- counter register\n"
 
-    ARCH_BODY += "counter_reg : entity work.%s(arch)\>\n"%(reg_name, )
+    com_det.arch_body += "counter_reg : entity work.%s(arch)\>\n"%(reg_name, )
 
-    ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["bits"], )
+    com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    ARCH_HEAD += "signal curr_count, next_count : std_logic_vector(%i downto 0);\n"%(CONFIG["bits"] - 1)
+    com_det.arch_head += "signal curr_count, next_count : std_logic_vector(%i downto 0);\n"%(gen_det.config["bits"] - 1)
 
-    ARCH_BODY += "clock => clock,\n"
-    if not CONFIG["settable"]:
-        ARCH_BODY += "enable => match_found or setup,\n"
+    com_det.arch_body += "clock => clock,\n"
+    if not gen_det.config["settable"]:
+        com_det.arch_body += "enable => match_found or setup,\n"
     else:
-        ARCH_BODY += "enable => match_found or setup or set_enable,\n"
-    ARCH_BODY += "data_in  => next_count,\n"
-    ARCH_BODY += "data_out => curr_count\n"
+        com_det.arch_body += "enable => match_found or setup or set_enable,\n"
+    com_det.arch_body += "data_in  => next_count,\n"
+    com_det.arch_body += "data_out => curr_count\n"
 
-    ARCH_BODY += "\<);\n\<\n"
+    com_det.arch_body += "\<);\n\<\n"
 
     mux_interface, mux_name = mux.generate_HDL(
         {
             "inputs"  : 2,
         },
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "-- Mux next_count\n"
+    com_det.arch_body += "-- Mux next_count\n"
 
-    ARCH_BODY += "next_count_mux : entity work.%s(arch)\>\n"%(mux_name, )
+    com_det.arch_body += "next_count_mux : entity work.%s(arch)\>\n"%(mux_name, )
 
-    ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["bits"], )
+    com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    ARCH_BODY += "sel(0)    => setup,\n"
-    ARCH_BODY += "data_in_0 => decremented_count,\n"
-    ARCH_BODY += "data_in_1 => overwrites,\n"
-    if not CONFIG["settable"]:
-        ARCH_BODY += "data_out  => next_count\n"
+    com_det.arch_body += "sel(0)    => setup,\n"
+    com_det.arch_body += "data_in_0 => decremented_count,\n"
+    com_det.arch_body += "data_in_1 => overwrites,\n"
+    if not gen_det.config["settable"]:
+        com_det.arch_body += "data_out  => next_count\n"
     else:
-        ARCH_HEAD += "signal next_count_int : std_logic_vector(%i downto 0);\n"%(CONFIG["bits"] - 1)
+        com_det.arch_head += "signal next_count_int : std_logic_vector(%i downto 0);\n"%(gen_det.config["bits"] - 1)
 
-        ARCH_BODY += "data_out  => next_count_int\n"
+        com_det.arch_body += "data_out  => next_count_int\n"
 
-    ARCH_BODY += "\<);\n\<\n"
+    com_det.arch_body += "\<);\n\<\n"
 
-    if CONFIG["settable"]:
-        ARCH_BODY += "next_count_int_mux : entity work.%s(arch)\>\n"%(mux_name, )
+    if gen_det.config["settable"]:
+        com_det.arch_body += "next_count_int_mux : entity work.%s(arch)\>\n"%(mux_name, )
 
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["bits"], )
+        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-        ARCH_BODY += "port map (\n\>"
+        com_det.arch_body += "port map (\n\>"
 
-        ARCH_BODY += "sel(0)    => set_enable,\n"
-        ARCH_BODY += "data_in_0 => next_count_int,\n"
-        ARCH_BODY += "data_in_1 => set_overwrites,\n"
-        ARCH_BODY += "data_out  => next_count\n"
+        com_det.arch_body += "sel(0)    => set_enable,\n"
+        com_det.arch_body += "data_in_0 => next_count_int,\n"
+        com_det.arch_body += "data_in_1 => set_overwrites,\n"
+        com_det.arch_body += "data_out  => next_count\n"
 
-        ARCH_BODY += "\<);\n\<\n"
-
-
+        com_det.arch_body += "\<);\n\<\n"
 
 
-def generate_decrementer():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    ARCH_BODY += "-- decrementer\n"
-    ARCH_HEAD += "signal decremented_count  : std_logic_vector(%i downto 0);\n"%(CONFIG["bits"] - 1, )
-    ARCH_BODY += "decremented_count <= std_logic_vector(to_unsigned(to_integer(unsigned(curr_count)) - 1, %i));\n\n"%(CONFIG["bits"], )
 
 
-def generate_overwrites_reached():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+def generate_decrementer(gen_det, com_det):
+    com_det.arch_body += "-- decrementer\n"
+    com_det.arch_head += "signal decremented_count  : std_logic_vector(%i downto 0);\n"%(gen_det.config["bits"] - 1, )
+    com_det.arch_body += "decremented_count <= std_logic_vector(to_unsigned(to_integer(unsigned(curr_count)) - 1, %i));\n\n"%(gen_det.config["bits"], )
 
-    ARCH_BODY += "-- Generate overwrites_reached\n"
-    ARCH_HEAD += "signal overwrites_reached_int : std_logic;\n"
 
-    ARCH_BODY += "overwrites_reached_int <= '1' when to_integer(unsigned(curr_count)) = 0 else '0';\n\n"
-    ARCH_BODY += "overwrites_reached <=  overwrites_reached_int;\n"
+def generate_overwrites_reached(gen_det, com_det):
+    com_det.arch_body += "-- Generate overwrites_reached\n"
+    com_det.arch_head += "signal overwrites_reached_int : std_logic;\n"
+
+    com_det.arch_body += "overwrites_reached_int <= '1' when to_integer(unsigned(curr_count)) = 0 else '0';\n\n"
+    com_det.arch_body += "overwrites_reached <=  overwrites_reached_int;\n"

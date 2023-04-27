@@ -1,0 +1,53 @@
+{
+  XOR (REG[0], REG[0], REG[0]);
+  MOV (ACC, REG[1]);
+  MOV (ACC, REG[2]);
+  MOV (ACC, REG[3]);
+  MOV (ACC, REG[4]);
+  MOV (ACC, REG[5]);
+  MOV (ACC, REG[6]);
+  MOV (ACC, REG[7]);
+  NOT (REG[0], REG[8]);
+  MOV (ACC, REG[ 9]);
+  MOV (ACC, REG[10]);
+  MOV (ACC, REG[11]);
+  MOV (ACC, REG[12]);
+  MOV (ACC, REG[13]);
+  MOV (ACC, REG[14]);
+  MOV (ACC, REG[15]);
+
+  NOT (REG[0], PUT[0]);
+  NOT (REG[1], PUT[0]);
+  NOT (REG[8], PUT[0]);
+  NOT (REG[9], PUT[0]);
+
+  AND  (REG[0], REG[ 8], PUT[0]);
+  AND  (REG[1], REG[ 8], PUT[0]);
+  AND  (REG[2], REG[10], PUT[0]);
+  AND  (REG[3], REG[11], PUT[0]);
+
+  NAND (REG[4], REG[12], PUT[0]);
+  NAND (REG[5], REG[13], PUT[0]);
+  NAND (REG[6], REG[14}, PUT[0]);
+  NAND (REG[7}, REG[15}, PUT[0]);
+
+  OR  (REG[0], REG[ 8], PUT[0]);
+  OR  (REG[1], REG[ 8], PUT[0]);
+  OR  (REG[2], REG[10], PUT[0]);
+  OR  (REG[3], REG[11], PUT[0]);
+
+  NOR (REG[4], REG[12], PUT[0]);
+  NOR (REG[5], REG[13], PUT[0]);
+  NOR (REG[6], REG[14}, PUT[0]);
+  NOR (REG[7}, REG[15}, PUT[0]);
+
+  XOR  (REG[0], REG[ 8], PUT[0]);
+  XOR  (REG[1], REG[ 8], PUT[0]);
+  XOR  (REG[2], REG[10], PUT[0]);
+  XOR  (REG[3], REG[11], PUT[0]);
+
+  NXOR (REG[4], REG[12], PUT[0]);
+  NXOR (REG[5], REG[13], PUT[0]);
+  NXOR (REG[6], REG[14}, PUT[0]);
+  NXOR (REG[7}, REG[15}, PUT[0]);
+}

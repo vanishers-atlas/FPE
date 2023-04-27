@@ -208,11 +208,16 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 def gen_common_ports(gen_det, com_det):
     com_det.add_port("clock", "std_logic", "in")
     if gen_det.config["stallable"]:
-        com_det.add_port("stall", "std_logic", "in")
+        com_det.add_port("stall_in", "std_logic", "in")
+        com_det.arch_head += "signal stall : std_logic;\n"
+        com_det.arch_body += "stall <= stall_in;\n"
 
 #####################################################################
 
-packer_fanin_signals = ["clock", "stall"]
+packer_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 packer_ripple_up_signals = [
     ( re.compile("fetched_(\d+)_word_(\d+)"), lambda m : "packer_fetched_%s_word_%s"%(m.group(1), m.group(2), ) ),
     ( re.compile("input_(\d+)_(\d+)_source_sel"), lambda m : "packer_input_%s_%s_source_sel"%(m.group(1), m.group(2), ) ),
@@ -234,8 +239,8 @@ def gen_packer(gen_det, com_det):
         module_name = None
 
     sub_interface, sub_name = ALU_packer.generate_HDL(
-        gen_det.config["packer"],
-        gen_det.output_path,
+        config=gen_det.config["packer"],
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -247,22 +252,16 @@ def gen_packer(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
 
     # Handle fanin signals
-    for signal in packer_fanin_signals:
-        if signal in sub_interface["ports"]:
-            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+    for port, signal in packer_fanin_signals.items():
+        if port in sub_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(port, signal)
 
     # Handle ripple up signals
     for rule, transform in packer_ripple_up_signals:
         for port in sub_interface["ports"].keys():
             match = rule.fullmatch(port)
             if match:
-                details = sub_interface["ports"][port]
-
-                try:
-                    com_det.add_port(transform(match), "std_logic_vector", details["direction"], details["width"])
-                except KeyError:
-                    com_det.add_port(transform(match), "std_logic", details["direction"])
-
+                com_det.ripple_port(transform(match), sub_interface["ports"][port])
                 com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
     # Handle internal inputs
@@ -299,7 +298,10 @@ def gen_packer(gen_det, com_det):
 
 #####################################################################
 
-core_fanin_signals = ["clock", "stall"]
+core_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 core_ripple_up_signals = [
     ( re.compile("acc_enable")      , lambda m : "core_acc_enable" ),
     ( re.compile("update_statuses") , lambda m : "core_update_statuses" ),
@@ -329,8 +331,8 @@ def gen_core(gen_det, com_det):
         module_name = None
 
     sub_interface, sub_name = core_module_LUT[gen_det.config["core_type"]].generate_HDL(
-        gen_det.config["core"],
-        gen_det.output_path,
+        config=gen_det.config["core"],
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -342,22 +344,16 @@ def gen_core(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
 
     # Handle fanin signals
-    for signal in core_fanin_signals:
-        if signal in sub_interface["ports"]:
-            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+    for port, signal in packer_fanin_signals.items():
+        if port in sub_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(port, signal)
 
     # Handle ripple up signals
     for rule, transform in core_ripple_up_signals:
         for port in sub_interface["ports"].keys():
             match = rule.fullmatch(port)
             if match:
-                details = sub_interface["ports"][port]
-
-                try:
-                    com_det.add_port(transform(match), "std_logic_vector", details["direction"], details["width"])
-                except KeyError:
-                    com_det.add_port(transform(match), "std_logic", details["direction"])
-
+                com_det.ripple_port(transform(match), sub_interface["ports"][port])
                 com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
     # Handle internal inputs
@@ -394,7 +390,10 @@ def gen_core(gen_det, com_det):
 
 #####################################################################
 
-unpacker_fanin_signals = ["clock", "stall", ]
+unpacker_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 unpacker_ripple_up_signals = [
     ( re.compile("enable"), lambda m : "unpacker_enable" ),
     ( re.compile("stored_(\d+)_word_(\d+)"), lambda m : "result_%s_word_%s"%(m.group(1), m.group(2), ) ),
@@ -414,8 +413,8 @@ def gen_unpacker(gen_det, com_det):
         module_name = None
 
     sub_interface, sub_name = ALU_unpacker.generate_HDL(
-        gen_det.config["unpacker"],
-        gen_det.output_path,
+        config=gen_det.config["unpacker"],
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -427,22 +426,16 @@ def gen_unpacker(gen_det, com_det):
     com_det.arch_body += "port map (\n\>"
 
     # Handle fanin signals
-    for signal in unpacker_fanin_signals:
-        if signal in sub_interface["ports"]:
-            com_det.arch_body += "%s => %s,\n"%(signal, signal)
+    for port, signal in packer_fanin_signals.items():
+        if port in sub_interface["ports"]:
+            com_det.arch_body += "%s => %s,\n"%(port, signal)
 
     # Handle ripple up signals
     for rule, transform in unpacker_ripple_up_signals:
         for port in sub_interface["ports"].keys():
             match = rule.fullmatch(port)
             if match:
-                details = sub_interface["ports"][port]
-
-                try:
-                    com_det.add_port(transform(match), "std_logic_vector", details["direction"], details["width"])
-                except KeyError:
-                    com_det.add_port(transform(match), "std_logic", details["direction"])
-
+                com_det.ripple_port(transform(match), sub_interface["ports"][port])
                 com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
     # Handle internal inputs
@@ -473,7 +466,10 @@ def gen_unpacker(gen_det, com_det):
 
 #####################################################################
 
-shifter_fanin_signals = ["clock", "stall", ]
+shifter_fanin_signals = {
+    "clock" : "clock",
+    "stall_in" : "stall"
+}
 shifter_ripple_up_signals = [
     ( re.compile("fetched_word_(\d+)"), lambda m : "shifter_fetched_word_%s"%(m.group(1), ) ),
     ( re.compile("word_(\d+)_operand_sel"), lambda m : "shifter_word_%s_operand_sel"%(m.group(1), ) ),
@@ -494,8 +490,8 @@ def gen_shifter(gen_det, com_det):
             module_name = None
 
         sub_interface, sub_name = ALU_shifter.generate_HDL(
-            gen_det.config["shifter"],
-            gen_det.output_path,
+            config=gen_det.config["shifter"],
+            output_path=gen_det.output_path,
             module_name=module_name,
             concat_naming=gen_det.concat_naming,
             force_generation=gen_det.force_generation
@@ -507,22 +503,16 @@ def gen_shifter(gen_det, com_det):
         com_det.arch_body += "port map (\n\>"
 
         # Handle fanin signals
-        for signal in shifter_fanin_signals:
-            if signal in sub_interface["ports"]:
-                com_det.arch_body += "%s => %s,\n"%(signal, signal)
+        for port, signal in packer_fanin_signals.items():
+            if port in sub_interface["ports"]:
+                com_det.arch_body += "%s => %s,\n"%(port, signal)
 
         # Handle ripple up signals
         for rule, transform in shifter_ripple_up_signals:
             for port in sub_interface["ports"].keys():
                 match = rule.fullmatch(port)
                 if match:
-                    details = sub_interface["ports"][port]
-
-                    try:
-                        com_det.add_port(transform(match), "std_logic_vector", details["direction"], details["width"])
-                    except KeyError:
-                        com_det.add_port(transform(match), "std_logic", details["direction"])
-
+                    com_det.ripple_port(transform(match), sub_interface["ports"][port])
                     com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
         # Handle internal inputs

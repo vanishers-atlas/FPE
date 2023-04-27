@@ -1,0 +1,38 @@
+{
+    "SIMD": {
+        "force_lanes": false,
+        "lanes": 1
+    },
+    "address_sources": {},
+    "data_memories": {
+        "GET": {
+            "FIFO_handshakes": false,
+            "FIFOs": 1,
+            "cross_lane": false,
+            "data_width": 16
+        },
+        "PUT": {
+            "FIFO_handshakes": false,
+            "FIFOs": 1,
+            "cross_lane": false,
+            "data_width": 16
+        },
+        "REG": {
+            "cross_lane": false,
+            "data_width": 16,
+            "depth": 16
+        }
+    },
+    "execute_units": {
+        "ALU": {
+            "data_width": 16
+        }
+    },
+    "external_stall": false,
+    "instr_decoder": {},
+    "program_flow": {
+        "ZOLs": {}
+    },
+    "report_stall": false,
+    "signal_padding": "unsigned"
+}

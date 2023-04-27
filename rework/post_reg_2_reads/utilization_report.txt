@@ -1,0 +1,38 @@
++---------------------------------------+-------------------------------------+------------+------------+---------+------+-----+--------+--------+------------+
+|                Instance               |                Module               | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
++---------------------------------------+-------------------------------------+------------+------------+---------+------+-----+--------+--------+------------+
+| test_FPE_inst                         |                               (top) |         51 |         26 |      24 |    1 | 111 |      0 |      0 |          1 |
+|   (test_FPE_inst)                     |                               (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          0 |
+|   test_FPE_inst                       |                            test_FPE |         51 |         26 |      24 |    1 | 111 |      0 |      0 |          1 |
+|     ALU                               |                        test_FPE_ALU |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          1 |
+|       core                            |                   test_FPE_ALU_core |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          1 |
+|     ID                                |                         test_FPE_ID |          5 |          5 |       0 |    0 |  42 |      0 |      0 |          0 |
+|       (ID)                            |                         test_FPE_ID |          1 |          1 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       ALU_core_ALU_mode_buffer        |   register_no_force__parameterized1 |          0 |          0 |       0 |    0 |   4 |      0 |      0 |          0 |
+|       ALU_core_op_mode_buffer         |   register_no_force__parameterized2 |          0 |          0 |       0 |    0 |   2 |      0 |      0 |          0 |
+|       PUT_write_0_enable_buffer       | register_no_force__parameterized0_4 |          0 |          0 |       0 |    0 |   1 |      0 |      0 |          0 |
+|       REG_write_0_addr_mux_sel_buffer |   register_no_force__parameterized3 |          0 |          0 |       0 |    0 |   2 |      0 |      0 |          0 |
+|       REG_write_0_enable_buffer       | register_no_force__parameterized0_5 |          0 |          0 |       0 |    0 |   1 |      0 |      0 |          0 |
+|       exe_instr_delay                 |        delay_16w_1d_noenable_noinit |          2 |          2 |       0 |    0 |  12 |      0 |      0 |          0 |
+|         delay_reg                     |                register_no_force_10 |          2 |          2 |       0 |    0 |  12 |      0 |      0 |          0 |
+|       fetch_instr_delay               |      delay_16w_1d_noenable_noinit_6 |          2 |          2 |       0 |    0 |  12 |      0 |      0 |          0 |
+|         delay_reg                     |                 register_no_force_9 |          2 |          2 |       0 |    0 |  12 |      0 |      0 |          0 |
+|       store_instr_delay               |      delay_16w_1d_noenable_noinit_7 |          0 |          0 |       0 |    0 |   8 |      0 |      0 |          0 |
+|         delay_reg                     |                 register_no_force_8 |          0 |          0 |       0 |    0 |   8 |      0 |      0 |          0 |
+|     PC                                |                         test_FPE_PC |         13 |         13 |       0 |    0 |   7 |      0 |      0 |          0 |
+|       running_FF                      |                         RS_flipflop |          1 |          1 |       0 |    0 |   1 |      0 |      0 |          0 |
+|       value_reg                       |   register_inited_enable_sync_force |         12 |         12 |       0 |    0 |   6 |      0 |      0 |          0 |
+|     PM                                |                         test_FPE_PM |          3 |          3 |       0 |    0 |  12 |      0 |      0 |          0 |
+|       dist_ROM                        |              dist_ROM_64d_1r_SA_MIF |          3 |          3 |       0 |    0 |  12 |      0 |      0 |          0 |
+|     PUT                               |                        test_FPE_PUT |          0 |          0 |       0 |    0 |  17 |      0 |      0 |          0 |
+|       FIFO_0_data_buffer              |                 register_no_force_3 |          0 |          0 |       0 |    0 |  16 |      0 |      0 |          0 |
+|       FIFO_0_write_buffer             |   register_no_force__parameterized0 |          0 |          0 |       0 |    0 |   1 |      0 |      0 |          0 |
+|     REG                               |                        test_FPE_REG |         24 |          0 |      24 |    0 |  32 |      0 |      0 |          0 |
+|       RAM_core                        |                dist_RAM_16d_QUAD_AA |         24 |          0 |      24 |    0 |   0 |      0 |      0 |          0 |
+|       read_0_buffer                   |                   register_no_force |          0 |          0 |       0 |    0 |  16 |      0 |      0 |          0 |
+|       read_1_buffer                   |                 register_no_force_2 |          0 |          0 |       0 |    0 |  16 |      0 |      0 |          0 |
+|     REG_write_0_addr_mux              |                               mux_4 |          4 |          4 |       0 |    0 |   0 |      0 |      0 |          0 |
+|     running_delay_2                   |           delay_1w_1d_noenable_init |          1 |          0 |       0 |    1 |   0 |      0 |      0 |          0 |
+|       delay_reg                       |          register_inited_no_force_1 |          1 |          0 |       0 |    1 |   0 |      0 |      0 |          0 |
+|     running_delay_3                   |         delay_1w_1d_noenable_init_0 |          1 |          1 |       0 |    0 |   1 |      0 |      0 |          0 |
+|       delay_reg                       |            register_inited_no_force |          1 |          1 |       0 |    0 |   1 |      0 |      0 |          0 |

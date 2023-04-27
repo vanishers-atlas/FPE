@@ -9,16 +9,17 @@ import os
 from FPE.toolchain.tests import utils
 
 if __name__ == "__main__":
-    import UNSIGNED
-    import SIGNED
+    import passthrough
+    import DSP48E1
 else:
-    from . import UNSIGNED
-    from . import SIGNED
+    from . import passthrough
+    from . import DSP48E1
 
 
 test_sets = [
-    UNSIGNED,
-    SIGNED,
+    passthrough,
+
+    DSP48E1,
 ]
 
 

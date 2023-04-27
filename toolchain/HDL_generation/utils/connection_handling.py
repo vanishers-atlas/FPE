@@ -29,4 +29,3 @@ def connect_signals(src, src_width, dst_width, signal_padding):
         )
     else:
         raise ValueError("%s not supported" %(signal_padding))
-    

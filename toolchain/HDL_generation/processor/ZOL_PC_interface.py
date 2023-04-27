@@ -108,8 +108,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -118,110 +118,65 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = config
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, config)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = {
-            "ports" : { },
-            "generics" : { },
-        }
+        # Init component_details
+        com_det = gen_utils.component_details()
 
         # Include extremely commom libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            }
-        ]
+        com_det.add_import("ieee", "std_logic_1164", "all")
 
         # Include stall port if needed
-        if CONFIG["stallable"]:
-            INTERFACE["ports"]["stall"] = {
-                "type" : "std_logic",
-                "direction" : "in"
-            }
+        if gen_det.config["stallable"]:
+            com_det.add_port("stall_in", "std_logic", "in")
+            com_det.arch_head += "signal stall : std_logic;\n"
+            com_det.arch_body += "stall <= stall_in;\n"
 
 
         # Generation Module Code
-        generate_check_and_overwrite_values()
-        generate_PC_check_handling()
-        generate_overwrite_handling()
+        generate_check_and_overwrite_values(gen_det, com_det)
+        generate_PC_check_handling(gen_det, com_det)
+        generate_overwrite_handling(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def generate_check_and_overwrite_values():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_check_and_overwrite_values(gen_det, com_det):
     # Declare internal check and overwrite values
-    ARCH_HEAD += "signal check_value_int : std_logic_vector(%i downto 0);\n"%(CONFIG["PC_width"] - 1, )
-    ARCH_HEAD += "signal overwrite_value_int : std_logic_vector(%i downto 0);\n"%(CONFIG["PC_width"] - 1, )
+    com_det.arch_head += "signal check_value_int : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
+    com_det.arch_head += "signal overwrite_value_int : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
 
-    if not CONFIG["seekable"]:
+    if not gen_det.config["seekable"]:
         # ZOL is not seekable ie check/overwrite values are fixed, therefore use generics
-        INTERFACE["generics"]["check_value"] = {
-            "type" : "integer",
-        }
-        INTERFACE["generics"]["overwrite_value"] = {
-            "type" : "integer",
-        }
-
+        com_det.add_generic("check_value", "integer")
+        com_det.add_generic("overwrite_value", "integer")
 
         # Import to_unsigned funtions
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "numeric_std",
-                "parts" : "all"
-            }
-        ]
+        com_det.add_import("ieee", "numeric_std", "all")
 
-        ARCH_BODY += "-- Convert generics to std_logic_vectors\n"
-        ARCH_BODY += "check_value_int <=  std_logic_vector(to_unsigned(check_value, %i));\n"%(CONFIG["PC_width"], )
-        ARCH_BODY += "overwrite_value_int <=  std_logic_vector(to_unsigned(overwrite_value, %i));\n\n"%(CONFIG["PC_width"], )
+        com_det.arch_body += "-- Convert generics to std_logic_vectors\n"
+        com_det.arch_body += "check_value_int <=  std_logic_vector(to_unsigned(check_value, %i));\n"%(gen_det.config["PC_width"], )
+        com_det.arch_body += "overwrite_value_int <=  std_logic_vector(to_unsigned(overwrite_value, %i));\n\n"%(gen_det.config["PC_width"], )
     else:
         # ZOL is seekable ie check/overwrite values are variable, therefore use registors and ports
 
-        INTERFACE["ports"]["clock"] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["seek_check_value"] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["PC_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["seek_overwrite_value"] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["PC_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["seek_enable"] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
+        com_det.add_port("clock", "std_logic", "in")
+        com_det.add_port("seek_check_value", "std_logic_vector", "in", gen_det.config["PC_width"])
+        com_det.add_port("seek_overwrite_value", "std_logic_vector", "in", gen_det.config["PC_width"])
+        com_det.add_port("seek_enable", "std_logic", "in")
 
         reg_interface, reg_name = register.generate_HDL(
             {
@@ -230,114 +185,88 @@ def generate_check_and_overwrite_values():
                 "has_enable"    : True,
                 "force_on_init" : True
             },
-            OUTPUT_PATH,
+            output_path=gen_det.output_path,
             module_name=None,
             concat_naming=False,
-            force_generation=FORCE_GENERATION
+            force_generation=gen_det.force_generation
         )
 
-        ARCH_BODY += "-- Register check_value\n"
+        com_det.arch_body += "-- Register check_value\n"
 
-        ARCH_BODY += "check_value_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "check_value_reg : entity work.%s(arch)\>\n"%(reg_name, )
 
-        ARCH_BODY += "generic map (\>\n"
-        ARCH_BODY += "data_width => %i,\n"%(CONFIG["PC_width"], )
-        ARCH_BODY += "force_value => %i\n"%(2**CONFIG["PC_width"] - 1, )
-        ARCH_BODY += "\<\n)\n"
+        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "data_width => %i,\n"%(gen_det.config["PC_width"], )
+        com_det.arch_body += "force_value => %i\n"%(2**gen_det.config["PC_width"] - 1, )
+        com_det.arch_body += "\<\n)\n"
 
-        ARCH_BODY += "port map (\n\>"
+        com_det.arch_body += "port map (\n\>"
 
-        if not CONFIG["stallable"]:
-            ARCH_BODY += "enable => seek_enable,\n"
+        if not gen_det.config["stallable"]:
+            com_det.arch_body += "enable => seek_enable,\n"
         else:
-            ARCH_BODY += "enable => seek_enable and not stall,\n"
+            com_det.arch_body += "enable => seek_enable and not stall,\n"
 
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => seek_check_value,\n"
-        ARCH_BODY += "data_out => check_value_int\n"
+        com_det.arch_body += "clock => clock,\n"
+        com_det.arch_body += "data_in  => seek_check_value,\n"
+        com_det.arch_body += "data_out => check_value_int\n"
 
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "\<);\n\<\n"
 
 
-        ARCH_BODY += "-- Register overwrite_value\n"
+        com_det.arch_body += "-- Register overwrite_value\n"
 
-        ARCH_BODY += "overwrite_value_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "overwrite_value_reg : entity work.%s(arch)\>\n"%(reg_name, )
 
-        ARCH_BODY += "generic map (\>\n"
-        ARCH_BODY += "data_width => %i,\n"%(CONFIG["PC_width"], )
-        ARCH_BODY += "force_value => %i\n"%(2**CONFIG["PC_width"] - 1, )
-        ARCH_BODY += "\<\n)\n"
+        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "data_width => %i,\n"%(gen_det.config["PC_width"], )
+        com_det.arch_body += "force_value => %i\n"%(2**gen_det.config["PC_width"] - 1, )
+        com_det.arch_body += "\<\n)\n"
 
-        ARCH_BODY += "port map (\n\>"
+        com_det.arch_body += "port map (\n\>"
 
-        if not CONFIG["stallable"]:
-            ARCH_BODY += "enable => seek_enable,\n"
+        if not gen_det.config["stallable"]:
+            com_det.arch_body += "enable => seek_enable,\n"
         else:
-            ARCH_BODY += "enable => seek_enable and not stall,\n"
+            com_det.arch_body += "enable => seek_enable and not stall,\n"
 
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => seek_overwrite_value,\n"
-        ARCH_BODY += "data_out => overwrite_value_int\n"
+        com_det.arch_body += "clock => clock,\n"
+        com_det.arch_body += "data_in  => seek_overwrite_value,\n"
+        com_det.arch_body += "data_out => overwrite_value_int\n"
 
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "\<);\n\<\n"
 
 
-def generate_PC_check_handling():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_PC_check_handling(gen_det, com_det):
     # Declare ports for PC checking
-    INTERFACE["ports"]["PC_value"] = {
-        "type" : "std_logic_vector",
-        "width": CONFIG["PC_width"],
-        "direction" : "in",
-    }
-    INTERFACE["ports"]["PC_running"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
-    INTERFACE["ports"]["match_found"] = {
-        "type" : "std_logic",
-        "direction" : "out",
-    }
+    com_det.add_port("PC_value", "std_logic_vector", "in", gen_det.config["PC_width"])
+    com_det.add_port("PC_running", "std_logic", "in")
+    com_det.add_port("match_found", "std_logic", "out")
 
-    ARCH_BODY += "-- Check if PC matches end Value\n"
-    ARCH_HEAD += "signal PC_equality_result : std_logic;\n"
-    ARCH_HEAD += "signal match_found_int : std_logic;\n"
+    com_det.arch_body += "-- Check if PC matches end Value\n"
+    com_det.arch_head += "signal PC_equality_result : std_logic;\n"
+    com_det.arch_head += "signal match_found_int : std_logic;\n"
 
-    ARCH_BODY += "PC_equality_result <= '1' when PC_value = check_value_int else '0';\n"
+    com_det.arch_body += "PC_equality_result <= '1' when PC_value = check_value_int else '0';\n"
 
-    if not CONFIG["stallable"]:
-        ARCH_BODY += "match_found_int <= PC_running and PC_equality_result;\n"
+    if not gen_det.config["stallable"]:
+        com_det.arch_body += "match_found_int <= PC_running and PC_equality_result;\n"
     else:
-        ARCH_BODY += "match_found_int <= '1' when PC_running and PC_equality_result and not stall;\n"
-    ARCH_BODY += "match_found <= match_found_int;\n"
+        com_det.arch_body += "match_found_int <= PC_running and PC_equality_result and not stall;\n"
+    com_det.arch_body += "match_found <= match_found_int;\n"
 
 
-def generate_overwrite_handling():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_overwrite_handling(gen_det, com_det):
     # Handle PC_overwrite
-    INTERFACE["ports"]["overwrite_PC_value"] = {
-        "type" : "std_logic_vector",
-        "width": CONFIG["PC_width"],
-        "direction" : "out",
-    }
-    INTERFACE["ports"]["overwrite_PC_enable"] = {
-        "type" : "std_logic",
-        "direction" : "out",
-    }
-    INTERFACE["ports"]["overwrites_reached"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
+    com_det.add_port("overwrite_PC_value", "std_logic_vector", "out", gen_det.config["PC_width"])
+    com_det.add_port("overwrite_PC_enable", "std_logic", "out")
+    com_det.add_port("overwrites_reached", "std_logic", "in")
 
     # Handle PC overwriting
-    ARCH_HEAD += "signal overwrite_int : std_logic;\n\n"
+    com_det.arch_head += "signal overwrite_int : std_logic;\n\n"
 
-    ARCH_BODY += "-- Compute  overwriting of PC\n"
-    ARCH_BODY += "overwrite_int <= match_found_int and not overwrites_reached;\n"
-    ARCH_BODY += "overwrite_PC_enable <= overwrite_int;\n\n"
+    com_det.arch_body += "-- Compute  overwriting of PC\n"
+    com_det.arch_body += "overwrite_int <= match_found_int and not overwrites_reached;\n"
+    com_det.arch_body += "overwrite_PC_enable <= overwrite_int;\n\n"
 
-    ARCH_BODY += "overwrite_PC_value <= overwrite_value_int;\n\n"
+    com_det.arch_body += "overwrite_PC_value <= overwrite_value_int;\n\n"

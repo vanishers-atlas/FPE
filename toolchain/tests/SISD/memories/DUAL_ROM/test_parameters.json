@@ -1,0 +1,34 @@
+{
+    "report_stall": false,
+    "external_stall": false,
+
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "data_memories": {
+        "PUT": {
+            "FIFOs": 1,
+            "FIFO_handshakes": false,
+            "data_width": 4
+        },
+        "ROM_A": {
+            "data_width": 4,
+            "depth": 16,
+            "type": "DIST"
+        },
+        "ROM_B": {
+            "data_width": 3,
+            "depth": 8,
+            "type": "DIST"
+        }
+    },
+    
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    },
+
+    "signal_padding": "unsigned"
+}

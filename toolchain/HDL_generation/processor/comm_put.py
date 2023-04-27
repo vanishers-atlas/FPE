@@ -148,8 +148,7 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -158,273 +157,212 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = preprocess_config(config)
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
     # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = { "ports" : {}, "generics" : {} }
+        # Init component_details
+        com_det = gen_utils.component_details()
 
         # Include extremely commom libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            }
-        ]
+        com_det.add_import("ieee", "std_logic_1164", "all")
 
         # Generation Module Code
-        gen_ports()
-        gen_stalling_logic()
-        gen_FIFO_data_logic()
-        gen_FIFO_write_logic()
+        gen_ports(gen_det, com_det)
+        gen_stalling_logic(gen_det, com_det)
+        gen_FIFO_data_logic(gen_det, com_det)
+        gen_FIFO_write_logic(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def gen_ports():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def gen_ports(gen_det, com_det):
     # Decalre clock and runnning ports
-    INTERFACE["ports"]["clock"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
-    INTERFACE["ports"]["running"] = {
-        "type" : "std_logic",
-        "direction" : "in",
-    }
+    com_det.add_port("clock", "std_logic", "in")
+    com_det.add_port("running", "std_logic", "in")
 
     # Handle FIFO ports
-    for FIFO in range(CONFIG["FIFOs"]):
-        INTERFACE["ports"]["FIFO_%i_data"%(FIFO, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["data_width"],
-            "direction" : "out"
-        }
-        INTERFACE["ports"]["FIFO_%i_write"%(FIFO, )] = {
-            "type" : "std_logic",
-            "direction" : "out"
-        }
-        if CONFIG["FIFO_handshakes"]:
-            INTERFACE["ports"]["FIFO_%i_ready"%(FIFO, )] = {
-                "type" : "std_logic",
-                "direction" : "in"
-            }
+    for FIFO in range(gen_det.config["FIFOs"]):
+        com_det.add_port("FIFO_%i_data"%(FIFO, ), "std_logic_vector", "out", gen_det.config["data_width"])
+        com_det.add_port("FIFO_%i_write"%(FIFO, ), "std_logic", "out")
+
+        if gen_det.config["FIFO_handshakes"]:
+            com_det.add_port("FIFO_%i_ready"%(FIFO, ), "std_logic", "in")
 
     # Handle read ports
-    for write in range(CONFIG["writes"]):
-        INTERFACE["ports"]["write_%i_addr"%(write, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["addr_width"],
-            "direction" : "in",
-        }
-        INTERFACE["ports"]["write_%i_data"%(write, )] = {
-            "type" : "std_logic_vector",
-            "width": CONFIG["data_width"],
-            "direction" : "in"
-        }
-        INTERFACE["ports"]["write_%i_enable"%(write, )] = {
-            "type" : "std_logic",
-            "direction" : "in"
-        }
+    for write in range(gen_det.config["writes"]):
+        com_det.add_port("write_%i_addr"%(write, ), "std_logic_vector", "in", gen_det.config["addr_width"])
+        com_det.add_port("write_%i_data"%(write, ), "std_logic_vector", "in", gen_det.config["data_width"])
+        com_det.add_port("write_%i_enable"%(write, ), "std_logic", "in")
 
     # Handle stalling ports
-    if   CONFIG["stall_type"] == "ACTIVE":
-        INTERFACE["ports"]["stall"] = {
-            "name" : "stall",
-            "type" : "std_logic",
-            "direction" : "inout"
-        }
-    elif CONFIG["stall_type"] == "PASSIVE":
-        INTERFACE["ports"]["stall"] = {
-            "type" : "std_logic",
-            "direction" : "in"
-        }
+    if gen_det.config["stall_type"] != "NONE":
+        com_det.add_port("stall_in", "std_logic", "in")
 
-def gen_stalling_logic():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+    if   gen_det.config["stall_type"] == "ACTIVE":
+        com_det.add_port("stall_out", "std_logic", "out")
 
-    # Handle FIFO_handshakes stall checking
-    if CONFIG["FIFO_handshakes"] :
-        ARCH_BODY += "\n-- FIFO_handshakes stall logic\n"
 
-        ARCH_HEAD += "signal FIFO_handshake_stall : std_logic;\n"
-        ARCH_BODY += "stall <= '1' when FIFO_handshake_stall = '1' else 'L';\n"
+def gen_stalling_logic(gen_det, com_det):
+    if gen_det.config["stall_type"] != "NONE":
+        com_det.arch_head += "signal stall : std_logic;\n"
 
-        if CONFIG["FIFOs"] == 1:
-            # This code may need reworking, depending on how vivado handles many termed logic expressions
-            ARCH_BODY += "FIFO_handshake_stall <= %s;\n"%(
-                " or ".join([
-                    "(write_%i_enable and not FIFO_0_ready)"%(i, )
-                    for i in range(CONFIG["writes"])
-                ]),
-            )
-        else:#CONFIG["FIFOs"] >  1:
-            mux_interface, mux_name = mux.generate_HDL(
+        if gen_det.config["stall_type"] == "PASSIVE":
+            com_det.arch_body += "stall <= stall_in;\n"
+        elif gen_det.config["stall_type"] == "ACTIVE":
+            com_det.arch_head += "signal FIFOs_ready_buffered : std_logic_vector(%i downto 0);\n"%(gen_det.config["FIFOs"] - 1, )
+
+            reg_interface, reg_name = register.generate_HDL(
                 {
-                    "inputs" : CONFIG["FIFOs"]
+                    "has_async_force" : False,
+                    "has_sync_force" : False,
+                    "has_enable"    : False,
+                    "force_on_init" : False
                 },
-                OUTPUT_PATH,
+                output_path=gen_det.output_path,
                 module_name=None,
                 concat_naming=False,
-                force_generation=FORCE_GENERATION
+                force_generation=gen_det.force_generation
             )
 
-            for write in range(CONFIG["writes"]):
-                ARCH_HEAD += "signal write_%i_FIFO_ready : std_logic;\n"%(write, )
+            com_det.arch_body += "FIFOs_ready_buffer : entity work.%s(arch)\>\n"%(reg_name, )
 
-                ARCH_BODY += "write_%i_FIFO_ready_mux : entity work.%s(arch)\>\n"%(write, mux_name, )
+            com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["FIFOs"], )
 
-                ARCH_BODY += "generic map (data_width => 1)\n"
+            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "clock => clock,\n"
+            com_det.arch_body += "data_in  => (%s),\n"%(
+                ", ".join(
+                    [
+                        "%i => FIFO_%i_ready"%(FIFO, FIFO, )
+                        for FIFO in range(gen_det.config["FIFOs"])
+                    ]
+                )
+            )
+            com_det.arch_body += "data_out => FIFOs_ready_buffered\n"
+            com_det.arch_body += "\<);\n\<\n"
 
-                ARCH_BODY += "port map (\n\>"
-                ARCH_BODY += "sel => write_%i_addr,\n"%(write, )
-                for i in range(0, CONFIG["FIFOs"]):
-                    ARCH_BODY += "data_in_%i(0) => FIFO_%i_ready,\n"%(i, i, )
-                for i in range(CONFIG["FIFOs"], mux_interface["number_inputs"]):
-                    ARCH_BODY += "data_in_%i(0) => '0',\n"%(i, )
-                ARCH_BODY += "data_out(0) => write_%i_FIFO_ready\n"%(write, )
 
-                ARCH_BODY += "\<);\n\<\n"
+
+            com_det.arch_head += "signal generated_stall : std_logic;\n"
+
+            com_det.arch_body += "stall <= stall_in or generated_stall;\n"
+            com_det.arch_body += "stall_out <= generated_stall;\n"
 
             # This code may need reworking, depending on how vivado handles many termed logic expressions
-            ARCH_BODY += "FIFO_handshake_stall <= %s;\n"%(
+            com_det.arch_body += "generated_stall <= %s;\n"%(
                 " or ".join([
-                    "(write_%i_enable and not write_%i_FIFO_ready)"%(i, i, )
-                    for i in range(CONFIG["writes"])
+                    "(FIFO_%i_write_buffer_out and not FIFO_%i_ready)"%(FIFO, FIFO, )
+                    for FIFO in range(gen_det.config["FIFOs"])
                 ]),
             )
 
-def gen_FIFO_write_logic():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def gen_FIFO_write_logic(gen_det, com_det):
     # Generate FIFO_adv buffer
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force" : False,
             "has_sync_force" : False,
-            "has_enable"    : False,
+            "has_enable"    : gen_det.config["stall_type"] != "NONE",
             "force_on_init" : False
         },
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
     # instance FIFO_adv buffers
-    ARCH_HEAD += "\n-- FIFO write signals\n"
-    ARCH_BODY += "\n-- FIFO write buffers\n"
-    for FIFO in range(CONFIG["FIFOs"]):
-        ARCH_HEAD += "signal FIFO_%i_write_buffer_in : std_logic;\n"%(FIFO,)
+    com_det.arch_head += "\n-- FIFO write signals\n"
+    com_det.arch_body += "\n-- FIFO write buffers\n"
+    for FIFO in range(gen_det.config["FIFOs"]):
+        com_det.arch_head += "signal FIFO_%i_write_buffer_in : std_logic;\n"%(FIFO,)
+        com_det.arch_head += "signal FIFO_%i_write_buffer_out : std_logic;\n"%(FIFO,)
 
-        ARCH_BODY += "FIFO_%i_write_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
+        com_det.arch_body += "FIFO_%i_write_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
 
-        ARCH_BODY += "generic map (data_width => 1)\n"
+        com_det.arch_body += "generic map (data_width => 1)\n"
 
-        ARCH_BODY += "port map (\n\>"
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in(0) => FIFO_%i_write_buffer_in,\n"%(FIFO, )
-        ARCH_BODY += "data_out(0) => FIFO_%i_write\n"%(FIFO, )
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "clock => clock,\n"
+        if gen_det.config["stall_type"] != "NONE":
+            com_det.arch_body += "enable => not stall,\n"
+        com_det.arch_body += "data_in(0) => FIFO_%i_write_buffer_in,\n"%(FIFO, )
+        com_det.arch_body += "data_out(0) => FIFO_%i_write_buffer_out\n"%(FIFO, )
+        com_det.arch_body += "\<);\n\<\n"
+
+        if gen_det.config["stall_type"] == "NONE":
+            com_det.arch_body += "FIFO_%i_write <= FIFO_%i_write_buffer_out;\n"%(FIFO, FIFO, )
+        else:
+            com_det.arch_body += "FIFO_%i_write <= FIFO_%i_write_buffer_out and not stall;\n"%(FIFO, FIFO, )
 
     # FIFO_adv logic
-    ARCH_BODY += "\n-- FIFO advance logic\n"
-    if CONFIG["writes"] == 1:
-        if CONFIG["FIFOs"] == 1:
-            if CONFIG["stall_type"] != "NONE":
-                ARCH_BODY += "FIFO_0_write_buffer_in <= (not stall) and running and write_0_enable;\n"
-            else:
-                ARCH_BODY += "FIFO_0_write_buffer_in <= running and write_0_enable;\n"
-        else:#CONFIG["FIFOs"] >= 2:
-            if CONFIG["stall_type"] != "NONE":
-                for FIFO in range(CONFIG["FIFOs"]):
-                    # This code may need reworking, depending on how vivado handles many termed logic expressions
-                    ARCH_BODY += "FIFO_%i_write_buffer_in <= (not stall) and running and FIFO_%i_ready and write_0_enable and %s;\n"%(
-                        FIFO, FIFO,
-                        " and ".join([
-                            "write_0_addr(%i)"%(bit, ) if FIFO&2**bit
-                            else "(not write_0_addr(%i))"%(bit, )
-                            for bit in range(CONFIG["addr_width"])
-                        ])
-                    )
-            else:
-                for FIFO in range(CONFIG["FIFOs"]):
-                    # This code may need reworking, depending on how vivado handles many termed logic expressions
-                    ARCH_BODY += "FIFO_%i_write_buffer_in <= running and FIFO_%i_ready and write_0_enable and %s;\n"%(
-                        FIFO, FIFO,
-                        " and ".join([
-                            "write_0_addr(%i)"%(bit, ) if FIFO&2**bit
-                            else "(not write_0_addr(%i))"%(bit, )
-                            for bit in range(CONFIG["addr_width"])
-                        ])
-                    )
-    else:#CONFIG["writes"] >  1:
+    com_det.arch_body += "\n-- FIFO advance logic\n"
+    if gen_det.config["writes"] == 1:
+        if gen_det.config["FIFOs"] == 1:
+            com_det.arch_body += "FIFO_0_write_buffer_in <= running and write_0_enable;\n"
+        else:#gen_det.config["FIFOs"] >= 2:
+            for FIFO in range(gen_det.config["FIFOs"]):
+                # This code may need reworking, depending on how vivado handles many termed logic expressions
+                com_det.arch_body += "FIFO_%i_write_buffer_in <= running and FIFO_%i_ready and write_0_enable and %s;\n"%(
+                    FIFO, FIFO,
+                    " and ".join([
+                        "write_0_addr(%i)"%(bit, ) if FIFO&2**bit
+                        else "(not write_0_addr(%i))"%(bit, )
+                        for bit in range(gen_det.config["addr_width"])
+                    ])
+                )
+    else:#gen_det.config["writes"] >  1:
         raise NotImplementedError("Support for 2+ writes needs adding")
 
-def gen_FIFO_data_logic ():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def gen_FIFO_data_logic (gen_det, com_det):
     # Generate read_data buffer
     reg_interface, reg_name = register.generate_HDL(
         {
             "has_async_force" : False,
             "has_sync_force" : False,
-            "has_enable"    : CONFIG["stall_type"] != "NONE",
+            "has_enable"    : gen_det.config["stall_type"] != "NONE",
             "force_on_init" : False
         },
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
-        force_generation=FORCE_GENERATION
+        force_generation=gen_det.force_generation
     )
 
     # Generate FIFO_data buffers
-    ARCH_HEAD += "\n-- FIFO data signals\n"
-    ARCH_BODY += "\n-- FIFO data buffers\n"
-    for FIFO in range(CONFIG["FIFOs"]):
-        ARCH_HEAD += "signal FIFO_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(FIFO, CONFIG["data_width"] - 1)
+    com_det.arch_head += "\n-- FIFO data signals\n"
+    com_det.arch_body += "\n-- FIFO data buffers\n"
+    for FIFO in range(gen_det.config["FIFOs"]):
+        com_det.arch_head += "signal FIFO_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(FIFO, gen_det.config["data_width"] - 1)
 
-        ARCH_BODY += "FIFO_%i_data_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
+        com_det.arch_body += "FIFO_%i_data_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
 
-        ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["data_width"])
+        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-        ARCH_BODY += "port map (\n\>"
-        if CONFIG["stall_type"] != "NONE":
-            ARCH_BODY += "enable => not stall,\n"
-        ARCH_BODY += "clock => clock,\n"
-        ARCH_BODY += "data_in  => FIFO_%i_data_buffer_in,\n"%(FIFO, )
-        ARCH_BODY += "data_out => FIFO_%i_data\n"%(FIFO, )
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "port map (\n\>"
+        if gen_det.config["stall_type"] != "NONE":
+            com_det.arch_body += "enable => not stall,\n"
+        com_det.arch_body += "clock => clock,\n"
+        com_det.arch_body += "data_in  => FIFO_%i_data_buffer_in,\n"%(FIFO, )
+        com_det.arch_body += "data_out => FIFO_%i_data\n"%(FIFO, )
+        com_det.arch_body += "\<);\n\<\n"
 
     # FIFO_data assignment logic
-    ARCH_BODY += "\n-- FIFO_data assignment logic\n"
-    if CONFIG["writes"] == 1:
-        for FIFO in range(CONFIG["FIFOs"]):
-            ARCH_BODY += "FIFO_%i_data_buffer_in <= write_0_data;\n"%(FIFO, )
-    else:#CONFIG["writes"] >  1:
+    com_det.arch_body += "\n-- FIFO_data assignment logic\n"
+    if gen_det.config["writes"] == 1:
+        for FIFO in range(gen_det.config["FIFOs"]):
+            com_det.arch_body += "FIFO_%i_data_buffer_in <= write_0_data;\n"%(FIFO, )
+    else:#gen_det.config["writes"] >  1:
         raise NotImplementedError("Support for 2+ writes needs adding")

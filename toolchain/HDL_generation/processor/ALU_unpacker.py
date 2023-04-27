@@ -161,7 +161,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                         num_words = 1
 
                     if word < num_words:
-                            if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "AND", "OR", "XOR", "ADD", "SUB", ]:
+                            if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", "ADD", "SUB", ]:
                                 value = map["0#unpadded"]
                             elif mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                                 value = map["0#unpadded"]
@@ -188,6 +188,9 @@ def preprocess_config(config_in):
     assert type(config_in["data_width"]) == int, "data_width must be an int"
     assert config_in["data_width"] >= 1, "data_width must be greater than 0"
     config_out["data_width"] = config_in["data_width"]
+
+    assert type(config_in["stallable"]) == bool, "stallable must be a bool"
+    config_out["stallable"] = config_in["stallable"]
 
     assert type(config_in["signal_padding"]) == str, "signal_padding must be an str"
     assert config_in["signal_padding"] in ["unsigned", "signed", ], "Unknown signal_padding, %s"%(config_in["signal_padding"], )
@@ -307,6 +310,9 @@ def gen_unpacker(gen_det, com_det):
     com_det.add_port("enable", "std_logic", "in")
     com_det.add_port("clock", "std_logic", "in")
 
+    if gen_det.config["stallable"]:
+        com_det.add_port("stall_in", "std_logic", "in")
+
 
     reg_interface, reg_name = register.generate_HDL(
         {
@@ -315,7 +321,7 @@ def gen_unpacker(gen_det, com_det):
             "has_enable"    : True,
             "force_on_init" : False
         },
-        gen_det.output_path,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
         force_generation=gen_det.force_generation
@@ -323,6 +329,7 @@ def gen_unpacker(gen_det, com_det):
 
     # Handle packings
     for result, packings in enumerate(gen_det.config["unpackings"]):
+
         # Declare result port
         com_det.add_port("result_%i"%(result, ), "std_logic_vector", "in", gen_det.config["result_widths"][result])
 
@@ -337,7 +344,7 @@ def gen_unpacker(gen_det, com_det):
             com_det.arch_body += "\n"
         if "single_bit" in packings.keys():
             LSM = 0
-            for word in range(packings["unpadded"]):
+            for word in range(packings["single_bit"]):
                 if word != 0:
                     LSM += 1
                 MSB = LSM + gen_det.config["data_width"]
@@ -363,7 +370,7 @@ def gen_unpacker(gen_det, com_det):
                     {
                         "inputs"  : len(sources),
                     },
-                    gen_det.output_path,
+                    output_path=gen_det.output_path,
                     module_name=None,
                     concat_naming=False,
                     force_generation=gen_det.force_generation
@@ -376,7 +383,10 @@ def gen_unpacker(gen_det, com_det):
                 com_det.arch_body += "generic map (data_width => %i)\n"%(mux_interface["sel_width"], )
                 com_det.arch_body += "port map (\n\>"
                 com_det.arch_body += "clock => clock,\n"
-                com_det.arch_body += "enable  => enable,\n"
+                if gen_det.config["stallable"]:
+                    com_det.arch_body += "enable  => enable and not stall_in,\n"
+                else:
+                    com_det.arch_body += "enable  => enable,\n"
                 com_det.arch_body += "data_in  => %s_word_%i_sel,\n"%(output, word, )
                 com_det.arch_body += "data_out => %s_word_%i_sel_buffered\n"%(output, word, )
                 com_det.arch_body += "\<);\n\<\n"

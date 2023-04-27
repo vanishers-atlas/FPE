@@ -82,6 +82,7 @@ grammar FPE_assembly;
 		However may affect the hardware generated (eg ZOLs
 	*/
 	statement : state_zol
+						| state_rep
 						| state_jump_label
 						| state_loop_label
 						| state_constant
@@ -89,6 +90,8 @@ grammar FPE_assembly;
 						;
 
 		state_zol : 'ZOL' '(' expr ')' scope ;
+
+		state_rep : 'REP' '(' expr ')' scope ;
 
 		state_jump_label : ident_dec ':' ;
 
@@ -104,7 +107,7 @@ grammar FPE_assembly;
 				)?
 				')' ';'
 			;
-			state_component_parameter : para_name=IDENTIFER ':' (IDENTIFER|expr) ;
+			state_component_parameter : para_name=IDENTIFER ':' (BOOL|expr) ;
 
 
 	/* operations are parts of an FPE program which map to program code
@@ -171,6 +174,9 @@ grammar FPE_assembly;
 		BIN_NUM : '0' [bB]	[0-1]+ ;
 		OCT_NUM : '0' [oO] 	[0-7]+ ;
 		HEX_NUM : '0' [xX]	[0-9A-Fa-f]+ ;
+
+	/* General IDENTIFER Handling */
+		BOOL : [Tt] 'rue' | [Ff] 'alse';
 
 	/* General IDENTIFER Handling */
 		IDENTIFER : [_a-zA-Z][_a-zA-Z0-9]* ;

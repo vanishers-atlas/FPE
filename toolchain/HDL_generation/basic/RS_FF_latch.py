@@ -9,33 +9,20 @@ from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-#####################################################################
-
-def add_inst_config(instr_id, instr_set, config):
-
-    raise NotImplementedError()
-
-    return config
-
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
-
-    raise NotImplementedError()
-
-    return pathways
-
-def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
-    controls = {}
-
-    raise NotImplementedError()
-
-    return controls
 
 #####################################################################
 
 def preprocess_config(config_in):
     config_out = {}
 
+    assert "hardcoded_init" in config_in.keys(), "Passed config lacks hardcoded_init key"
+    assert config_in["hardcoded_init"] == None or (type(config_in["hardcoded_init"]) is str and config_in["hardcoded_init"].upper() in  ["0", "1", "X", "U", "L", "H", "Z"]), "hardcoded_init must be a valid std_logic value"
+    if config_in["hardcoded_init"] == None:
+        config_out["hardcoded_init"] = None
+    else:
+        config_out["hardcoded_init"] = config_in["hardcoded_init"].upper()
+
+    config_out["has_enable"] = config_in["has_enable"]
     assert "has_enable" in config_in.keys(), "Passed config lacks has_enable key"
     assert type(config_in["has_enable"]) is bool, "has_enable must be a bool"
     config_out["has_enable"] = config_in["has_enable"]
@@ -56,6 +43,9 @@ def handle_module_name(module_name, config):
         # Handle enable
         if config["has_enable"] == True:
             generated_name += "_enable"
+
+        if config["hardcoded_init"] != None:
+            generated_name += "_init_" + config["hardcoded_init"]
 
         return generated_name
     else:
@@ -105,7 +95,8 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 def generate_logic(gen_det, com_det):
 
     # Declare generics
-    com_det.add_generic("stating_state", "std_logic")
+    if gen_det.config["hardcoded_init"] == None:
+        com_det.add_generic("stating_state", "std_logic")
 
     # Declare ports
     com_det.add_port("R", "std_logic", "in")
@@ -116,8 +107,10 @@ def generate_logic(gen_det, com_det):
     if gen_det.config["has_enable"]:
         com_det.add_port("enable", "std_logic", "in")
 
-
-    com_det.arch_head += "signal state : std_logic := stating_state;\n"
+    if gen_det.config["hardcoded_init"] == None:
+        com_det.arch_head += "signal state : std_logic := stating_state;\n"
+    else:
+        com_det.arch_head += "signal state : std_logic := '%s';\n"%(gen_det.config["hardcoded_init"], )
 
     # Generate process start
     if gen_det.config["clocked"]:

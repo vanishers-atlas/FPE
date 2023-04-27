@@ -1,0 +1,25 @@
+{
+  "signal_padding": "unsigned",
+
+  "external_stall" : false,
+  "report_stall" : true,
+
+  "SIMD": {
+    "lanes": 1
+  },
+
+  "data_memories": {
+    "IMM": {},
+    "PUT": {
+      "data_width": 4,
+      "FIFO_handshakes": true,
+      "FIFOs": 1
+    }
+  },
+
+  "execute_units": {
+    "ALU": {
+      "data_width": 5
+    }
+  }
+}

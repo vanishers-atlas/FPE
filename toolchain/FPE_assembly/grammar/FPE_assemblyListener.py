@@ -197,6 +197,15 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by FPE_assemblyParser#state_rep.
+    def enterState_rep(self, ctx:FPE_assemblyParser.State_repContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#state_rep.
+    def exitState_rep(self, ctx:FPE_assemblyParser.State_repContext):
+        pass
+
+
     # Enter a parse tree produced by FPE_assemblyParser#state_jump_label.
     def enterState_jump_label(self, ctx:FPE_assemblyParser.State_jump_labelContext):
         pass

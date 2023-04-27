@@ -15,11 +15,13 @@ import json
 from FPE.toolchain import utils  as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation import utils  as gen_utils
+from FPE.toolchain.HDL_generation import HDL_generator as HDL_generator
 
 # import import assembler files (extactors)
 from FPE.toolchain.assembler import IMM_handling
 from FPE.toolchain.assembler import PM_handling
-from FPE.toolchain.assembler import ZOL_handling
+from FPE.toolchain.assembler import hidden_ZOL_handling
+from FPE.toolchain.assembler import preloaded_rep_bank_handling
 
 def determine_require_generics(interface):
     generics = {}
@@ -28,7 +30,10 @@ def determine_require_generics(interface):
         if generic in [ "IMM_init_mif", "PM_init_mif", "PC_end_value", ]:
             pass
         # Skipped handled ZOL generics
-        elif generic.startswith("bound_ZOL_"):
+        elif generic.startswith("hidden_ZOL_"):
+            pass
+        # Skipped handled ZOL generics
+        elif generic == "rep_bank_starting_loop_id" or generic.startswith("rep_bank_loop_"):
             pass
         else:
             generics[generic] = None
@@ -138,51 +143,35 @@ def run(assembly_filename, config_filename, interface_filename, generic_file, pr
     generics["PM_init_mif"]  = pm_file
     generics["PC_end_value"] = program_end
 
-    # Handle ZOL values
-    if "ZOL_overwrites_encoding" in interface.keys():
-        handler = ZOL_handling.handler(program_context, interface["ZOL_overwrites_encoding"])
+    # Handle hidden ZOL values
+    if "hidden_ZOLs_overwrites_encoding" in interface.keys():
+        handler = hidden_ZOL_handling.handler(program_context, interface["hidden_ZOLs_overwrites_encoding"])
         walker.walk(handler, program_context["program_tree"])
 
-        for ZOL_name, values in handler.get_output().items():
-            generics["%s_overwrites" %(ZOL_name)] = values["overwrites"]
-            generics["%s_check_value"%(ZOL_name)] = values["check_value"]
-            generics["%s_overwrite_value"  %(ZOL_name)] = values["overwrite_value"]
+        for loop_name, values in handler.get_output().items():
+            generics["%s_overwrites" %(loop_name)] = values["overwrites"]
+            generics["%s_check_value"%(loop_name)] = values["check_value"]
+            generics["%s_overwrite_value"  %(loop_name)] = values["overwrite_value"]
 
-    # Generate testbench style file, with example instancation
-    IMPORTS   = []
-    ARCH_HEAD = gen_utils.indented_string()
-    ARCH_BODY = gen_utils.indented_string()
-    INTERFACE = { "ports" : {}, "generics" : {} }
 
-    # Include extremely commom libs
-    IMPORTS += [ {"library" : "ieee", "package" : "std_logic_1164", "parts" : "all"} ]
+    if "rep_bank_preloaded_overwrites_encoding" in interface.keys():
+        assert "rep_bank_preloaded_pc_values_encoding" in interface.keys() and "rep_bank_preloaded_loop_id_encoding" in interface.keys()
 
-    ARCH_BODY +=  "%s_instance : entity work.%s(arch)\n\>"%(processor_name, processor_name)
+        handler = preloaded_rep_bank_handling.handler(program_context, interface["rep_bank_preloaded_overwrites_encoding"], interface["rep_bank_preloaded_pc_values_encoding"], interface["rep_bank_preloaded_loop_id_encoding"])
+        walker.walk(handler, program_context["program_tree"])
 
-    if len(interface["generics"]) != 0:
-        ARCH_BODY += "generic map (\>\n"
+        for loop_name, values in handler.get_loop_details().items():
+            generics["%s_overwrites"%(loop_name)] = values["overwrites"]
+            generics["%s_start_value"%(loop_name)] = values["start_value"]
+            generics["%s_end_value"%(loop_name)] = values["end_value"]
 
-        for generic in interface["generics"].keys():
-            details = interface["generics"][generic]
-            if details["type"] == "string" or details["type"].startswith("std_logic_vector"):
-                ARCH_BODY += "%s => \"%s\",\n"%(generic, generics[generic])
-            else:
-                ARCH_BODY += "%s => %s,\n"%(generic, generics[generic])
+        starting_loop_id, FSM_edges = handler.get_FSM_details()
+        generics["rep_bank_starting_loop_id"] = starting_loop_id
+        for loop_id, edges in FSM_edges.items():
+            generics["rep_bank_loop_%i_on_overwrite"%(loop_id)] = edges[0]
+            generics["rep_bank_loop_%i_on_fallthrough"%(loop_id)] = edges[2]
+            if config["program_flow"]["rep_bank"]["stall_on_id_change"] == "CONDITIONALLY":
+                generics["rep_bank_loop_%i_on_overwrite_stall"%(loop_id)] = edges[1]
+                generics["rep_bank_loop_%i_on_fallthrough_stall"%(loop_id)] = edges[3]
 
-        ARCH_BODY.drop_last_X(2)
-        ARCH_BODY += "\<\n)\n"
-
-    ARCH_BODY += "port map (\>\n"
-
-    for port in interface["ports"].keys():
-        details = interface["ports"][port]
-        INTERFACE["ports"][port] = details
-        ARCH_BODY += "%s => %s,\n"%(port, port)
-
-    ARCH_BODY.drop_last_X(2)
-    ARCH_BODY += "\<\n);\n"
-
-    ARCH_BODY += "\<\n"
-
-    # Save code to file
-    gen_utils.generate_files(output_path, processor_name + "_inst", IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+    HDL_generator.wrap_module(processor_name, interface, generics, wrapped_name = processor_name + "_inst", HDL_output_path=output_path, full_wrap = True )

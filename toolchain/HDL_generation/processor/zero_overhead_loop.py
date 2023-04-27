@@ -31,7 +31,6 @@ def add_inst_config(instr_id, instr_set, config):
 
 def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
     pathways = gen_utils.init_datapaths()
-
     tracker_mod = tracker_module_LUT[config["tracker_type"]]
 
     # Get pathways from subcomponents
@@ -55,12 +54,6 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
 
 
 #####################################################################
-
-tracker_module_LUT = {
-    "ripple"    : ZOL_tracker_ripple,
-    "cascade"   : ZOL_tracker_cascade,
-    "counter"   : ZOL_tracker_counter,
-}
 
 def preprocess_config(config_in):
     config_out = {}
@@ -116,8 +109,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -126,66 +119,41 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = preprocess_config(config)
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, CONFIG)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
-
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+        # Init component_details
+        com_det = gen_utils.component_details()
 
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = {
-            "ports" : { },
-            "generics" : { },
-        }
+        # Include common libs
+        com_det.add_import("ieee", "std_logic_1164", "all")
 
-        # Include global libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all",
-            }
-        ]
-
-        # Setup global ports
-        INTERFACE["ports"]["clock"] = {
-            "type" : "std_logic",
-            "direction" : "in",
-        }
-
-        if CONFIG["stallable"]:
-            INTERFACE["ports"]["stall"] = {
-                "type" : "std_logic",
-                "direction" : "in",
-            }
-
+        # Setup common ports
+        com_det.add_port("clock", "std_logic", "in")
+        if gen_det.config["stallable"]:
+            com_det.add_port("stall_in", "std_logic", "in")
 
         # Generation Module Code
-        generate_PC_interface()
-        generate_tracker()
+        generate_PC_interface(gen_det, com_det)
+        generate_tracker(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 
 #####################################################################
 
-fanin_PC_interface_ports = [ "clock", "stall", ]
+fanin_PC_interface_ports = [ "clock", "stall_in", ]
 ripple_up_PC_interface_ports = [
     "PC_value", "PC_running",
     "overwrite_PC_value", "overwrite_PC_enable",
@@ -193,38 +161,35 @@ ripple_up_PC_interface_ports = [
 ]
 internal_PC_interface_ports = [ "match_found", "overwrites_reached", ]
 
-def generate_PC_interface():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_PC_interface(gen_det, com_det):
     # Generate PC_interface subunit
-    if CONCAT_NAMING:
-        module_name = MODULE_NAME + "_PC_interface"
+    if gen_det.concat_naming:
+        module_name = gen_det.module_name + "_PC_interface"
     else:
         module_name = None
 
     sub_interface, sub_name = ZOL_PC_interface.generate_HDL(
-        CONFIG["PC_interface"],
-        OUTPUT_PATH,
+        config=gen_det.config["PC_interface"],
+        output_path=gen_det.output_path,
         module_name=module_name,
-        concat_naming=CONCAT_NAMING,
-        force_generation=FORCE_GENERATION
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
     )
 
     # Instancate PC_interface subunit
-    ARCH_BODY += "-- PC interface handling\n"
-    ARCH_BODY += "PC_interface : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "-- PC interface handling\n"
+    com_det.arch_body += "PC_interface : entity work.%s(arch)\>\n"%(sub_name, )
 
     if len(sub_interface["generics"]):
-        ARCH_BODY += "generic map (\>\n"
+        com_det.arch_body += "generic map (\>\n"
 
         for generic, details in sub_interface["generics"].items():
-            INTERFACE["generics"][generic] = details
-            ARCH_BODY += "%s => %s,\n"%(generic, generic, )
-        ARCH_BODY.drop_last_X(2)
-        ARCH_BODY += ")\<\n"
+            com_det.ripple_generic(generic, details)
+            com_det.arch_body += "%s => %s,\n"%(generic, generic, )
+        com_det.arch_body.drop_last_X(2)
+        com_det.arch_body += ")\<\n"
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
     if __debug__:
         for port in sub_interface["ports"].keys():
@@ -236,66 +201,68 @@ def generate_PC_interface():
     # Handle fan in ports
     for port in fanin_PC_interface_ports:
         if port in sub_interface["ports"]:
-            ARCH_BODY += "%s => %s,\n"%(port, port, )
+            com_det.arch_body += "%s => %s,\n"%(port, port, )
 
     # Handle ripple up ports
     for port in ripple_up_PC_interface_ports:
         if port in sub_interface["ports"]:
-            INTERFACE["ports"][port] = sub_interface["ports"][port]
-            ARCH_BODY += "%s => %s,\n"%(port, port, )
+            com_det.ripple_port(port, sub_interface["ports"][port])
+            com_det.arch_body += "%s => %s,\n"%(port, port, )
 
     # Handle internal ports
     for port in internal_PC_interface_ports:
         if  port in sub_interface["ports"]:
             port_details = sub_interface["ports"][port]
             if port_details["direction"] == "out":
-                ARCH_HEAD += "signal %s : %s;\n"%(port, port_details["type"], )
-            ARCH_BODY += "%s => %s,\n"%(port, port, )
+                com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
+            com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    ARCH_BODY.drop_last_X(2)
-    ARCH_BODY += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last_X(2)
+    com_det.arch_body += "\n\<);\n\<\n"
 
 
 #####################################################################
 
-fanin_tracker_ports = [ "clock", "stall", "PC_running"]
+tracker_module_LUT = {
+    "ripple"    : ZOL_tracker_ripple,
+    "cascade"   : ZOL_tracker_cascade,
+    "counter"   : ZOL_tracker_counter,
+}
+
+fanin_tracker_ports = [ "clock", "stall_in", "PC_running"]
 ripple_up_tracker_ports = [ "set_overwrites", "set_enable", ]
 internal_tracker_ports = [ "match_found", "overwrites_reached", ]
 
-def generate_tracker():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
+def generate_tracker(gen_det, com_det):
     # Generate PC_interface subunit
-    if CONCAT_NAMING:
-        module_name = MODULE_NAME + "_tracker"
+    if gen_det.concat_naming:
+        module_name = gen_det.module_name + "_tracker"
     else:
         module_name = None
 
-    sub_interface, sub_name = tracker_module_LUT[CONFIG["tracker_type"]].generate_HDL(
-        CONFIG["tracker"],
-        OUTPUT_PATH,
+    sub_interface, sub_name = tracker_module_LUT[gen_det.config["tracker_type"]].generate_HDL(
+        config=gen_det.config["tracker"],
+        output_path=gen_det.output_path,
         module_name=module_name,
-        concat_naming=CONCAT_NAMING,
-        force_generation=FORCE_GENERATION
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
     )
 
     # Handle overwrites_encoding
     assert "overwrites_encoding" in sub_interface.keys()
-    INTERFACE["overwrites_encoding"] = sub_interface["overwrites_encoding"]
+    com_det.add_interface_item("overwrites_encoding", sub_interface["overwrites_encoding"])
 
     # Instancate PC_interface subunit
-    ARCH_BODY += "-- overwrites tracker handling\n"
-    ARCH_BODY += "tracker : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "-- overwrites tracker handling\n"
+    com_det.arch_body += "tracker : entity work.%s(arch)\>\n"%(sub_name, )
 
     if len(sub_interface["generics"]):
         assert len(sub_interface["generics"]) == 1
         assert list(sub_interface["generics"].keys())[0] == "overwrites"
+        com_det.ripple_generic("overwrites", sub_interface["generics"]["overwrites"])
+        com_det.arch_body += "generic map ( overwrites => overwrites )\n"
 
-        INTERFACE["generics"]["overwrites"] = sub_interface["generics"]["overwrites"]
-        ARCH_BODY += "generic map ( overwrites => overwrites )\n"
-
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
     if __debug__:
         for port in sub_interface["ports"]:
@@ -307,21 +274,21 @@ def generate_tracker():
     # Handle fan in ports
     for port in fanin_tracker_ports:
         if port in sub_interface["ports"]:
-            ARCH_BODY += "%s => %s,\n"%(port, port, )
+            com_det.arch_body += "%s => %s,\n"%(port, port, )
 
     # Handle ripple up ports
     for port in ripple_up_tracker_ports:
         if port in sub_interface["ports"]:
-            INTERFACE["ports"][port] = sub_interface["ports"][port]
-            ARCH_BODY += "%s => %s,\n"%(port, port, )
+            com_det.ripple_port(port, sub_interface["ports"][port])
+            com_det.arch_body += "%s => %s,\n"%(port, port, )
 
     # Handle internal ports
     for port in internal_tracker_ports:
         if port in sub_interface["ports"]:
             port_details = sub_interface["ports"][port]
             if port_details["direction"] == "out":
-                ARCH_HEAD += "signal %s : %s;\n"%(port, port_details["type"], )
-            ARCH_BODY += "%s => %s,\n"%(port, port, )
+                com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
+            com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    ARCH_BODY.drop_last_X(2)
-    ARCH_BODY += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last_X(2)
+    com_det.arch_body += "\n\<);\n\<\n"

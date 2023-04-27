@@ -8,7 +8,7 @@ class extractor(ParseTreeListener):
 		this.program_context = {
 			**program_context,
 			"components" : {
-				"ZOLs" : {}
+				"declared_ZOLs" : {}
 			},
 		}
 
@@ -27,19 +27,18 @@ class extractor(ParseTreeListener):
 
 			assert(para_name not in parameters.keys())
 
-			if   len(para_ctx.IDENTIFER()) == 2:
-				parameters[para_name] = asm_utils.token_to_text(para_ctx.IDENTIFER()[1])
-			elif para_ctx.expr() != None:
+			if   para_ctx.expr() != None:
 				parameters[para_name] = asm_utils.evaluate_expr(para_ctx.expr(), this.program_context)
+			elif para_ctx.BOOL() != None:
+				parameters[para_name] = asm_utils.token_to_text(para_ctx.BOOL()).lower() == "true"
 			else:
 				raise SyntaxError("Component parameter found without a know vqlue form, %s"%(
 					asm_utils.ctx_start(para_ctx)
 				))
 
 		if   com_type in ["ZOL_ripple", "ZOL_cascade", "ZOL_counter"]:
-			this.program_context["components"]["ZOLs"][com_name] = {
+			this.program_context["components"]["declared_ZOLs"][com_name] = {
 				"ctx" : ctx,
-				"type" : com_type[4:], # Drop the ZOL_ from the com type to get the Zol type
 				"parameters" : parameters,
 			}
 		else:

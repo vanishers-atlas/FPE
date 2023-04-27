@@ -1,0 +1,53 @@
+{
+  MOV (GET[0]<ADV>, REG[0x0]);
+  MOV (GET[0], REG[0x1]);
+  MOV (GET[0]<ADV>, REG[0x2]);
+  MOV (GET[0], REG[0x3]);
+  MOV (GET[0]<ADV>, REG[0x4]);
+  MOV (GET[0], REG[0x5]);
+  MOV (GET[0]<ADV>, REG[0x6]);
+  MOV (GET[0], REG[0x7]);
+  MOV (GET[0]<ADV>, REG[0x8]);
+  MOV (GET[0], REG[0x9]);
+  MOV (GET[0]<ADV>, REG[0xA]);
+  MOV (GET[0], REG[0xB]);
+  MOV (GET[0]<ADV>, REG[0xC]);
+  MOV (GET[0], REG[0xD]);
+  MOV (GET[0]<ADV>, REG[0xE]);
+  MOV (GET[0], REG[0xF]);
+
+  NOT (GET[0]<ADV>, PUT[0]);
+  NOT (GET[0], PUT[0]);
+  NOT (GET[0]<ADV>, PUT[0]);
+  NOT (GET[0], PUT[0]);
+
+  AND  (GET[0]<ADV>, REG[ 0], PUT[0]);
+  AND  (GET[0], REG[ 1], PUT[0]);
+  AND  (GET[0]<ADV>, REG[ 2], PUT[0]);
+  AND  (GET[0], REG[ 3], PUT[0]);
+
+  NAND (GET[0]<ADV>, REG[ 4], PUT[0]);
+  NAND (GET[0], REG[ 5], PUT[0]);
+  NAND (GET[0]<ADV>, REG[ 6], PUT[0]);
+  NAND (GET[0], REG[ 7], PUT[0]);
+
+  OR   (GET[0]<ADV>, REG[ 8], PUT[0]);
+  OR   (GET[0], REG[ 9], PUT[0]);
+  OR   (GET[0]<ADV>, REG[10], PUT[0]);
+  OR   (GET[0], REG[11], PUT[0]);
+
+  NOR  (GET[0]<ADV>, REG[12], PUT[0]);
+  NOR  (GET[0], REG[13], PUT[0]);
+  NOR  (GET[0]<ADV>, REG[14], PUT[0]);
+  NOR  (GET[0], REG[15], PUT[0]);
+
+  XOR  (GET[0]<ADV>, REG[ 0], PUT[0]);
+  XOR  (GET[0], REG[ 1], PUT[0]);
+  XOR  (GET[0]<ADV>, REG[ 2], PUT[0]);
+  XOR  (GET[0], REG[ 3], PUT[0]);
+
+  XNOR (GET[0]<ADV>, REG[ 4], PUT[0]);
+  XNOR (GET[0], REG[ 5], PUT[0]);
+  XNOR (GET[0]<ADV>, REG[ 6], PUT[0]);
+  XNOR (GET[0], REG[ 7], PUT[0]);
+}

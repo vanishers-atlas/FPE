@@ -1,0 +1,43 @@
+{
+    "external_stall" : false,
+    "report_stall" : false,
+
+
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "program_fetch": {},
+
+    "instruction_decoder": {},
+
+
+    "address_sources": {
+        "BAM_0": {
+            "addr_max": 16,
+            "offset_max": 16,
+            "step_max": 4
+        }
+    },
+
+    "data_memories": {
+        "PUT": {
+            "FIFOs": 1,
+            "FIFO_handshakes": false,
+            "data_width": 4
+        },
+        "RAM": {
+            "data_width": 4,
+            "depth": 16,
+            "type": "DIST"
+        }
+    },
+
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    },
+
+    "signal_padding": "unsigned"
+}

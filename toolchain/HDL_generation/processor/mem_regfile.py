@@ -14,9 +14,10 @@ from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
 from FPE.toolchain.HDL_generation  import utils as gen_utils
 
-from FPE.toolchain.HDL_generation.processor import mem_BAPA_harness
-
+from FPE.toolchain.HDL_generation.basic import dist_RAM
 from FPE.toolchain.HDL_generation.basic import register
+
+from FPE.toolchain.HDL_generation.processor import mem_BAPA_harness
 
 #####################################################################
 
@@ -149,7 +150,6 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
 
             gen_utils.add_control(controls, "store", instr_prefix + "write_%i_enable"%(write, ), values, "std_logic")
 
-
     return controls
 
 
@@ -239,12 +239,14 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         com_det.add_import("ieee", "std_logic_1164", "all")
         com_det.add_port("clock", "std_logic", "in")
         if gen_det.config["stallable"]:
-            com_det.add_port("stall", "std_logic", "in")
+            com_det.add_port("stall_in", "std_logic", "in")
+            com_det.arch_head += "signal stall : std_logic;\n"
+            com_det.arch_body += "stall <= stall_in;\n"
 
         if "BAPA" in gen_det.config.keys():
             gen_BAPA_regfile(gen_det, com_det)
         else:
-            gen_registers(gen_det, com_det)
+            gen_ram(gen_det, com_det)
             gen_reads(gen_det, com_det)
             gen_writes(gen_det, com_det)
 
@@ -255,11 +257,13 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 #####################################################################
 
-hardness_fanin_signals = ["clock", "stall"]
-hardness_ripple_up_signals = [
+hardness_fanin_signals = ["clock", "stall_in"]
+hardness_ripple_up_addrs = [
     re.compile("read_(\d+)_addr"),
-    re.compile("read_(\d+)_word_(\d+)"),
     re.compile("write_(\d+)_addr"),
+]
+hardness_ripple_up_signals = [
+    re.compile("read_(\d+)_word_(\d+)"),
     re.compile("write_(\d+)_word_(\d+)"),
     re.compile("write_(\d+)_enable_(\d+)"),
 ]
@@ -271,7 +275,8 @@ hardness_internal_signals = [
     re.compile("block_(\d+)_write_(\d+)_enable"),
 ]
 
-subblock_fanin_signals = ["clock", "stall"]
+
+subblock_fanin_signals = ["clock", "stall_in"]
 subblock_internal_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_data"),
@@ -301,8 +306,8 @@ def gen_BAPA_regfile(gen_det, com_det):
         module_name = None
 
     harness_interface, harness_name = mem_BAPA_harness.generate_HDL(
-        gen_det.config["BAPA"],
-        gen_det.output_path,
+        config=gen_det.config["BAPA"],
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -323,6 +328,20 @@ def gen_BAPA_regfile(gen_det, com_det):
         if signal in harness_interface["ports"]:
             com_det.arch_body += "%s => %s,\n"%(signal, signal)
 
+    # Handle ripple up addrs
+    for rule in hardness_ripple_up_addrs:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            width = gen_det.config["addr_width"]
+            com_det.add_port(port, "std_logic_vector", details["direction"], width)
+
+            # Connect harness port to rippled port
+            if subblock_config["depth"] == 1:
+                com_det.arch_body += "%s => \"0\" & %s,\n"%(port, port)
+            else:
+                com_det.arch_body += "%s => %s,\n"%(port, port)
+
     # Handle ripple up signals
     for rule in hardness_ripple_up_signals:
         for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
@@ -330,9 +349,7 @@ def gen_BAPA_regfile(gen_det, com_det):
 
             # Handle generic controlled ports
             if details["type"].startswith("std_logic_vector("):
-                if details["type"].startswith("std_logic_vector(block_addr_width"):
-                    width = gen_det.config["addr_width"]
-                elif details["type"].startswith("std_logic_vector(data_width"):
+                if details["type"].startswith("std_logic_vector(data_width"):
                     width = gen_det.config["data_width"]
                 else:
                     raise ValueError("Unknown std_logic_vector type in harness interface, " + details["type"])
@@ -382,8 +399,8 @@ def gen_BAPA_regfile(gen_det, com_det):
         module_name = None
 
     subblock_interface, subblock_name = generate_HDL(
-        subblock_config,
-        gen_det.output_path,
+        config=subblock_config,
+        output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
@@ -416,39 +433,91 @@ def gen_BAPA_regfile(gen_det, com_det):
         com_det.arch_body.drop_last_X(2)
         com_det.arch_body += "\n\<);\n\<\n"
 
-
 #####################################################################
 
-def gen_registers(gen_det, com_det):
-    reg_interface, reg_name = register.generate_HDL(
+def gen_ram(gen_det, com_det):
+    if gen_det.config["writes"] != 1:
+        raise ValueError("regfile only supports 1 write per cycle")
+
+    # Determine ram config type
+    if gen_det.config["reads"] == 1:
+        com_det.ports_config = "SIMPLE_DUAL"
+    elif gen_det.config["reads"] <= 3:
+        com_det.ports_config = "QUAD"
+    else:
+        raise ValueError("regfile only supports up 3 reads per cycle")
+        
+    ram_interface, ram_name = dist_RAM.generate_HDL(
         {
-            "has_async_force"  : False,
-            "has_sync_force"   : False,
-            "has_enable"    : True,
-            "force_on_init" : False
+            "depth" : gen_det.config["depth"],
+            "init_type" : "NONE",
+            "ports_config" : com_det.ports_config,
+            "synchronicity" : "WRITE_ONLY",
+            "enabled_reads" : False,
         },
-        gen_det.output_path,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_head += "-- Register signals\n"
-    com_det.arch_body += "-- Registers\n"
+    com_det.arch_head += "-- RAM signals\n"
+    com_det.arch_body += "-- RAM block\n"
 
-    for reg in range(gen_det.config["depth"]):
-        com_det.arch_head += "signal reg_%i_in  : std_logic_vector(%i downto 0);\n"%(reg, gen_det.config["data_width"] - 1)
-        com_det.arch_head += "signal reg_%i_out : std_logic_vector(%i downto 0);\n"%(reg, gen_det.config["data_width"] - 1)
-        com_det.arch_head += "signal reg_%i_enable : std_logic;\n"%(reg, )
+    com_det.arch_body += "RAM_core : entity work.%s(arch)\>\n"%(ram_name, )
+    com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
+    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "clock => clock,\n"
 
-        com_det.arch_body += "reg_%i : entity work.%s(arch)\>\n"%(reg, reg_name)
-        com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
-        com_det.arch_body += "port map (\n\>"
-        com_det.arch_body += "clock => clock,\n"
-        com_det.arch_body += "enable  => reg_%i_enable,\n"%(reg, )
-        com_det.arch_body += "data_in  => reg_%i_in,\n"%(reg, )
-        com_det.arch_body += "data_out => reg_%i_out\n"%(reg, )
-        com_det.arch_body += "\<);\n\<\n"
+
+    # Handle wrute port
+    com_det.arch_head += "signal RAM_write_enable : std_logic;\n"
+    com_det.arch_body += "write_enable  => RAM_write_enable,\n"
+
+    com_det.arch_head += "signal RAM_write_data  : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
+
+    if any(portname == "read_write_addr" for portname in ram_interface["ports"].keys()):
+        com_det.arch_body += "write_data => RAM_write_data,\n"
+        com_det.arch_body += "read_write_data => open,\n"
+
+        com_det.arch_head += "signal RAM_write_addr  : std_logic_vector(%i downto 0);\n"%(ram_interface["addr_width"] - 1, )
+        com_det.arch_body += "read_write_addr  => RAM_write_addr,\n"
+    elif any(portname == "write_addr" for portname in ram_interface["ports"].keys()):
+        com_det.arch_body += "write_data  => RAM_write_data,\n"
+
+        com_det.arch_head += "signal RAM_write_addr  : std_logic_vector(%i downto 0);\n"%(ram_interface["addr_width"] - 1, )
+        com_det.arch_body += "write_addr  => RAM_write_addr,\n"
+    else:
+        raise NotImplementedError("Unknown write behavour")
+
+    # Handle read port
+    if any(portname == "read_addr" for portname in ram_interface["ports"].keys()):
+        com_det.arch_head += "signal RAM_read_addr_0  : std_logic_vector(%i downto 0);\n"%(ram_interface["addr_width"] - 1, )
+        com_det.arch_head += "signal RAM_read_data_0  : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
+
+        com_det.arch_body += "read_addr  => RAM_read_addr_0,\n"
+        com_det.arch_body += "read_data  => RAM_read_data_0,\n"
+    elif any(portname == "read_2_addr" for portname in ram_interface["ports"].keys()):
+        com_det.arch_head += "signal RAM_read_addr_0  : std_logic_vector(%i downto 0);\n"%(ram_interface["addr_width"] - 1, )
+        com_det.arch_head += "signal RAM_read_addr_1  : std_logic_vector(%i downto 0);\n"%(ram_interface["addr_width"] - 1, )
+        com_det.arch_head += "signal RAM_read_addr_2  : std_logic_vector(%i downto 0);\n"%(ram_interface["addr_width"] - 1, )
+
+        com_det.arch_body += "read_0_addr  => RAM_read_addr_0,\n"
+        com_det.arch_body += "read_1_addr  => RAM_read_addr_1,\n"
+        com_det.arch_body += "read_2_addr  => RAM_read_addr_2,\n"
+
+        com_det.arch_head += "signal RAM_read_data_0  : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
+        com_det.arch_head += "signal RAM_read_data_1  : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
+        com_det.arch_head += "signal RAM_read_data_2  : std_logic_vector(%i downto 0);\n"%(gen_det.config["data_width"] - 1, )
+
+        com_det.arch_body += "read_0_data  => RAM_read_data_0,\n"
+        com_det.arch_body += "read_1_data  => RAM_read_data_1,\n"
+        com_det.arch_body += "read_2_data  => RAM_read_data_2,\n"
+    else:
+        raise NotImplementedError("Unknown read behavour")
+
+    com_det.arch_body.drop_last_X(2)
+    com_det.arch_body += "\<);\n\<\n"
 
 def gen_reads(gen_det, com_det):
 
@@ -460,7 +529,7 @@ def gen_reads(gen_det, com_det):
                 "has_enable"    : gen_det.config["stallable"],
                 "force_on_init" : False
             },
-            gen_det.output_path,
+            output_path=gen_det.output_path,
             module_name=None,
             concat_naming=False,
             force_generation=gen_det.force_generation
@@ -471,9 +540,9 @@ def gen_reads(gen_det, com_det):
         com_det.add_port("read_%i_addr"%(read, ), "std_logic_vector", "in", gen_det.config["addr_width"])
         com_det.add_port("read_%i_data"%(read, ), "std_logic_vector", "out", gen_det.config["data_width"])
 
+        com_det.arch_head += "signal read_%i_data_internal : std_logic_vector(%i downto 0);\n"%(read, gen_det.config["data_width"] - 1)
         if gen_det.config["buffer_reads"]:
             # Generate output buffers
-            com_det.arch_head += "signal read_%i_buffer_in : std_logic_vector(%i downto 0);\n"%(read, gen_det.config["data_width"] - 1)
 
             com_det.arch_body += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
 
@@ -482,40 +551,42 @@ def gen_reads(gen_det, com_det):
             com_det.arch_body += "port map (\n\>"
 
             if gen_det.config["stallable"]:
-                com_det.arch_body += "enable  => not stall,\n"
+                com_det.arch_body += "enable  => not stall_in,\n"
 
             com_det.arch_body += "clock => clock,\n"
-            com_det.arch_body += "data_in  => read_%i_buffer_in,\n"%(read, )
+            com_det.arch_body += "data_in  => read_%i_data_internal,\n"%(read, )
             com_det.arch_body += "data_out => read_%i_data\n"%(read, )
 
             com_det.arch_body += "\<);\n\<"
 
-            com_det.arch_body += "read_%i_buffer_in <=\>"%(read, )
-            for reg in range(gen_det.config["depth"]):
-                com_det.arch_body += "reg_%i_out when read_%i_addr = \"%s\"\nelse "%(reg, read, bin(reg)[2:].rjust(gen_det.config["addr_width"], "0"))
-            com_det.arch_body += "(others => 'X');\n\<"
-
             com_det.arch_body += "\n"
         else:
-            com_det.arch_body += "read_%i_data <=\>"%(read, )
-            for reg in range(gen_det.config["depth"]):
-                com_det.arch_body += "reg_%i_out when read_%i_addr = \"%s\"\nelse "%(reg, read, bin(reg)[2:].rjust(gen_det.config["addr_width"], "0"))
-            com_det.arch_body += "(others => 'X');\n\<"
+            com_det.arch_body += "read_%i_data <= read_%i_data_internal;\n"%(read, read, )
+
+    if com_det.ports_config == "SIMPLE_DUAL":
+        com_det.arch_body += "RAM_read_addr_0 <= read_0_addr;\n"
+        com_det.arch_body += "read_0_data_internal <= RAM_read_data_0;\n"
+    elif com_det.ports_config == "QUAD":
+        for read in range(gen_det.config["reads"]):
+            com_det.arch_body += "RAM_read_addr_%i <= read_%i_addr;\n"%(read, read, )
+            com_det.arch_body += "read_%i_data_internal <= RAM_read_data_%i;\n"%(read, read, )
+
+        for read in range(gen_det.config["reads"], 3):
+            com_det.arch_body += "RAM_read_addr_%i <= (others => '1');\n"%(read, )
+    else:
+        raise ValueError("regfile only supports up 3 reads per cycle")
+
+
 
 def gen_writes(gen_det, com_det):
 
-    for write in range(gen_det.config["writes"]):
-        # Declare port
-        com_det.add_port("write_%i_addr"%(write, ), "std_logic_vector", "in", gen_det.config["addr_width"])
-        com_det.add_port("write_%i_data"%(write, ), "std_logic_vector", "in", gen_det.config["data_width"])
-        com_det.add_port("write_%i_enable"%(write, ), "std_logic", "in")
-
     if gen_det.config["writes"] == 1:
-        for reg in range(gen_det.config["depth"]):
-            com_det.arch_body += "reg_%i_in <= write_0_data;\n"%(reg, )
-            if gen_det.config["stallable"]:
-                com_det.arch_body += "reg_%i_enable <= write_0_enable and not stall when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(gen_det.config["addr_width"], "0"))
-            else:
-                com_det.arch_body += "reg_%i_enable <= write_0_enable when write_0_addr = \"%s\" else '0';\n"%(reg, bin(reg)[2:].rjust(gen_det.config["addr_width"], "0"))
+        com_det.add_port("write_0_addr", "std_logic_vector", "in", gen_det.config["addr_width"])
+        com_det.add_port("write_0_data", "std_logic_vector", "in", gen_det.config["data_width"])
+        com_det.add_port("write_0_enable", "std_logic", "in")
+
+        com_det.arch_body += "RAM_write_data <= write_0_data;\n"
+        com_det.arch_body += "RAM_write_addr <= write_0_addr;\n"
+        com_det.arch_body += "RAM_write_enable <= write_0_enable;\n"
     else:
-        raise NotImplementedError()
+        raise NotImplementedError("Regfile can only handle 1 wrtie per cycle")

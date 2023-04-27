@@ -151,7 +151,7 @@ def add_inst_config(instr_id, instr_set, config):
                         # Record required padding
                         try:
                             supported_packings[index].add(( ("fetched", index, ), ("unpadded", ), num_words, ))
-                        except KeyError:
+                        except IndexError:
                             supported_packings.append(set())
                             supported_packings[index].add(( ("fetched", index, ), ("unpadded", ), num_words, ))
 
@@ -255,7 +255,7 @@ def add_inst_config(instr_id, instr_set, config):
                         # Record required padding
                         try:
                             supported_packings[index].add(( ("fetched", index, ), (padding_type, ), num_words, ))
-                        except KeyError:
+                        except IndexError:
                             supported_packings.append(set())
                             supported_packings[index].add(( ("fetched", index, ), (padding_type, ), num_words, ))
 
@@ -410,7 +410,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                 if instr_id in asm_utils.instr_exe_units(instr):
                     mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
 
-                    if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "AND", "OR", "XOR", "ADD", "SUB", ]:
+                    if   mnemonic in ["MOV", "LSH", "RSH", "LRL", "RRL", "NOT", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", "ADD", "SUB", ]:
                         value = map["unpadded"]
                     elif mnemonic in ["PMOV", "PLSH", "PRSH", "PLRL", "PRRL", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
                         value = map["unpadded"]
@@ -599,7 +599,7 @@ def gen_packer(gen_det, com_det):
         {
             "inputs"  : 2,
         },
-        gen_det.output_path,
+        output_path=gen_det.output_path,
         module_name=None,
         concat_naming=False,
         force_generation=gen_det.force_generation
@@ -616,7 +616,7 @@ def gen_packer(gen_det, com_det):
                     {
                         "inputs"  : len(sources),
                     },
-                    gen_det.output_path,
+                    output_path=gen_det.output_path,
                     module_name=None,
                     concat_naming=False,
                     force_generation=gen_det.force_generation
@@ -718,7 +718,7 @@ def gen_packer(gen_det, com_det):
 
             word = 1
             sel_bit = 0
-            while word < operand_details["packings"]["unpadded"]:
+            while word < operand_details["packings"]["single_one"]:
                 for _ in range(word):
                     com_det.arch_body += "input_%i_single_one(%i) <= '1';\n"%(operand, LSB, )
                     LSB += 1
@@ -757,7 +757,7 @@ def gen_packer(gen_det, com_det):
 
             word = 1
             sel_bit = 0
-            while word < operand_details["packings"]["unpadded"]:
+            while word < operand_details["packings"]["single_zero"]:
                 for _ in range(word):
                     com_det.arch_body += "input_%i_single_zero(%i) <= '0';\n"%(operand, LSB, )
                     LSB += 1
@@ -783,7 +783,7 @@ def gen_packer(gen_det, com_det):
                     word += 1
                 sel_bit += 1
             if packed_width > LSB:
-                com_det.arch_body += "input_%i_single_one(%i downto %i) <= (others => '0');\n"%(operand, packed_width - 1, LSB, )
+                com_det.arch_body += "input_%i_single_zero(%i downto %i) <= (others => '0');\n"%(operand, packed_width - 1, LSB, )
             com_det.arch_body += "\n"
         # Handle packings mux
         com_det.add_port("result_%i"%(operand, ), "std_logic_vector", "out", packed_width)
@@ -794,7 +794,7 @@ def gen_packer(gen_det, com_det):
                 {
                     "inputs"  : len(packings),
                 },
-                gen_det.output_path,
+                output_path=gen_det.output_path,
                 module_name=None,
                 concat_naming=False,
                 force_generation=gen_det.force_generation

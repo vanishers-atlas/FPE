@@ -1,5 +1,8 @@
 {
-    "SIMD": {
+  "external_stall" : false,
+  "report_stall" : false,
+
+  "SIMD": {
         "lanes": 1
     },
     "address_sources": {},

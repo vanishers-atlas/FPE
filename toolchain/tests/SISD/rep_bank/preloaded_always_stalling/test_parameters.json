@@ -1,0 +1,33 @@
+{
+    "signal_padding": "unsigned",
+
+    "external_stall" : true,
+    "report_stall" : true,
+
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "program_flow": {
+      "rep_bank": {
+          "subtype": "preloaded",
+          "stall_on_id_change": "ALWAYS"
+      }
+    },
+
+    "address_sources": {},
+
+    "data_memories": {
+        "PUT": {
+            "data_width": 4,
+            "FIFO_handshakes": false,
+            "FIFOs": 1
+        }
+    },
+
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    }
+}

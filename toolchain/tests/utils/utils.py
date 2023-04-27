@@ -129,7 +129,6 @@ def run_sweep_leaf(
 
     #return None
 
-
     # Symulate testbench
     vhdl_files = [
         output_dir + "\\" + file

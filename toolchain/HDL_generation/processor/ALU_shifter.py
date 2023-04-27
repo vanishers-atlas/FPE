@@ -339,7 +339,7 @@ def gen_input_handling(gen_det, com_det):
                 {
                     "inputs"  : len(sources),
                 },
-                gen_det.output_path,
+                output_path=gen_det.output_path,
                 module_name=None,
                 concat_naming=False,
                 force_generation=gen_det.force_generation
@@ -451,7 +451,7 @@ def gen_shifting(gen_det, com_det):
                 {
                     "inputs"  : len(set(shifted_signals.values())),
                 },
-                gen_det.output_path,
+                output_path=gen_det.output_path,
                 module_name=None,
                 concat_naming=False,
                 force_generation=gen_det.force_generation

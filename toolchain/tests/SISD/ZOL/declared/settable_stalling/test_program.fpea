@@ -1,0 +1,126 @@
+{
+  COM seek_set_zol : ZOL_counter(
+    overwrites : 60,
+    seekable : true,
+    settable : true
+  );
+
+
+  seek_set_zol.SEEK(solo_single_instr_30);
+  seek_set_zol.SET(29);
+  NOP;
+  NOP;
+  NOP;
+
+  LOOP solo_single_instr_30 :
+  {
+    MOV (0b0000, PUT[0]);
+  }
+  NOP;
+  NOP;
+
+
+  seek_set_zol.SEEK(solo_single_instr_60);
+  seek_set_zol.SET(59);
+  NOP;
+  NOP;
+  NOP;
+
+  LOOP solo_single_instr_60 :
+  {
+    MOV (0b0001, PUT[0]);
+  }
+  NOP;
+  NOP;
+
+
+  seek_set_zol.SEEK(solo_multi_instr_30);
+  seek_set_zol.SET(29);
+  NOP;
+  NOP;
+  NOP;
+
+  LOOP solo_multi_instr_30 :
+  {
+    MOV (0b0100, PUT[0]);
+    MOV (0b0101, PUT[0]);
+  }
+  NOP;
+  NOP;
+
+
+  seek_set_zol.SEEK(solo_multi_instr_60);
+  seek_set_zol.SET(59);
+  NOP;
+  NOP;
+  NOP;
+
+  LOOP solo_multi_instr_60 :
+  {
+    MOV (0b0110, PUT[0]);
+    MOV (0b0111, PUT[0]);
+  }
+  NOP;
+
+
+  ZOL(2)
+  {
+
+    seek_set_zol.SEEK(nested_single_instr_30);
+    seek_set_zol.SET(29);
+    NOP;
+    NOP;
+    NOP;
+
+    LOOP nested_single_instr_30 :
+    {
+      MOV (0b1000, PUT[0]);
+    }
+    NOP;
+    NOP;
+
+
+    seek_set_zol.SEEK(nested_single_instr_60);
+    seek_set_zol.SET(59);
+    NOP;
+    NOP;
+    NOP;
+
+    LOOP nested_single_instr_60 :
+    {
+      MOV (0b1001, PUT[0]);
+    }
+    NOP;
+    NOP;
+
+
+
+    seek_set_zol.SEEK(nested_multi_instr_30);
+    seek_set_zol.SET(29);
+    NOP;
+    NOP;
+    NOP;
+
+    LOOP nested_multi_instr_30 :
+    {
+      MOV (0b1100, PUT[0]);
+      MOV (0b1101, PUT[0]);
+    }
+    NOP;
+
+
+    seek_set_zol.SEEK(nested_multi_instr_60);
+    seek_set_zol.SET(59);
+    NOP;
+    NOP;
+    NOP;
+
+    LOOP nested_multi_instr_60 :
+    {
+      MOV (0b1110, PUT[0]);
+      MOV (0b1111, PUT[0]);
+    }
+    NOP;
+  }
+  NOP;
+}

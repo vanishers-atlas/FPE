@@ -1,0 +1,33 @@
+{
+    "report_stall": true,
+    "external_stall": true,
+
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "data_memories": {
+        "GET": {
+            "FIFOs": 1,
+            "FIFO_handshakes": false,
+            "data_width": 4
+        },
+        "PUT": {
+            "FIFOs": 1,
+            "FIFO_handshakes": false,
+            "data_width": 4
+        },
+        "REG": {
+            "data_width": 4,
+            "depth": 16
+        }
+    },
+
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    },
+    
+    "signal_padding": "unsigned"
+}

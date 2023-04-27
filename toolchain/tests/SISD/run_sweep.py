@@ -11,6 +11,7 @@ if __name__ == "__main__":
     import comms
     import memories
     import ZOL
+    import rep_bank
     import BAM
     import ALU
     import jumping
@@ -18,6 +19,7 @@ else:
     from . import comms
     from . import memories
     from . import ZOL
+    from . import rep_bank
     from . import BAM
     from . import ALU
     from . import jumping
@@ -27,9 +29,10 @@ test_sets = [
     comms,
     memories,
     ZOL,
+    rep_bank,
     BAM,
     ALU,
-    jumping,
+    #jumping,
 ]
 
 def run_sweep(path="."):

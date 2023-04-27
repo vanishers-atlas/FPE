@@ -1,7 +1,7 @@
 SHIFT_OUT = chr(0x0E)
 SHIFT_IN  = chr(0x0F)
 
-class indented_string:
+class IndentedString:
     def __init__(self):
         self.str = ""
 
@@ -9,7 +9,7 @@ class indented_string:
         this.str = this.str[0:-X]
 
     def append_string(this, string):
-        result = indented_string()
+        result = IndentedString()
         result.str = this.str
 
         # Process string chars
@@ -37,8 +37,8 @@ class indented_string:
             pass
         return result
 
-    def concate_indented_strings(A, B):
-        result = indented_string()
+    def concate(A, B):
+        result = IndentedString()
         result.str = A.str + B.str
         return result
 
@@ -46,7 +46,7 @@ class indented_string:
         if type(B) == type(""):
             return A.append_string(B)
         else:
-            return A.concate_indented_strings(B)
+            return A.concate(B)
 
     def __str__(this):
         str = ""

@@ -11,15 +11,18 @@ class extractor(ParseTreeListener):
         this.program_context = program_context
 
         # Create a blank para_file
-        this.para_file = {
+        this.rollcall = {
             "signal_padding" : None,
+
+            "external_stall" : None,
+            "report_stall" : None,
 
             "SIMD" : {
                 "lanes" : None,
+                "force_lanes" : False,
             },
 
             "program_flow" : {
-                "ZOLs" : { },
             },
 
             "instr_decoder"  : { },
@@ -30,71 +33,25 @@ class extractor(ParseTreeListener):
 
             "execute_units" : { },
         }
-        this.para_context = {
-            "ZOLs" : { },
-        }
 
     def return_findings(this):
-        return this.para_file, this.para_context
-
-    #################################################################################
-
-    def enterState_component(this, ctx):
-        com_type = asm_utils.token_to_text(ctx.com_type)
-
-        if   com_type == "ZOL_ripple":
-            this.state_component_ZOL_ripple(ctx)
-        elif com_type == "ZOL_cascade":
-            this.state_component_ZOL_cascade(ctx)
-        elif com_type == "ZOL_counter":
-            this.state_component_ZOL_counter(ctx)
-        else:
-            raise ValueError("Unknown Component type, %s, at %s"%(
-                com_type,
-                asm_utils.ctx_start(ctx)
-            ) )
-
-
-    def state_component_ZOL_ripple(this, ctx):
-        com_name = asm_utils.token_to_text(ctx.com_name.IDENTIFER())
-
-        this.para_context["ZOLs"][com_name] = {
-            "overwrites" : "int",
-            "seekable" : "bool",
-        }
-
-    def state_component_ZOL_cascade(this, ctx):
-        com_name = asm_utils.token_to_text(ctx.com_name.IDENTIFER())
-
-        this.para_context["ZOLs"][com_name] = {
-            "overwrites" : "int",
-            "seekable" : "bool",
-        }
-
-    def state_component_ZOL_counter(this, ctx):
-        com_name = asm_utils.token_to_text(ctx.com_name.IDENTIFER())
-
-        this.para_context["ZOLs"][com_name] = {
-            "overwrites" : "int",
-            "seekable" : "bool",
-            "settable" : "bool",
-        }
+        return this.rollcall
 
     #################################################################################
 
     def enterOp_bam(this, ctx):
         BAM = asm_utils.get_component_op(ctx, this.program_context)[0]
         # Ensure BAM exists
-        if BAM not in this.para_file["address_sources"]:
-            this.para_file["address_sources"][BAM] = {}
+        if BAM not in this.rollcall["address_sources"]:
+            this.rollcall["address_sources"][BAM] = {}
 
         # Ensure required para_file are in ALU
-        if "offset_max" not in this.para_file["address_sources"][BAM]:
-            this.para_file["address_sources"][BAM]["offset_max"] = None
-        if "addr_max" not in this.para_file["address_sources"][BAM]:
-            this.para_file["address_sources"][BAM]["addr_max"] = None
-        if "step_max" not in this.para_file["address_sources"][BAM]:
-            this.para_file["address_sources"][BAM]["step_max"] = None
+        if "offset_max" not in this.rollcall["address_sources"][BAM]:
+            this.rollcall["address_sources"][BAM]["offset_max"] = None
+        if "addr_max" not in this.rollcall["address_sources"][BAM]:
+            this.rollcall["address_sources"][BAM]["addr_max"] = None
+        if "step_max" not in this.rollcall["address_sources"][BAM]:
+            this.rollcall["address_sources"][BAM]["step_max"] = None
 
     #################################################################################
 
@@ -103,20 +60,34 @@ class extractor(ParseTreeListener):
         assert len(ALU) == 1
         ALU = ALU[0]
         # Ensure ALU exists
-        if ALU not in this.para_file["execute_units"]:
-            this.para_file["execute_units"][ALU] = {}
+        if ALU not in this.rollcall["execute_units"]:
+            this.rollcall["execute_units"][ALU] = {}
 
         # Ensure required para_file are in ALU
-        if "data_width" not in this.para_file["execute_units"][ALU]:
-            this.para_file["execute_units"][ALU]["data_width" ] = None
+        if "data_width" not in this.rollcall["execute_units"][ALU]:
+            this.rollcall["execute_units"][ALU]["data_width" ] = None
 
     #################################################################################
 
     def enterAccess_fetch(this, ctx):
         mem = asm_utils.get_component_access(ctx, this.program_context)
+        this.handle_fetch(mem)
 
+    def enterBap_fetch(this, ctx):
+        mem = asm_utils.get_component_access(ctx, this.program_context)
+        this.handle_fetch(mem)
+
+    def enterAccess_store(this, ctx):
+        mem = asm_utils.get_component_access(ctx, this.program_context)
+        this.handle_store(mem)
+
+    def enterAccess_store(this, ctx):
+        mem = asm_utils.get_component_access(ctx, this.program_context)
+        this.handle_store(mem)
+
+    def handle_fetch(this, mem):
         if mem == "IMM":
-            this.IMM_handling(mem)
+            pass
         elif mem in ["GET", "PUT"]:
             this.comm_handling(mem)
         elif mem in ["ROM_A", "ROM_B", "RAM", "REG"]:
@@ -124,9 +95,7 @@ class extractor(ParseTreeListener):
         else:
             raise ValueError("Unknown mem used in fatch access, " + str(mem))
 
-    def enterAccess_store(this, ctx):
-        mem = asm_utils.get_component_access(ctx, this.program_context)
-
+    def handle_store(this, mem):
         if mem in ["PUT"]:
             this.comm_handling(mem)
         elif mem in ["RAM", "REG"]:
@@ -134,59 +103,61 @@ class extractor(ParseTreeListener):
         else:
             raise ValueError("Unknown mem used in store access, " + str(mem))
 
-
-    def IMM_handling(this, mem):
-        # Ensure mem is declared in config
-        if mem not in this.para_file["data_memories"]:
-            this.para_file["data_memories"][mem] = {}
-
     def comm_handling(this, mem):
         # Ensure mem is declared in config
-        if mem not in this.para_file["data_memories"]:
-            this.para_file["data_memories"][mem] = {}
+        if mem not in this.rollcall["data_memories"]:
+            this.rollcall["data_memories"][mem] = { "cross_lane" : False }
 
         # Ensure required para_file are in mem
-        if "data_width" not in this.para_file["data_memories"][mem]:
-            this.para_file["data_memories"][mem]["data_width"] = None
-        if "FIFOs" not in this.para_file["data_memories"][mem]:
-            this.para_file["data_memories"][mem]["FIFOs"] = None
-        if "FIFO_handshakes" not in this.para_file["data_memories"][mem]:
-            this.para_file["data_memories"][mem]["FIFO_handshakes"] = None
+        if "data_width" not in this.rollcall["data_memories"][mem]:
+            this.rollcall["data_memories"][mem]["data_width"] = None
+        if "FIFOs" not in this.rollcall["data_memories"][mem]:
+            this.rollcall["data_memories"][mem]["FIFOs"] = None
+        if "FIFO_handshakes" not in this.rollcall["data_memories"][mem]:
+            this.rollcall["data_memories"][mem]["FIFO_handshakes"] = None
 
     def basic_mem_handling(this, mem):
         # Ensure mem is declared in config
-        if mem not in this.para_file["data_memories"]:
-            this.para_file["data_memories"][mem] = {}
+        if mem not in this.rollcall["data_memories"]:
+            this.rollcall["data_memories"][mem] = { "cross_lane" : False }
 
         # Handle ROM and RAM type parameter
         if mem in ["ROM_A", "ROM_B", "RAM"]:
-            if "type" not in this.para_file["data_memories"][mem]:
-                this.para_file["data_memories"][mem]["type"] = None
+            if "type" not in this.rollcall["data_memories"][mem]:
+                this.rollcall["data_memories"][mem]["type"] = None
 
         # Ensure required para_file are in mem
-        if "data_width" not in this.para_file["data_memories"][mem]:
-            this.para_file["data_memories"][mem]["data_width" ] = None
-        if "depth" not in this.para_file["data_memories"][mem]:
-            this.para_file["data_memories"][mem]["depth" ] = None
+        if "data_width" not in this.rollcall["data_memories"][mem]:
+            this.rollcall["data_memories"][mem]["data_width" ] = None
+        if "depth" not in this.rollcall["data_memories"][mem]:
+            this.rollcall["data_memories"][mem]["depth" ] = None
 
     #################################################################################
 
     def enterAddr_bam(this, ctx):
         BAM = asm_utils.get_component_addr(ctx, this.program_context)
         # Ensure BAM exists
-        if BAM not in this.para_file["address_sources"]:
-            this.para_file["address_sources"][BAM] = {}
+        if BAM not in this.rollcall["address_sources"]:
+            this.rollcall["address_sources"][BAM] = {}
 
         # Ensure required para_file are in ALU
-        if "offset_max" not in this.para_file["address_sources"][BAM]:
-            this.para_file["address_sources"][BAM]["offset_max"] = None
-        if "addr_max" not in this.para_file["address_sources"][BAM]:
-            this.para_file["address_sources"][BAM]["addr_max"] = None
-        if "step_max" not in this.para_file["address_sources"][BAM]:
-            this.para_file["address_sources"][BAM]["step_max"] = None
+        if "offset_max" not in this.rollcall["address_sources"][BAM]:
+            this.rollcall["address_sources"][BAM]["offset_max"] = None
+        if "addr_max" not in this.rollcall["address_sources"][BAM]:
+            this.rollcall["address_sources"][BAM]["addr_max"] = None
+        if "step_max" not in this.rollcall["address_sources"][BAM]:
+            this.rollcall["address_sources"][BAM]["step_max"] = None
 
     #################################################################################
 
     def enterState_zol(this, ctx):
-        this.para_file["program_flow"]["bound_ZOL_tracker_type"] = None
-        this.para_file["program_flow"]["pune_single_iteration_bound_ZOLs"] = None
+        this.rollcall["program_flow"]["hidden_ZOLs"] = {}
+
+        this.rollcall["program_flow"]["hidden_ZOLs"]["tracker_type"] = None
+        this.rollcall["program_flow"]["hidden_ZOLs"]["pune_single_iteration"] = None
+
+    def enterState_rep(this, ctx):
+        this.rollcall["program_flow"]["rep_bank"] = {}
+
+        this.rollcall["program_flow"]["rep_bank"]["subtype"] = None
+        this.rollcall["program_flow"]["rep_bank"]["stall_on_id_change"] = None

@@ -1,5 +1,4 @@
-from FPE.toolchain.HDL_generation.utils import indented_string as inStr
-
+from FPE.toolchain.HDL_generation.utils.indented_string import IndentedString
 import json, zlib
 
 class FilesInvalid (Exception):
@@ -27,8 +26,8 @@ class generation_details ():
 
 class component_details ():
     def __init__(this):
-        this.arch_head = inStr.indented_string()
-        this.arch_body = inStr.indented_string()
+        this.arch_head = IndentedString()
+        this.arch_body = IndentedString()
 
         this._imports = []
 
@@ -66,6 +65,15 @@ class component_details ():
         if port_width != None:
             this._ports[port_name]["width"] = port_width
 
+    def ripple_port(this, port_name,  port_details):
+        port_type =  port_details["type"]
+        port_direction =  port_details["direction"]
+        port_width = None
+        try:  port_width =  port_details["width"]
+        except KeyError: pass
+
+        this.add_port(port_name, port_type, port_direction, port_width)
+
     def add_generic(this, generic_name, generic_type, generic_width=None):
         assert type(generic_name) == str, "generic_name must be a string"
         assert generic_name not in this._generics.keys(), "there already us a generic called " + generic_name
@@ -80,6 +88,14 @@ class component_details ():
         }
         if generic_width != None:
             this._generics[generic_name]["width"] = generic_width
+
+    def ripple_generic(this, generic_name, generic_details):
+        generic_type =  generic_details["type"]
+        generic_width = None
+        try:  generic_width =  generic_details["width"]
+        except KeyError: pass
+
+        this.add_generic(generic_name, generic_type, generic_width)
 
     def add_interface_item(this, key, value):
         assert type(key) == str, "key must be a string"
@@ -169,24 +185,24 @@ def generate_files(*args):
         assert type(imports) == list, "Invalid usage, in seperate parameter mode, args[2] (imports)  must be a list"
 
         arch_head = args[3]
-        assert type(arch_head) == inStr.indented_string, "Invalid usage, in seperate parameter mode, args[3] (arch_head)  must be an indented_string"
+        assert type(arch_head) == IndentedString, "Invalid usage, in seperate parameter mode, args[3] (arch_head)  must be an IndentedString"
 
         arch_body = args[4]
-        assert type(arch_body) == inStr.indented_string, "Invalid usage, in seperate parameter mode, args[4] (arch_body)  must be an indented_string"
+        assert type(arch_body) == IndentedString, "Invalid usage, in seperate parameter mode, args[4] (arch_body)  must be an IndentedString"
 
         interface = args[5]
         assert type(interface) == dict, "Invalid usage, in seperate parameter mode, args[5] (interface)  must be a dict"
     else:
         raise SyntaxError("Invalad usage, generate_files has 2 possible modes of usage: collecton parameters and seperate parameters. "
             + "in collecton parameter mode 2 paremeteris requiredL gen_det(generation_details), and com_det(component_details). "
-            + "In seperate parameter mode 6 parameters are required: output_path(str), module_name(str), imports(list), arch_head(indented_string), arch_body(indented_string), and imports(dict)"
+            + "In seperate parameter mode 6 parameters are required: output_path(str), module_name(str), imports(list), arch_head(IndentedString), arch_body(IndentedString), and imports(dict)"
         )
 
     output_path, module_name, imports, arch_head, arch_body, interface
 
 
 
-    text = inStr.indented_string()
+    text = IndentedString()
 
     # include imports
     last_lib = ""

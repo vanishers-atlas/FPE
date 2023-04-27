@@ -84,8 +84,8 @@ def handle_module_name(module_name, config):
 #####################################################################
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
 
+    # Check and preprocess parameters
     assert type(config) == dict, "config must be a dict"
     assert type(output_path) == str, "output_path must be a str"
     assert module_name == None or type(module_name) == str, "module_name must ne a string or None"
@@ -94,102 +94,68 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
     if __debug__ and concat_naming == True:
         assert type(module_name) == str and module_name != "", "When using concat_naming, and a non blank module name is required"
 
+    config = preprocess_config(config)
+    module_name = handle_module_name(module_name, config)
 
-    # Moves parameters into global scope
-    CONFIG = config
-    OUTPUT_PATH = output_path
-    MODULE_NAME = handle_module_name(module_name, config)
-    CONCAT_NAMING = concat_naming
-    FORCE_GENERATION = force_generation
+    # Combine parameters into generation_details class for easy passing to functons
+    gen_det = gen_utils.generation_details(config, output_path, module_name, concat_naming, force_generation)
 
-    # Load return variables from pre-exiting file if allowed and can
+    # Load return variables from pre-existing file if allowed and can
     try:
-        return gen_utils.load_files(FORCE_GENERATION, OUTPUT_PATH, MODULE_NAME)
+        return gen_utils.load_files(gen_det)
     except gen_utils.FilesInvalid:
-        # Generate new file
-        global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
+        # Init component_details
+        com_det = gen_utils.component_details()
 
-        # Init generation and return varables
-        IMPORTS   = []
-        ARCH_HEAD = gen_utils.indented_string()
-        ARCH_BODY = gen_utils.indented_string()
-        INTERFACE = {
-            "generics" : {
-                "overwrites" : {
-                    "type" : "std_logic_vector",
-                    "width" : SRL_WIDTH*CONFIG["tallies"],
-                }
-            },
-            "ports" : {
-                "clock" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                },
-                "match_found" : {
-                    "type" : "std_logic",
-                    "direction" : "in",
-                },
-                "overwrites_reached" : {
-                    "type" : "std_logic",
-                    "direction" : "out",
-                },
-            },
-            "overwrites_encoding" : {
+        com_det.add_generic("overwrites", "std_logic_vector", SRL_WIDTH*gen_det.config["tallies"])
+
+        com_det.add_port("clock", "std_logic", "in")
+        com_det.add_port("match_found", "std_logic", "in")
+        com_det.add_port("overwrites_reached", "std_logic", "out")
+
+        com_det.add_interface_item("overwrites_encoding",
+            {
                 "type"      : "biased_tally",
                 "bias"      : SRL_BAIS,
                 "range"     : SRL_RANGE,
-                "tallies"   : CONFIG["tallies"]
-            },
-        }
+                "tallies"   : gen_det.config["tallies"]
+            }
+        )
 
         # Include required libs
-        IMPORTS += [
-            {
-                "library" : "ieee",
-                "package" : "std_logic_1164",
-                "parts" : "all"
-            },
-            {
-                "library" : "UNISIM",
-                "package" : "vcomponents",
-                "parts" : "all"
-            },
-        ]
-
-
+        com_det.add_import("ieee", "std_logic_1164", "all")
+        com_det.add_import("UNISIM", "vcomponents", "all")
 
         # Generation Module Code
-        generate_state_machine()
-        generate_SRLs()
+        generate_state_machine(gen_det, com_det)
+        generate_SRLs(gen_det, com_det)
 
         # Save code to file
-        gen_utils.generate_files(OUTPUT_PATH, MODULE_NAME, IMPORTS, ARCH_HEAD, ARCH_BODY, INTERFACE)
+        gen_utils.generate_files(gen_det, com_det)
 
-        return INTERFACE, MODULE_NAME
+        return com_det.get_interface(), gen_det.module_name
+
 
 #####################################################################
 
-def generate_state_machine():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    if CONCAT_NAMING:
-        module_name = MODULE_NAME + "_FSM"
+def generate_state_machine(gen_det, com_det):
+    if gen_det.concat_naming:
+        module_name = gen_det.module_name + "_FSM"
     else:
         module_name = None
 
     sub_interface, sub_name = ZOL_inverted_SR_FSM.generate_HDL(
         {},
-        OUTPUT_PATH,
+        output_path=gen_det.output_path,
         module_name=module_name,
-        concat_naming=CONCAT_NAMING,
-        force_generation=FORCE_GENERATION
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
     )
 
-    ARCH_BODY += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
 
     assert len(sub_interface["generics"]) == 0
-    # ARCH_BODY += "generic map ()\n"
+    # com_det.arch_body += "generic map ()\n"
 
     assert len(sub_interface["ports"]) == 4
     assert "clock" in sub_interface["ports"].keys()
@@ -197,46 +163,43 @@ def generate_state_machine():
     assert "not_tracking" in sub_interface["ports"].keys()
     assert "overwrites_reached" in sub_interface["ports"].keys()
 
-    ARCH_BODY += "port map (\n\>"
+    com_det.arch_body += "port map (\n\>"
 
-    ARCH_HEAD += "signal not_tracking : std_logic;\n"
+    com_det.arch_head += "signal not_tracking : std_logic;\n"
 
-    ARCH_BODY += "clock => clock,\n"
-    ARCH_BODY += "match_found  => match_found,\n"
-    ARCH_BODY += "overwrites_reached => overwrites_reached_int,\n"
-    ARCH_BODY += "not_tracking  => not_tracking\n"
+    com_det.arch_body += "clock => clock,\n"
+    com_det.arch_body += "match_found  => match_found,\n"
+    com_det.arch_body += "overwrites_reached => overwrites_reached_int,\n"
+    com_det.arch_body += "not_tracking  => not_tracking\n"
 
-    ARCH_BODY += "\<);\n\<\n"
+    com_det.arch_body += "\<);\n\<\n"
 
-def generate_SRLs():
-    global CONFIG, OUTPUT_PATH, MODULE_NAME, CONCAT_NAMING, FORCE_GENERATION
-    global INTERFACE, IMPORTS, ARCH_HEAD, ARCH_BODY
-
-    ARCH_BODY += "-- Ripple iteration tracker\n"
-    ARCH_HEAD += "signal overwrites_reached_int : std_logic;\n"
+def generate_SRLs(gen_det, com_det):
+    com_det.arch_body += "-- Ripple iteration tracker\n"
+    com_det.arch_head += "signal overwrites_reached_int : std_logic;\n"
 
     # Generate ripple chain of SRLC32Es
-    for ripple in range(CONFIG["tallies"]):
-        ARCH_HEAD += "signal ripple_%i_out : std_logic;\n"%(ripple, )
+    for ripple in range(gen_det.config["tallies"]):
+        com_det.arch_head += "signal ripple_%i_out : std_logic;\n"%(ripple, )
 
-        ARCH_BODY += "ripple_%i : SRLC32E\n\>"%(ripple)
-        ARCH_BODY += "generic map (INIT => X\"00000000\")\n"
-        ARCH_BODY += "port map (\>\n"
+        com_det.arch_body += "ripple_%i : SRLC32E\n\>"%(ripple)
+        com_det.arch_body += "generic map (INIT => X\"00000000\")\n"
+        com_det.arch_body += "port map (\>\n"
 
-        ARCH_BODY += "A => overwrites(%i downto %i),\n"%(5*ripple + 4, 5*ripple)
+        com_det.arch_body += "A => overwrites(%i downto %i),\n"%(5*ripple + 4, 5*ripple)
 
         # Handle the specail case of the first SRL
         if ripple == 0:
-            ARCH_BODY += "D => not_tracking,\n"
+            com_det.arch_body += "D => not_tracking,\n"
         else:
-            ARCH_BODY += "D => ripple_%i_out,\n"%(ripple - 1)
+            com_det.arch_body += "D => ripple_%i_out,\n"%(ripple - 1)
 
-        ARCH_BODY += "Q => ripple_%i_out,\n"%(ripple)
-        ARCH_BODY += "CLK => clock,\n"
-        ARCH_BODY += "CE => match_found,\n"
-        ARCH_BODY += "Q31 => open\n"
-        ARCH_BODY += "\<);\n\<\n"
+        com_det.arch_body += "Q => ripple_%i_out,\n"%(ripple)
+        com_det.arch_body += "CLK => clock,\n"
+        com_det.arch_body += "CE => match_found,\n"
+        com_det.arch_body += "Q31 => open\n"
+        com_det.arch_body += "\<);\n\<\n"
 
     # Connect output of final SRLC32E to overwrites_reached
-    ARCH_BODY += "overwrites_reached_int <=  ripple_%i_out;\n"%(CONFIG["tallies"] - 1)
-    ARCH_BODY += "overwrites_reached <=  overwrites_reached_int;\n"
+    com_det.arch_body += "overwrites_reached_int <=  ripple_%i_out;\n"%(gen_det.config["tallies"] - 1)
+    com_det.arch_body += "overwrites_reached <=  overwrites_reached_int;\n"

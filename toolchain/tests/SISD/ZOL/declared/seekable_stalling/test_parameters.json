@@ -1,0 +1,32 @@
+{
+    "SIMD": {
+        "lanes": 1
+    },
+
+    "external_stall" : true,
+    "report_stall" : true,
+
+    "data_memories": {
+        "PUT": {
+            "FIFO_handshakes": false,
+            "FIFOs": 1,
+            "data_width": 4
+        }
+    },
+
+    "execute_units": {
+        "ALU": {
+            "data_width": 4
+        }
+    },
+
+    "program_flow": {
+        "hidden_ZOLs": {
+            "pune_single_iteration": false,
+            "tracker_type": "ripple"
+        }
+    },
+
+
+    "signal_padding": "unsigned"
+}

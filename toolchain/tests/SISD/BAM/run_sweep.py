@@ -10,16 +10,25 @@ from FPE.toolchain.tests import utils
 
 
 if __name__ == "__main__":
-    import UNSIGNED
-    import SIGNED
+    import fetch
+    import fetch_stalling
+
+    import store
+    import store_stalling
 else:
-    from . import UNSIGNED
-    from . import SIGNED
+    from . import fetch
+    from . import fetch_stalling
+
+    from . import store
+    from . import store_stalling
 
 
 test_sets = [
-    UNSIGNED,
-    SIGNED,
+    fetch,
+    fetch_stalling,
+
+    store,
+    store_stalling,
 ]
 
 def run_sweep(path="."):
