@@ -58,7 +58,7 @@ def preprocess_config(config_in):
             assert type(config_in["loop_id_width"]) == int
             assert config_in["loop_id_width"] > 0
 
-            assert config_in["loop_id_width"] == tc_utils.unsigned.width(config_in["num_states"])
+            assert config_in["loop_id_width"] == tc_utils.unsigned.width(config_in["num_states"] - 1)
         return config_in
     else:
         config_out = {}
@@ -76,7 +76,7 @@ def preprocess_config(config_in):
         assert type(config_in["loops"]) == list
         config_out["num_states"] = len(config_in["loops"])
 
-        config_out["loop_id_width"] = tc_utils.unsigned.width(config_out["num_states"])
+        config_out["loop_id_width"] = tc_utils.unsigned.width(config_out["num_states"] - 1)
 
         config_out["PREPROCESSED"] = True
 
