@@ -15,6 +15,11 @@ if __name__ == "__main__":
 
     import store
     import store_stalling
+
+    import stated_base
+    import stated_step
+
+    import multi_base
 else:
     from . import fetch
     from . import fetch_stalling
@@ -22,13 +27,21 @@ else:
     from . import store
     from . import store_stalling
 
+    from . import stated_base
+    from . import stated_step
 
+    from . import multi_base
 test_sets = [
     fetch,
     fetch_stalling,
 
     store,
     store_stalling,
+
+    stated_base,
+    stated_step,
+
+    multi_base
 ]
 
 def run_sweep(path="."):

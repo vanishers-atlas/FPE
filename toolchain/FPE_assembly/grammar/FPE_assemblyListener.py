@@ -179,6 +179,42 @@ class FPE_assemblyListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by FPE_assemblyParser#addr_bam_mod.
+    def enterAddr_bam_mod(self, ctx:FPE_assemblyParser.Addr_bam_modContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#addr_bam_mod.
+    def exitAddr_bam_mod(self, ctx:FPE_assemblyParser.Addr_bam_modContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#addr_bam_dir_mod.
+    def enterAddr_bam_dir_mod(self, ctx:FPE_assemblyParser.Addr_bam_dir_modContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#addr_bam_dir_mod.
+    def exitAddr_bam_dir_mod(self, ctx:FPE_assemblyParser.Addr_bam_dir_modContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#addr_bam_size_mod.
+    def enterAddr_bam_size_mod(self, ctx:FPE_assemblyParser.Addr_bam_size_modContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#addr_bam_size_mod.
+    def exitAddr_bam_size_mod(self, ctx:FPE_assemblyParser.Addr_bam_size_modContext):
+        pass
+
+
+    # Enter a parse tree produced by FPE_assemblyParser#addr_bam_base_mod.
+    def enterAddr_bam_base_mod(self, ctx:FPE_assemblyParser.Addr_bam_base_modContext):
+        pass
+
+    # Exit a parse tree produced by FPE_assemblyParser#addr_bam_base_mod.
+    def exitAddr_bam_base_mod(self, ctx:FPE_assemblyParser.Addr_bam_base_modContext):
+        pass
+
+
     # Enter a parse tree produced by FPE_assemblyParser#statement.
     def enterStatement(self, ctx:FPE_assemblyParser.StatementContext):
         pass
