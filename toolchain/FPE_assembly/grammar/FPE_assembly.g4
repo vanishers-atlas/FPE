@@ -74,8 +74,15 @@ grammar FPE_assembly;
 				;
 
 		addr_literal  : expr ;
-		addr_bam : 	'BAM' '[' expr ']'
-								('<' step_mod=('FORWARD' | 'BACKWARD') '>')? ;
+		addr_bam : 	'BAM' '[' expr ']' ('<' addr_bam_mod (',' addr_bam_mod)* '>')? ;
+			addr_bam_mod  : addr_bam_dir_mod
+										| addr_bam_size_mod
+										| addr_bam_base_mod
+										;
+
+			  addr_bam_dir_mod : direction=('FORWARD' | 'BACKWARD');
+				addr_bam_size_mod : 'STEP' ':' expr;
+				addr_bam_base_mod : 'BASE' ':' expr;
 
 	/* Statements are parts of an FPE program which don't map to program code
 		And thus don't take up processor cycles
@@ -132,7 +139,7 @@ grammar FPE_assembly;
 			op_bam_reset 	: 'RESET' 'BAM' '[' expr ']' ;
 			op_bam_seek		: 'SEEK'  'BAM' '[' expr ']'
 											'(' access_fetch ')'
-											( '<' step_mod=('FORWARD' | 'BACKWARD') '>')? ;
+											( '<' direction=('FORWARD' | 'BACKWARD') '>')? ;
 
 		op_ZOL : op_ZOL_seek | op_ZOL_set ;
 			op_ZOL_seek : exe_com=ident_ref '.' 'SEEK' '(' loop_label=ident_ref ')' ;

@@ -150,10 +150,10 @@ def generate_instr_op_bam_reset(ctx, program_context):
 def generate_instr_op_bam_seek(ctx, program_context):
     mods = []
 
-    if ctx.step_mod == None:
+    if ctx.direction == None:
         mods.append("FORWARD")
     else:
-        mods.append(asm_utils.token_to_text(ctx.step_mod))
+        mods.append(asm_utils.token_to_text(ctx.direction))
 
     return "#".join(
         [
@@ -818,8 +818,30 @@ def generate_instr_addr_literal():
 def generate_instr_addr_bam(ctx, program_context):
     mods = []
 
-    if ctx.step_mod != None:
-        mods.append(asm_utils.token_to_text(ctx.step_mod))
+    if ctx.expr():
+        bam_id = asm_utils.evaluate_expr(ctx.expr(), program_context)
+    else:
+        raise NotImplementedError(
+            "%s without a supported subrule at %s"%
+            (
+                type(ctx),
+                asm_utils.ctx_start(ctx),
+            )
+        )
+
+    for _mod_ctx in ctx.addr_bam_mod():
+        if   _mod_ctx.addr_bam_dir_mod():
+            mod_ctx = _mod_ctx.addr_bam_dir_mod()
+            mods.append("dir?%s"%(asm_utils.token_to_text(mod_ctx.direction), ))
+        elif _mod_ctx.addr_bam_size_mod():
+            mod_ctx = _mod_ctx.addr_bam_size_mod()
+            if bam_id in program_context["BAM_steps"].keys():
+                step = asm_utils.evaluate_expr(mod_ctx.expr(), program_context)
+                mods.append("step?%i"%(step))
+        elif _mod_ctx.addr_bam_base_mod():
+            pass
+        else:
+            raise ValueError("unknown mod_ctx type")
 
     return ";".join(
         [

@@ -38,6 +38,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
 def preprocess_config(config_in):
     config_out = {}
 
+
     config_out["stallable"] = config_in["stallable"]
 
     # Handle instr_set section of config
@@ -49,6 +50,9 @@ def preprocess_config(config_in):
 
     # Handle instruction decoder section of config
     config_out["instr_decoder"] = {}
+
+    assert(len(config_in["instr_set"]) > 0)
+    config_out["pipeline_stages"] = config_in["pipeline_stages"]
 
     assert(config_in["instr_decoder"]["instr_width"] > 0)
     config_out["instr_decoder"]["instr_width"] = config_in["instr_decoder"]["instr_width"]
@@ -111,6 +115,7 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         define_decode_table_type(gen_det, com_det)
         compute_instr_sections(gen_det, com_det)
         generate_input_ports(gen_det, com_det)
+        generate_prefetch_signals(gen_det, com_det)
         generate_fetch_signals(gen_det, com_det)
         generate_exe_signals(gen_det, com_det)
         generate_store_signals(gen_det, com_det)
@@ -291,7 +296,7 @@ def implement_decoder_rom(gen_det, com_det, decoder_rom, stage):
         {
             "width" : rom_width,
             "depth" : 1,
-            "has_enable" : gen_det.config["stallable"],
+            "has_enable" : True,
             "inited" : False,
         },
         gen_det.output_path,
@@ -305,7 +310,9 @@ def implement_decoder_rom(gen_det, com_det, decoder_rom, stage):
     com_det.arch_body += "port map (\n\>"
 
     if gen_det.config["stallable"]:
-        com_det.arch_body += "enable => not stall_in,\n"
+        com_det.arch_body += "enable => %s and not stall_in,\n"%(gen_det.input_signals["enable"], )
+    else:
+        com_det.arch_body += "enable => %s,\n"%(gen_det.input_signals["enable"], )
 
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "data_in  => control_signals_%s,\n"%(stage, )
@@ -369,6 +376,41 @@ def generate_input_ports(gen_det, com_det):
     if gen_det.config["stallable"]:
         com_det.add_port("stall_in", "std_logic", "in")
 
+
+def generate_prefetch_signals(gen_det, com_det):
+
+    if "PREFETCH" not in gen_det.config["pipeline_stages"]:
+        return
+
+    ####################################################################
+    # Compute then buffer controls based on opcode
+    ####################################################################
+    decoder_rom = init_decoder_rom(gen_det, com_det)
+
+
+
+    if len(gen_utils.get_controls(gen_det.config["controls"], "prefetch")) != 0:
+        implement_decoder_rom(gen_det, com_det, decoder_rom, "prefetch")
+
+    ####################################################################
+    # Buffer gen_det.input_signals for next stage
+    ####################################################################
+    generate_input_signals_delay(gen_det, com_det, "prefetch")
+
+    ####################################################################
+    # Output controls that are directly part of instr
+    ####################################################################
+
+    # Handle prefetch addrs
+    for addr, dic in enumerate(gen_det.instr_sections["addrs"]):
+        width = dic["width"]
+        section = dic["range"]
+
+        com_det.add_port("addr_%i_prefetch"%(addr), "std_logic_vector", "out", width)
+
+
+        com_det.arch_body += "addr_%i_prefetch <= %s(%s);\n"%(addr, gen_det.input_signals["instr"], section)
+    com_det.arch_body += "\n"
 
 def generate_fetch_signals(gen_det, com_det):
 
