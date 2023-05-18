@@ -12,8 +12,10 @@ precontext_rules = [
     component_parameter_uniqueness,
 ]
 
+from . import BAM_mod_checking
 from . import ZOL_operand_definedness
 
 postcontext_rules = [
+    BAM_mod_checking,
     ZOL_operand_definedness,
 ]

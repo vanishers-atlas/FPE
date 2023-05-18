@@ -510,22 +510,6 @@ addr_sources_predeclared_ports = {
 
 def gen_addr_sources(gen_det, com_det, controls, datapaths):
 
-    # Declare data paths for ID addrs
-    # needs to happen before ID is generated so ID can be passed the mux controls
-    for instr in gen_det.config["instr_set"]:
-        ID_addr = 0
-        for read, access in enumerate(asm_utils.instr_fetches(instr)):
-            if asm_utils.addr_com(asm_utils.access_addr(access)) == "ID":
-                for lane in gen_det.config["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath_source(datapaths, "%sfetch_addr_%i"%(lane, read), "fetch", instr, "ID_addr_%i_fetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
-                ID_addr += 1
-
-        for write, access in enumerate(asm_utils.instr_stores(instr)):
-            if asm_utils.addr_com(asm_utils.access_addr(access)) == "ID":
-                for lane in gen_det.config["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath_source(datapaths, "%sstore_addr_%i"%(lane, write), "store", instr, "ID_addr_%i_store"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
-                ID_addr += 1
-
     com_det.arch_body += "\n-- Address components\n"
     for bam, config in gen_det.config["address_sources"].items():
         if gen_det.concat_naming:
@@ -549,6 +533,11 @@ def gen_addr_sources(gen_det, com_det, controls, datapaths):
             concat_naming=gen_det.concat_naming,
             force_generation=gen_det.force_generation
         )
+        if "required_stages" in interface.keys():
+            # Shgould be replaced with a more rebust way to accumalte require stages,
+            # however as this the only place a stage may be added and for time this hardcoding is being used, Sorry. Nat
+            assert interface["required_stages"] == ["prefetch",]
+            gen_det.config["pipeline_stages"] = ["PM", "ID", "PREFETCH", "FETCH", "EXE", "STORE"]
 
         com_det.arch_body += "\n%s : entity work.%s(arch)\>\n"%(bam, name)
 
@@ -1015,6 +1004,33 @@ def gen_program_memory(gen_det, com_det):
 #####################################################################
 
 def gen_datapath_muxes(gen_det, com_det, controls, datapaths):
+
+    # Declare data paths for ID addrs
+    # needs to happen before ID is generated so ID can be passed the mux controls
+    for instr in gen_det.config["instr_set"]:
+        ID_addr = 0
+
+        for read, access in enumerate(asm_utils.instr_fetches(instr)):
+            addr_com = asm_utils.addr_com(asm_utils.access_addr(access))
+            if addr_com == "ID":
+                for lane in gen_det.config["SIMD"]["lanes_names"]:
+                    gen_utils.add_datapath_source(datapaths, "%sfetch_addr_%i"%(lane, read), "fetch", instr, "ID_addr_%i_fetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                ID_addr += 1
+            elif gen_det.config["address_sources"][addr_com]["base_type"] == "ROM":
+                for lane in gen_det.config["SIMD"]["lanes_names"]:
+                    gen_utils.add_datapath_source(datapaths, "%sprefetch_addr_%i"%(lane, read, ), "prefetch", instr, "ID_addr_%i_prefetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                ID_addr += 1
+
+        for write, access in enumerate(asm_utils.instr_stores(instr)):
+            addr_com = asm_utils.addr_com(asm_utils.access_addr(access))
+            if addr_com == "ID":
+                for lane in gen_det.config["SIMD"]["lanes_names"]:
+                    gen_utils.add_datapath_source(datapaths, "%sstore_addr_%i"%(lane, write), "store", instr, "ID_addr_%i_store"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                ID_addr += 1
+            elif gen_det.config["address_sources"][addr_com]["base_type"] == "ROM":
+                for lane in gen_det.config["SIMD"]["lanes_names"]:
+                    gen_utils.add_datapath_source(datapaths, "%sprefetch_addr_%i"%(lane, write, ), "prefetch", instr, "ID_addr_%i_prefetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                ID_addr += 1
 
     mux_controls, com_det.arch_head, com_det.arch_body = gen_utils.gen_datapath_muxes(datapaths, gen_det.output_path, gen_det.force_generation, com_det.arch_head, com_det.arch_body)
     controls = gen_utils.merge_controls(controls, mux_controls)
