@@ -147,8 +147,10 @@ def generate_layer_parameters_and_generics(path, layer_name, input_rows, input_c
             }
         },
         "program_flow": {
-            "bound_ZOL_tracker_type"  : "ripple",
-            "pune_single_iteration_bound_ZOLs" : "false",
+            "hidden_ZOLs": {
+                "tracker_type"  : "ripple",
+                "pune_single_iteration" : False,
+            },
         }
     }
 
@@ -183,9 +185,9 @@ def generate_layer_parameters_and_generics(path, layer_name, input_rows, input_c
 
     generics = {
       "BAM_0_base": 0,
-      "BAM_0_increment": 1,
+      "BAM_0_internal_step_value": 1,
       "BAM_1_base": 0,
-      "BAM_1_increment": 1,
+      "BAM_1_internal_step_value": 1,
       "RAM_mem_file":"..\\%s_RAM.mem"%(layer_name, ),
     }
 

@@ -173,9 +173,9 @@ def generate_layer_parameters_and_generics(path, layer_name, input_neurons, outp
 
     generics = {
         "BAM_0_base": 0,
-        "BAM_0_increment": 1,
+        "BAM_0_internal_step_value": 1,
         "BAM_1_base": 0,
-        "BAM_1_increment": 1,
+        "BAM_1_internal_step_value": 1,
         "RAM_init_mif": "..\\%s_RAM_A.mem"%(layer_name, ),
     	"ROM_A_init_mif": "..\\%s_ROM_A.mem"%(layer_name, )
     }

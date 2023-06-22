@@ -71,7 +71,7 @@ def generation_network(network_name, input_dims, data_path, use_BRAMs=True):
             network_script += "CONFIG.Use_Extra_Logic {true} "
             network_script += "CONFIG.Data_Count_Width {10} "
             network_script += "] [get_bd_cells fifo_%i]\n"%(fifo, )
-            network_script += "connect_bd_net [get_bd_pins fifo_%i/clk]\n\n"%(fifo, )
+            network_script += "connect_bd_net [get_bd_ports clock] [get_bd_pins fifo_%i/clk]\n\n"%(fifo, )
 
 
             network_script += "create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 FIFO_%i_empty_negate\n"%(fifo, )
@@ -81,13 +81,12 @@ def generation_network(network_name, input_dims, data_path, use_BRAMs=True):
 
             network_script += "create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 FIFO_%i_full_negate\n"%(fifo, )
             network_script += "set_property -dict [list CONFIG.C_SIZE {1} CONFIG.C_OPERATION {not} ] [get_bd_cells FIFO_%i_full_negate]\n\n"%(fifo, )
-            # network_script += "connect_bd_net [get_bd_pins fifo_%i/full] [get_bd_pins FIFO_%i_full_negate/Op1]\n\n"%(fifo, fifo, )
+            network_script += "connect_bd_net [get_bd_pins fifo_%i/full] [get_bd_pins FIFO_%i_full_negate/Op1]\n\n"%(fifo, fifo, )
 
             if layer != 0:
-                pass
-                # network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_data] [get_bd_pins fifo_%i/din]\n"%(layer - 1, fifo, )
-                # network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_write] [get_bd_pins fifo_%i/wr_en]\n"%(layer  - 1, fifo, )
-                # network_script += "connect_bd_net [get_bd_pins FIFO_%i_full_negate/Res] [get_bd_pins layer_%i/PUT_FIFO_0_ready]\n\n"%(fifo, layer  - 1, )
+                network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_data] [get_bd_pins fifo_%i/din]\n"%(layer - 1, fifo, )
+                network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_write] [get_bd_pins fifo_%i/wr_en]\n"%(layer  - 1, fifo, )
+                network_script += "connect_bd_net [get_bd_pins FIFO_%i_full_negate/Res] [get_bd_pins layer_%i/PUT_FIFO_0_ready]\n\n"%(fifo, layer  - 1, )
 
             fifo += 1
         elif part["type"] == "reg":
@@ -125,29 +124,28 @@ def generation_network(network_name, input_dims, data_path, use_BRAMs=True):
             network_script += "create_bd_cell -type module -reference passthrought_along_reg reg_%i\n"%(reg, )
             network_script += "set_property -dict [list CONFIG.data_width {%i}] [get_bd_cells reg_%i]\n\n"%(data_width, reg, )
 
-            network_script += "connect_bd_net [get_bd_pins reg_%i/clock]\n"%(reg, )
+            network_script += "connect_bd_net [get_bd_ports clock] [get_bd_pins reg_%i/clock]\n"%(reg, )
 
             if layer != 0:
-                pass
-                # network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_data] [get_bd_pins reg_%i/data_in]\n"%(layer -1, reg, )
-                # network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_write] [get_bd_pins reg_%i/enable]\n"%(layer -1, reg, )
+                network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_data] [get_bd_pins reg_%i/data_in]\n"%(layer -1, reg, )
+                network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_write] [get_bd_pins reg_%i/enable]\n"%(layer -1, reg, )
             network_script += "\n"
 
 
             network_script += "create_bd_cell -type module -reference passthrought_along_RSFF RSFF_%i\n"%(reg, )
             network_script += "set_property -dict [list CONFIG.Pre_reset {true} CONFIG.Pre_set {false}] [get_bd_cells RSFF_%i]\n"%(reg, )
 
-            network_script += "connect_bd_net [get_bd_pins RSFF_%i/clock]\n"%(reg, )
+            network_script += "connect_bd_net [get_bd_ports clock] [get_bd_pins RSFF_%i/clock]\n"%(reg, )
             if layer != 0:
-                # network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_write] [get_bd_pins RSFF_%i/S]\n"%(layer -1, reg, )
+                network_script += "connect_bd_net [get_bd_pins layer_%i/PUT_FIFO_0_write] [get_bd_pins RSFF_%i/S]\n"%(layer -1, reg, )
             network_script += "\n"
 
             network_script += "create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 RSFF_%i_negate\n"%(reg, )
             network_script += "set_property -dict [list CONFIG.C_SIZE {1} CONFIG.C_OPERATION {not} CONFIG.LOGO_FILE {data/sym_notgate.png}] [get_bd_cells RSFF_%i_negate]\n\n"%(reg, )
 
-            # network_script += "connect_bd_net [get_bd_pins RSFF_%i/Q] [get_bd_pins RSFF_%i_negate/Op1]\n"%(reg, reg, )
+            network_script += "connect_bd_net [get_bd_pins RSFF_%i/Q] [get_bd_pins RSFF_%i_negate/Op1]\n"%(reg, reg, )
             if layer != 0:
-                # network_script += "connect_bd_net [get_bd_pins RSFF_%i_negate/Res] [get_bd_pins layer_%i/PUT_FIFO_0_ready]\n"%(reg, layer -1, )
+                network_script += "connect_bd_net [get_bd_pins RSFF_%i_negate/Res] [get_bd_pins layer_%i/PUT_FIFO_0_ready]\n"%(reg, layer -1, )
             network_script += "\n"
 
             reg += 1
@@ -234,22 +232,21 @@ def generation_network(network_name, input_dims, data_path, use_BRAMs=True):
 
             network_script += "create_bd_cell -type module -reference layer_%i_inst layer_%i\n\n"%(layer, layer, )
 
-            network_script += "connect_bd_net [get_bd_pins layer_%i/clock]\n"%(layer, )
-            # network_script += "connect_bd_net [get_bd_pins kickoff_const/dout] [get_bd_pins layer_%i/kickoff]\n"%(layer, )
+            network_script += "connect_bd_net [get_bd_ports clock] [get_bd_pins layer_%i/clock]\n"%(layer, )
+            network_script += "connect_bd_net [get_bd_pins kickoff_const/dout] [get_bd_pins layer_%i/kickoff]\n"%(layer, )
             network_script += "create_bd_port -dir O layer_%i_running\n"%(layer, )
-            # network_script += "connect_bd_net [get_bd_pins /layer_%i/running] [get_bd_ports layer_%i_running]\n\n"%(layer, layer, )
+            network_script += "connect_bd_net [get_bd_pins /layer_%i/running] [get_bd_ports layer_%i_running]\n\n"%(layer, layer, )
 
 
             if last_store_type == "FIFO":
-                pass
-                # network_script += "connect_bd_net [get_bd_pins fifo_%i/dout] [get_bd_pins layer_%i/GET_FIFO_0_data]\n"%(fifo - 1, layer, )
-                # network_script += "connect_bd_net [get_bd_pins fifo_%i/rd_en] [get_bd_pins layer_%i/GET_FIFO_0_adv]\n"%(fifo - 1, layer, )
-                # network_script += "connect_bd_net [get_bd_pins FIFO_%i_empty_negate/Res] [get_bd_pins layer_%i/GET_FIFO_0_valid]\n\n"%(fifo - 1, layer, )
+                network_script += "connect_bd_net [get_bd_pins fifo_%i/dout] [get_bd_pins layer_%i/GET_FIFO_0_data]\n"%(fifo - 1, layer, )
+                network_script += "connect_bd_net [get_bd_pins fifo_%i/rd_en] [get_bd_pins layer_%i/GET_FIFO_0_adv]\n"%(fifo - 1, layer, )
+                network_script += "connect_bd_net [get_bd_pins FIFO_%i_empty_negate/Res] [get_bd_pins layer_%i/GET_FIFO_0_valid]\n\n"%(fifo - 1, layer, )
             elif last_store_type == "reg":
                 pass
-                # network_script += "connect_bd_net [get_bd_pins reg_%i/data_out] [get_bd_pins layer_%i/GET_FIFO_0_data]\n"%(reg - 1, layer, )
-                # network_script += "connect_bd_net [get_bd_pins RSFF_%i/Q] [get_bd_pins layer_%i/GET_FIFO_0_valid]\n"%(reg - 1, layer, )
-                # network_script += "connect_bd_net [get_bd_pins layer_%i/GET_FIFO_0_adv] [get_bd_pins RSFF_%i/R]\n"%(layer, reg - 1, )
+                network_script += "connect_bd_net [get_bd_pins reg_%i/data_out] [get_bd_pins layer_%i/GET_FIFO_0_data]\n"%(reg - 1, layer, )
+                network_script += "connect_bd_net [get_bd_pins RSFF_%i/Q] [get_bd_pins layer_%i/GET_FIFO_0_valid]\n"%(reg - 1, layer, )
+                network_script += "connect_bd_net [get_bd_pins layer_%i/GET_FIFO_0_adv] [get_bd_pins RSFF_%i/R]\n"%(layer, reg - 1, )
             else:
                 raise ValueError("Unknow last_store_type, " + str(last_store_type))
             layer += 1
@@ -260,16 +257,15 @@ def generation_network(network_name, input_dims, data_path, use_BRAMs=True):
     network_script += "create_bd_port -dir O input_ready\n\n"
 
     if data_path[0]["type"] == "FIFO":
-        pass
-        # network_script += "connect_bd_net [get_bd_ports input_data] [get_bd_pins fifo_0/din]\n"
-        # network_script += "connect_bd_net [get_bd_ports input_write] [get_bd_pins fifo_0/wr_en]\n"
-        # network_script += "connect_bd_net [get_bd_pins FIFO_0_full_negate/Res] [get_bd_ports input_ready]\n\n"
+        network_script += "connect_bd_net [get_bd_ports input_data] [get_bd_pins fifo_0/din]\n"
+        network_script += "connect_bd_net [get_bd_ports input_write] [get_bd_pins fifo_0/wr_en]\n"
+        network_script += "connect_bd_net [get_bd_pins FIFO_0_full_negate/Res] [get_bd_ports input_ready]\n\n"
     elif data_path[0]["type"] == "reg":
         pass
-        # network_script += "connect_bd_net [get_bd_ports input_data] [get_bd_pins reg_0/data_in]\n"
-        # network_script += "connect_bd_net [get_bd_ports input_write] [get_bd_pins reg_0/enable]\n"
-        # network_script += "connect_bd_net [get_bd_ports input_write] [get_bd_pins RSFF_0/S]\n"
-        # network_script += "connect_bd_net [get_bd_pins RSFF_0_negate/Res] [get_bd_ports input_ready]\n"
+        network_script += "connect_bd_net [get_bd_ports input_data] [get_bd_pins reg_0/data_in]\n"
+        network_script += "connect_bd_net [get_bd_ports input_write] [get_bd_pins reg_0/enable]\n"
+        network_script += "connect_bd_net [get_bd_ports input_write] [get_bd_pins RSFF_0/S]\n"
+        network_script += "connect_bd_net [get_bd_pins RSFF_0_negate/Res] [get_bd_ports input_ready]\n"
     else:
         raise ValueError("Unknow data_path[0][\"type\"], " + str(data_path[0]["type"]))
 
@@ -281,14 +277,14 @@ def generation_network(network_name, input_dims, data_path, use_BRAMs=True):
 
     if data_path[-1]["type"] == "FIFO":
         last_fifo = fifo - 1
-        # network_script += "connect_bd_net [get_bd_pins fifo_%i/dout] [get_bd_ports output_data]\n"%(last_fifo, )
-        # network_script += "connect_bd_net [get_bd_ports output_read] [get_bd_pins fifo_%i/rd_en]\n"%(last_fifo, )
-        # network_script += "connect_bd_net [get_bd_pins FIFO_%i_empty_negate/Res] [get_bd_ports output_valid]\n\n"%(last_fifo, )
+        network_script += "connect_bd_net [get_bd_pins fifo_%i/dout] [get_bd_ports output_data]\n"%(last_fifo, )
+        network_script += "connect_bd_net [get_bd_ports output_read] [get_bd_pins fifo_%i/rd_en]\n"%(last_fifo, )
+        network_script += "connect_bd_net [get_bd_pins FIFO_%i_empty_negate/Res] [get_bd_ports output_valid]\n\n"%(last_fifo, )
     elif data_path[-1]["type"] == "reg":
         last_reg = reg - 1
-        # network_script += "connect_bd_net [get_bd_pins reg_%i/data_out] [get_bd_ports output_data]\n"%(last_reg, )
-        # network_script += "connect_bd_net [get_bd_ports output_read] [get_bd_pins RSFF_%i/R]\n"%(last_reg, )
-        # network_script += "connect_bd_net [get_bd_pins RSFF_%i/Q] [get_bd_ports output_valid]\n\n"%(last_reg, )
+        network_script += "connect_bd_net [get_bd_pins reg_%i/data_out] [get_bd_ports output_data]\n"%(last_reg, )
+        network_script += "connect_bd_net [get_bd_ports output_read] [get_bd_pins RSFF_%i/R]\n"%(last_reg, )
+        network_script += "connect_bd_net [get_bd_pins RSFF_%i/Q] [get_bd_ports output_valid]\n\n"%(last_reg, )
     else:
         raise ValueError("Unknow data_path[-1][\"type\"], " + str(data_path[-1]["type"]))
 

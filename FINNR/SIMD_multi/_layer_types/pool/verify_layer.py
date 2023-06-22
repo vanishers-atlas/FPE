@@ -259,7 +259,7 @@ def generate_testbrench_file(input_data, output_data, num_lanes):
 def test_layer(data_rows, data_cols, data_depth, num_lanes, number_tests, test_time):
 
     # Generate program files
-    generate_layer.generate_layer(".\\verifying", "varifying", data_rows, data_cols, data_depth, num_lanes, use_BRAMs=False, pregened_memfiles=[ ] )
+    generate_layer.generate_layer(".\\verifying", "varifying", data_rows, data_cols, data_depth, num_lanes, use_BRAMs=False, pregened_memfiles={} )
 
     # # Generate testbench
     test_input = []

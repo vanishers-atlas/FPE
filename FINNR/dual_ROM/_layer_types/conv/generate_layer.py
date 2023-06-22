@@ -395,8 +395,10 @@ def generate_layer_parameters_and_generics(path, layer_name, data_cols, data_row
 			}
 		},
 		"program_flow": {
-			"bound_ZOL_tracker_type"  : "ripple",
-			"pune_single_iteration_bound_ZOLs" : "false",
+		    "hidden_ZOLs": {
+		        "tracker_type"  : "ripple",
+		        "pune_single_iteration" : False,
+		    },
 		}
 	}
 
@@ -406,25 +408,25 @@ def generate_layer_parameters_and_generics(path, layer_name, data_cols, data_row
 	generics = {
 		# act_write BAM
 		"BAM_0_base": 0,
-		"BAM_0_increment": 1,
+		"BAM_0_internal_step_value": 1,
 		# act_row_0 BAM
 		"BAM_1_base": 0*(data_cols + 2)*data_depth,
-		"BAM_1_increment": 1,
+		"BAM_1_internal_step_value": 1,
 		# act_row_1 BAM
 		"BAM_2_base": 1*(data_cols + 2)*data_depth,
-		"BAM_2_increment": 1,
+		"BAM_2_internal_step_value": 1,
 		# act_row_2 BAM
 		"BAM_3_base": 2*(data_cols + 2)*data_depth,
-		"BAM_3_increment": 1,
+		"BAM_3_internal_step_value": 1,
 		# kernels BAM
 		"BAM_4_base": 0,
-		"BAM_4_increment": 1,
+		"BAM_4_internal_step_value": 1,
 		# thresholds BAM
 		"BAM_5_base": 0,
-		"BAM_5_increment": 1,
+		"BAM_5_internal_step_value": 1,
 		# gammas BAM
 		"BAM_6_base": gamma_footprint_start,
-		"BAM_6_increment": 1,
+		"BAM_6_internal_step_value": 1,
 
 		"RAM_init_mif": "..\\%s_RAM.mem"%(layer_name, ),
 		"ROM_A_init_mif": "..\\%s_ROM_A.mem"%(layer_name, ),

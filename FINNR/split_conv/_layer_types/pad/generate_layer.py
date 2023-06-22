@@ -134,8 +134,10 @@ def generate_layer_parameters_and_generics(path, layer_name, data_cols, data_row
     		}
     	},
     	"program_flow": {
-            "bound_ZOL_tracker_type"  : "ripple",
-            "pune_single_iteration_bound_ZOLs" : "false",
+            "hidden_ZOLs": {
+                "tracker_type"  : "ripple",
+                "pune_single_iteration" : False,
+            },
         }
     }
 

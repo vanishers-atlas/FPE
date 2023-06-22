@@ -234,8 +234,10 @@ def generate_layer_parameters_and_generics(path, layer_name, input_neurons, outp
             }
         },
         "program_flow": {
-            "bound_ZOL_tracker_type"  : "ripple",
-            "pune_single_iteration_bound_ZOLs" : "false",
+            "hidden_ZOLs": {
+                "tracker_type"  : "ripple",
+                "pune_single_iteration" : False,
+            },
         }
     }
 
@@ -250,16 +252,16 @@ def generate_layer_parameters_and_generics(path, layer_name, input_neurons, outp
     generics = {
         # acts_write
         "BAM_0_base": 0,
-        "BAM_0_increment": 1,
+        "BAM_0_internal_step_value": 1,
         # acts_read
         "BAM_1_base": 0,
-        "BAM_1_increment": parallelism_factor,
+        "BAM_1_internal_step_value": parallelism_factor,
         # weights
         "BAM_2_base": 0,
-        "BAM_2_increment": parallelism_factor,
+        "BAM_2_internal_step_value": parallelism_factor,
         # thresholds & gammas
         "BAM_3_base": number_wieghts,
-        "BAM_3_increment": 1,
+        "BAM_3_internal_step_value": 1,
 
         "RAM_init_mif": "..\\%s_RAM_A.mem"%(layer_name, ),
     }

@@ -401,8 +401,6 @@ if __name__ == "__main__":
 
     test_layer(data_rows, data_cols, data_depth, num_kernals, 2, number_tests, test_time)
 
-    exit()
-    
     test_layer(data_rows, data_cols, data_depth, num_kernals, 4, number_tests, test_time)
 
     test_layer(data_rows, data_cols, data_depth, num_kernals, 8, number_tests, test_time)

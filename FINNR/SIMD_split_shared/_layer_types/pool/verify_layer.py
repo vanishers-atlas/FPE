@@ -131,7 +131,7 @@ def generate_testbrench_file(input_data, output_data, num_lanes):
         f.write("\t\tkickoff <= '0';\n")
         f.write("\t\twait for 1000 ns;\n")
 
-        f.write("\t\tfor k in 0 to %i loop\n"%(len(input_data) - 1))
+        f.write("\t\tfor k in 0 to %i loop\n"%(len(input_data[0]) - 1))
         f.write("\t\t\twait until rising_edge(clock);\n")
         f.write("\t\t\tkickoff <= '1';\n")
         f.write("\t\t\twait until running = '1';\n")

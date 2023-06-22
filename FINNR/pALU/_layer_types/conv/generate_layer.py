@@ -444,9 +444,11 @@ def generate_layer_parameters_and_generics(path, layer_name, data_cols, data_row
 			}
 		},
 		"program_flow": {
-			"bound_ZOL_tracker_type"  : "ripple",
-			"pune_single_iteration_bound_ZOLs" : "false",
-		}
+            "hidden_ZOLs": {
+                "tracker_type"  : "ripple",
+                "pune_single_iteration" : False,
+            },
+        }
 	}
 
 	with open(path + "\\" + layer_name + "_parameters.json", "w") as f:
@@ -454,17 +456,17 @@ def generate_layer_parameters_and_generics(path, layer_name, data_cols, data_row
 
 	generics = {
 		"BAM_0_base": 0,
-		"BAM_0_increment": parallelism_factor,
+		"BAM_0_internal_step_value": parallelism_factor,
 		"BAM_1_base": 0*(data_cols + 2)*data_depth,
-		"BAM_1_increment": parallelism_factor,
+		"BAM_1_internal_step_value": parallelism_factor,
 		"BAM_2_base": 1*(data_cols + 2)*data_depth,
-		"BAM_2_increment": parallelism_factor,
+		"BAM_2_internal_step_value": parallelism_factor,
 		"BAM_3_base": 2*(data_cols + 2)*data_depth,
-		"BAM_3_increment": parallelism_factor,
+		"BAM_3_internal_step_value": parallelism_factor,
 		"BAM_4_base": 0,
-		"BAM_4_increment": parallelism_factor,
+		"BAM_4_internal_step_value": parallelism_factor,
 		"BAM_5_base": kernal_ROM_depth,
-		"BAM_5_increment": 1,
+		"BAM_5_internal_step_value": 1,
 		"RAM_init_mif": "..\\%s_RAM.mem"%(layer_name, ),
 	}
 
