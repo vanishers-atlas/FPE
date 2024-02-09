@@ -1,2 +1,5 @@
 **/__pycache__
-BNN_vs_FINN/*
+
+# Tempery ignores for files hinging around from half finished work before break
+FINNR/*
+BNN_work/*
