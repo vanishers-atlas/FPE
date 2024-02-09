@@ -17,40 +17,33 @@ from FPE.toolchain.HDL_generation  import utils as gen_utils
 from FPE.toolchain.HDL_generation.basic import dist_RAM
 from FPE.toolchain.HDL_generation.basic import register
 
-from FPE.toolchain.HDL_generation.processor import mem_BAPA_harness
+from FPE.toolchain.HDL_generation.processor import BAPA_common as BAPA_harness
 
 #####################################################################
 
 def add_inst_config(instr_id, instr_set, config):
 
-    BAPA_used = False
+    config["buffer_reads"] = True
 
-    reads = 0
-    writes = 0
+    config["reads"] = 0
+    config["writes"] = 0
     for instr in instr_set:
         count = 0
         for access in asm_utils.instr_fetches(instr):
             if asm_utils.access_mem(access) == instr_id:
                 count += 1
-
-                if "BAPA" in asm_utils.access_mods(access):
-                    BAPA_used = True
-        reads = max(reads, count)
+        config["reads"] = max(config["reads"], count)
 
         count = 0
         for access in asm_utils.instr_stores(instr):
             if asm_utils.access_mem(access) == instr_id:
                 count += 1
+        config["writes"] = max(config["writes"], count)
 
-            if "BAPA" in asm_utils.access_mods(access):
-                BAPA_used = True
-        writes = max(writes, count)
-
-    config["buffer_reads"] = True
-    config["reads"] = reads
-    config["writes"] = writes
-    if BAPA_used:
-        config["BAPA"] = mem_BAPA_harness.add_inst_config(instr_id, instr_set, { "stallable" : config["stallable"] })
+    BAPA_config = BAPA_harness.add_inst_config(instr_id, instr_set, config)
+    if BAPA_config != None:
+        config["buffer_reads"] = False
+        config["BAPA"] = BAPA_config
 
     return config
 
@@ -63,7 +56,7 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
     pathways = gen_utils.init_datapaths()
 
     if "BAPA" in config.keys():
-        pathways = mem_BAPA_harness.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
+        pathways = BAPA_harness.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
     else:
         # Gather pathway ports
         read_addr_ports = []
@@ -128,7 +121,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
 
     if "BAPA" in config.keys():
-        controls = mem_BAPA_harness.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
+        controls = BAPA_harness.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
     else:
         # Gather controt ports
         write_enable_controls = []
@@ -169,10 +162,6 @@ def preprocess_config(config_in):
     assert config_in["writes"] > 0, "writes must be greater than 0"
     config_out["writes"] = config_in["writes"]
 
-    if "BAPA" in config_in.keys():
-        if __debug__: mem_BAPA_harness.preprocess_config(config_in["BAPA"])
-        config_out["BAPA"] = config_in["BAPA"]
-
     assert type(config_in["depth"]) == int, "depth must be an int"
     assert config_in["depth"] > 0, "depth must be greater than 0"
     config_out["depth"] = config_in["depth"]
@@ -181,6 +170,9 @@ def preprocess_config(config_in):
 
     assert(config_in["data_width"] >= 1)
     config_out["data_width"] = config_in["data_width"]
+
+    if "BAPA" in config_in.keys():
+        config_out["BAPA"] = BAPA_harness.preprocess_config(config_in["BAPA"])
 
     assert(type(config_in["stallable"]) == type(True))
     config_out["stallable"] = config_in["stallable"]
@@ -193,7 +185,7 @@ def handle_module_name(module_name, config):
         generated_name = "REG"
 
         if "BAPA" in config.keys():
-            sub_name = mem_BAPA_harness.handle_module_name(None, config["BAPA"])
+            sub_name = BAPA_harness.handle_module_name(None, config["BAPA"])
             raise N0tImplementedError()
 
         generated_name += "_%ir"%(config["reads"], )
@@ -257,27 +249,14 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 #####################################################################
 
-hardness_fanin_signals = ["clock", "stall_in"]
-hardness_ripple_up_addrs = [
-    re.compile("read_(\d+)_addr"),
-    re.compile("write_(\d+)_addr"),
-]
-hardness_ripple_up_signals = [
-    re.compile("read_(\d+)_word_(\d+)"),
-    re.compile("write_(\d+)_word_(\d+)"),
-    re.compile("write_(\d+)_enable_(\d+)"),
-]
-hardness_internal_signals = [
-    re.compile("block_(\d+)_read_(\d+)_addr"),
-    re.compile("block_(\d+)_read_(\d+)_data"),
-    re.compile("block_(\d+)_write_(\d+)_addr"),
-    re.compile("block_(\d+)_write_(\d+)_data"),
-    re.compile("block_(\d+)_write_(\d+)_enable"),
-]
+def gen_BAPA_regfile(gen_det, com_det):
+    gen_det, com_det = handle_harness_blocks(gen_det, com_det)
+    gen_det, com_det = handle_BAPA_harness(gen_det, com_det)
 
+    return gen_det, com_det
 
-subblock_fanin_signals = ["clock", "stall_in"]
-subblock_internal_signals = [
+wrapped_fanin_signals = ["clock", "stall_in"]
+wrapped_internal_signals = [
     re.compile("read_(\d+)_addr"),
     re.compile("read_(\d+)_data"),
     re.compile("write_(\d+)_addr"),
@@ -285,40 +264,104 @@ subblock_internal_signals = [
     re.compile("write_(\d+)_enable"),
 ]
 
-def gen_BAPA_regfile(gen_det, com_det):
-    # Compute subblock details
-    num_subblocks = gen_det.config["BAPA"]["num_blocks"]
-    subblock_depth = math.ceil(gen_det.config["depth"]/num_subblocks)
-    subblock_addr_width = tc_utils.unsigned.width(subblock_depth - 1)
+def handle_harness_blocks(gen_det, com_det):
+    # Compute wrapped memory details
+    wrapped_config = copy.deepcopy(gen_det.config)
+    # Remove BAPA from wrapped_config as BAPA is being handled in this super component
+    del wrapped_config["BAPA"]
+    wrapped_config = { ** wrapped_config, **gen_det.config["BAPA"]["wrapped_mems"] }
 
-    subblock_config = copy.deepcopy(gen_det.config)
-    # Remove BAPA from subblock_config as BAPA is being handled in this super component
-    del subblock_config["BAPA"]
-    # overwrite depth
-    subblock_config["depth"] = subblock_depth
-    # Tell subblock to not buffer its reads, as the BAPA harness handles that in a BAPA mem
-    subblock_config["buffer_reads"] = False
+    if gen_det.concat_naming :
+        module_name = gen_det.module_name + "_subblock"
+    else:
+        module_name = None
 
+    wrapped_interface, wrapped_name = generate_HDL(
+        config=wrapped_config,
+        output_path=gen_det.output_path,
+        module_name=module_name,
+        concat_naming=gen_det.concat_naming,
+        force_generation=gen_det.force_generation
+    )
+    gen_det.config["BAPA"]["wrapped_mems"]["addr_width"] = wrapped_interface["addr_width"]
+
+    # Instancate sub blocks
+    for subblock in range(gen_det.config["BAPA"]["wrapped_mems"]["num_blocks"]):
+        com_det.arch_body += "wrapped_%i : entity work.%s(arch)\>\n"%(subblock, wrapped_name, )
+
+        if wrapped_interface["generics"]:
+            com_det.arch_body += "generic map (\>\n"
+            raise NotImplementedError()
+            com_det.arch_body += "\<)\n"
+
+        com_det.arch_body += "port map (\n\>"
+
+        # Handle fanin signals
+        for signal in wrapped_fanin_signals:
+            if signal in wrapped_interface["ports"]:
+                com_det.arch_body += "%s => %s,\n"%(signal, signal)
+
+        # Handle internal signals
+        for rule in wrapped_internal_signals:
+            for port in [port for port in wrapped_interface["ports"].keys() if rule.fullmatch(port) ]:
+                details = wrapped_interface["ports"][port]
+
+                com_det.arch_body += "%s => block_%i_%s,\n"%(port, subblock, port, )
+
+
+        com_det.arch_body.drop_last_X(2)
+        com_det.arch_body += "\n\<);\n\<\n"
+
+    return gen_det, com_det
+
+hardness_fanin_signals = ["clock", "stall_in"]
+
+hardness_ripple_up_addrs = [
+    re.compile("read_(\d+)_addr"),
+    re.compile("write_(\d+)_addr"),
+]
+hardness_ripple_up_data = [
+    re.compile("read_(\d+)_word_(\d+)"),
+    re.compile("write_(\d+)_word_(\d+)"),
+]
+hardness_ripple_up_signals = [
+    re.compile("write_(\d+)_enable_(\d+)"),
+]
+
+hardness_wrapped_addrs = [
+    re.compile("block_(\d+)_read_(\d+)_addr"),
+    re.compile("block_(\d+)_write_(\d+)_addr"),
+]
+hardness_wrapped_data = [
+    re.compile("block_(\d+)_read_(\d+)_data"),
+    re.compile("block_(\d+)_write_(\d+)_data"),
+]
+hardness_internal_signals = [
+    re.compile("block_(\d+)_write_(\d+)_enable"),
+]
+
+def handle_BAPA_harness(gen_det, com_det):
     # Generate BAPA harness
     if gen_det.concat_naming:
         module_name = gen_det.module_name + "_BAPA_harness"
     else:
         module_name = None
 
-    harness_interface, harness_name = mem_BAPA_harness.generate_HDL(
+    harness_interface, harness_name = BAPA_harness.generate_HDL(
         config=gen_det.config["BAPA"],
         output_path=gen_det.output_path,
         module_name=module_name,
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
     )
+    gen_det.config["addr_width"] = gen_det.config["BAPA"]["wrapped_mems"]["addr_width"] + harness_interface["BAPA_addr_bits"]
 
     # Instancate BAPA harness
     com_det.arch_body += "BAPA_harness : entity work.%s(arch)\>\n"%(harness_name, )
 
     com_det.arch_body += "generic map (\>\n"
     com_det.arch_body += "data_width => %i,\n"%(gen_det.config["data_width"], )
-    com_det.arch_body += "block_addr_width => %i\n"%(subblock_addr_width, )
+    com_det.arch_body += "block_addr_width => %i\n"%(gen_det.config["BAPA"]["wrapped_mems"]["addr_width"], )
     com_det.arch_body += "\<)\n"
 
     com_det.arch_body += "port map (\n\>"
@@ -328,7 +371,8 @@ def gen_BAPA_regfile(gen_det, com_det):
         if signal in harness_interface["ports"]:
             com_det.arch_body += "%s => %s,\n"%(signal, signal)
 
-    # Handle ripple up addrs
+
+    # Ripple up harness addrs
     for rule in hardness_ripple_up_addrs:
         for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
             details = harness_interface["ports"][port]
@@ -337,29 +381,52 @@ def gen_BAPA_regfile(gen_det, com_det):
             com_det.add_port(port, "std_logic_vector", details["direction"], width)
 
             # Connect harness port to rippled port
-            if subblock_config["depth"] == 1:
-                com_det.arch_body += "%s => \"0\" & %s,\n"%(port, port)
-            else:
-                com_det.arch_body += "%s => %s,\n"%(port, port)
+            com_det.arch_body += "%s => %s,\n"%(port, port)
+
+    # Ripple up harness data
+    for rule in hardness_ripple_up_data:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            width = gen_det.config["addr_width"]
+            com_det.add_port(port, "std_logic_vector", details["direction"], width)
+
+            # Connect harness port to rippled port
+            com_det.arch_body += "%s => %s,\n"%(port, port)
 
     # Handle ripple up signals
     for rule in hardness_ripple_up_signals:
         for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
             details = harness_interface["ports"][port]
 
-            # Handle generic controlled ports
-            if details["type"].startswith("std_logic_vector("):
-                if details["type"].startswith("std_logic_vector(data_width"):
-                    width = gen_det.config["data_width"]
-                else:
-                    raise ValueError("Unknown std_logic_vector type in harness interface, " + details["type"])
-
-                com_det.add_port(port, "std_logic_vector", details["direction"], width)
-            # Ripple up non generic controlled ports untouched
-            else:
+            # Declare rippled port
+            try:
+                com_det.add_port(port, details["type"], details["direction"], details["width"])
+            except KeyError:
                 com_det.add_port(port, details["type"], details["direction"])
 
             # Connect harness port to rippled port
+            com_det.arch_body += "%s => %s,\n"%(port, port)
+
+
+    # Connect wrapped addrs
+    for rule in hardness_wrapped_addrs:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            width = gen_det.config["BAPA"]["wrapped_mems"]["addr_width"]
+
+            com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(port, width - 1, )
+            com_det.arch_body += "%s => %s,\n"%(port, port)
+
+    # Connect wrapped data
+    for rule in hardness_wrapped_data:
+        for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
+            details = harness_interface["ports"][port]
+
+            width = gen_det.config["BAPA"]["wrapped_mems"]["data_width"]
+
+            com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(port, width - 1, )
             com_det.arch_body += "%s => %s,\n"%(port, port)
 
     # Handle internal signals
@@ -367,75 +434,27 @@ def gen_BAPA_regfile(gen_det, com_det):
         for port in [port for port in harness_interface["ports"].keys() if rule.fullmatch(port) ]:
             details = harness_interface["ports"][port]
 
-            # Handle generic controlled ports
-            if details["type"].startswith("std_logic_vector("):
-                if details["type"].startswith("std_logic_vector(block_addr_width"):
-                    width = subblock_addr_width
-                elif details["type"].startswith("std_logic_vector(data_width"):
-                    width = gen_det.config["data_width"]
-                else:
-                    raise ValueError("Unknown std_logic_vector type in harness interface, " + details["type"])
-            # Handle non generic controlled ports
-            else:
-                try:
-                    width = details["width"]
-                except KeyError:
-                    width = None
+            # Declare inturnal signal
+            try:
+                com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(port, details["width"] - 1, )
+            except KeyError:
+                com_det.arch_head += "signal %s : std_logic;\n"%(port, )
 
             # Connect harness port to internal signal
-            if width == None:
-                com_det.arch_head += "signal %s : std_logic;\n"%(port, )
-            else:
-                com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(port, width - 1, )
             com_det.arch_body += "%s => %s,\n"%(port, port)
 
     com_det.arch_body.drop_last_X(2)
     com_det.arch_body += "\n\<);\n\<\n"
 
-    # Generate subblock
-    if gen_det.concat_naming :
-        module_name = gen_det.module_name + "_subblock"
-    else:
-        module_name = None
-
-    subblock_interface, subblock_name = generate_HDL(
-        config=subblock_config,
-        output_path=gen_det.output_path,
-        module_name=module_name,
-        concat_naming=gen_det.concat_naming,
-        force_generation=gen_det.force_generation
-    )
-
-    # Instancate sub blocks
-    for subblock in range(num_subblocks):
-        com_det.arch_body += "subblock_%i : entity work.%s(arch)\>\n"%(subblock, subblock_name, )
-
-        if subblock_interface["generics"]:
-            com_det.arch_body += "generic map (\>\n"
-            raise NotImplementedError()
-            com_det.arch_body += "\<)\n"
-
-        com_det.arch_body += "port map (\n\>"
-
-        # Handle fanin signals
-        for signal in subblock_fanin_signals:
-            if signal in subblock_interface["ports"]:
-                com_det.arch_body += "%s => %s,\n"%(signal, signal)
-
-        # Handle internal signals
-        for rule in subblock_internal_signals:
-            for port in [port for port in subblock_interface["ports"].keys() if rule.fullmatch(port) ]:
-                details = subblock_interface["ports"][port]
-
-                com_det.arch_body += "%s => block_%i_%s,\n"%(port, subblock, port, )
+    return gen_det, com_det
 
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\n\<);\n\<\n"
 
 #####################################################################
 
 def gen_ram(gen_det, com_det):
+    com_det.add_interface_item("addr_width", gen_det.config["addr_width"])
+
     if gen_det.config["writes"] != 1:
         raise ValueError("regfile only supports 1 write per cycle")
 
@@ -446,7 +465,7 @@ def gen_ram(gen_det, com_det):
         com_det.ports_config = "QUAD"
     else:
         raise ValueError("regfile only supports up 3 reads per cycle")
-        
+
     ram_interface, ram_name = dist_RAM.generate_HDL(
         {
             "depth" : gen_det.config["depth"],
@@ -575,8 +594,6 @@ def gen_reads(gen_det, com_det):
             com_det.arch_body += "RAM_read_addr_%i <= (others => '1');\n"%(read, )
     else:
         raise ValueError("regfile only supports up 3 reads per cycle")
-
-
 
 def gen_writes(gen_det, com_det):
 

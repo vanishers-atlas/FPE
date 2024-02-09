@@ -1,0 +1,409 @@
+{
+  // Test PMOV
+  PMOV(4, ROMA[0], REG[0]);
+  PMOV(4, ACC, REG[ 4]);
+
+  NOP; NOP; NOP; NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  // Test parallel left shifts and rolls
+  PLSH(4, ROMA[4], 1, REG[ 0]);
+  PLSH(4, ACC, 1, REG[ 4]);
+  PLSH(4, ACC, 1, REG[ 8]);
+  PLSH(4, ACC, 1, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PLSH(4, ROMA[4], 2, REG[ 0]);
+  PLSH(4, ACC, 2, REG[ 4]);
+  PLSH(4, ACC, 2, REG[ 8]);
+  PLSH(4, ACC, 2, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PLSH(4, ROMA[4], 3, REG[ 0]);
+  PLSH(4, ACC, 3, REG[ 4]);
+  PLSH(4, ACC, 3, REG[ 8]);
+  PLSH(4, ACC, 3, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PLRL(4, ROMA[4], 1, REG[ 0]);
+  PLRL(4, ACC, 1, REG[ 4]);
+  PLRL(4, ACC, 1, REG[ 8]);
+  PLRL(4, ACC, 1, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PLRL(4, ROMA[4], 2, REG[ 0]);
+  PLRL(4, ACC, 2, REG[ 4]);
+  PLRL(4, ACC, 2, REG[ 8]);
+  PLRL(4, ACC, 2, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PLRL(4, ROMA[4], 3, REG[ 0]);
+  PLRL(4, ACC, 3, REG[ 4]);
+  PLRL(4, ACC, 3, REG[ 8]);
+  PLRL(4, ACC, 3, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  // Test parallel right shifts and rolls
+
+  PRSH(4, ROMA[8], 1, REG[ 0]);
+  PRSH(4, ACC, 1, REG[ 4]);
+  PRSH(4, ACC, 1, REG[ 8]);
+  PRSH(4, ACC, 1, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRSH(4, ROMA[8], 2, REG[ 0]);
+  PRSH(4, ACC, 2, REG[ 4]);
+  PRSH(4, ACC, 2, REG[ 8]);
+  PRSH(4, ACC, 2, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRSH(4, ROMA[8], 3, REG[ 0]);
+  PRSH(4, ACC, 3, REG[ 4]);
+  PRSH(4, ACC, 3, REG[ 8]);
+  PRSH(4, ACC, 3, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRRL(4, ROMA[8], 1, REG[ 0]);
+  PRRL(4, ACC, 1, REG[ 4]);
+  PRRL(4, ACC, 1, REG[ 8]);
+  PRRL(4, ACC, 1, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRRL(4, ROMA[8], 2, REG[ 0]);
+  PRRL(4, ACC, 2, REG[ 4]);
+  PRRL(4, ACC, 2, REG[ 8]);
+  PRRL(4, ACC, 2, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRRL(4, ROMA[8], 3, REG[ 0]);
+  PRRL(4, ACC, 3, REG[ 4]);
+  PRRL(4, ACC, 3, REG[ 8]);
+  PRRL(4, ACC, 3, REG[12]);
+  NOP;
+
+  MOV(REG[ 0], PUT[0]);
+  MOV(REG[ 1], PUT[0]);
+  MOV(REG[ 2], PUT[0]);
+  MOV(REG[ 3], PUT[0]);
+  NOP;
+
+  MOV(REG[ 4], PUT[0]);
+  MOV(REG[ 5], PUT[0]);
+  MOV(REG[ 6], PUT[0]);
+  MOV(REG[ 7], PUT[0]);
+  NOP;
+
+  MOV(REG[ 8], PUT[0]);
+  MOV(REG[ 9], PUT[0]);
+  MOV(REG[10], PUT[0]);
+  MOV(REG[11], PUT[0]);
+  NOP;
+
+  MOV(REG[12], PUT[0]);
+  MOV(REG[13], PUT[0]);
+  MOV(REG[14], PUT[0]);
+  MOV(REG[15], PUT[0]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+}

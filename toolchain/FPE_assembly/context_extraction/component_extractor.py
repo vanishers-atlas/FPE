@@ -42,7 +42,7 @@ class extractor(ParseTreeListener):
 				"parameters" : parameters,
 			}
 		else:
-			raise ValueError("Unknown com_type, %s, at %s"(
+			raise ValueError("Unknown com_type, %s, at %s"%(
 				com_type,
 				asm_utils.ctx_start(ctx)
 			) )

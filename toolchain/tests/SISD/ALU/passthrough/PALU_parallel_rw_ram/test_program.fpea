@@ -1,0 +1,396 @@
+{
+  // Test PMOV
+  MOV(0b0000, REG[0]);
+  MOV(0b0011, REG[1]);
+  MOV(0b1100, REG[2]);
+  MOV(0b1111, REG[3]);
+
+  NOP; NOP;
+
+  PMOV(4, REG[0], RAM[ 0]);
+  PMOV(4, REG[0], RAM[ 4]);
+  PMOV(4, REG[0], RAM[ 8]);
+  PMOV(4, REG[0], RAM[12]);
+
+  NOP; NOP; NOP; NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  // Test parallel left shifts and rolls
+  MOV(0b0001, REG[0]);
+  MOV(0b0010, REG[1]);
+  MOV(0b0100, REG[2]);
+  MOV(0b1000, REG[3]);
+
+  NOP; NOP; NOP; NOP;
+
+  PLSH(4, REG[0], 1, RAM[ 0]);
+  PLSH(4, ACC, 1, RAM[ 4]);
+  PLSH(4, ACC, 1, RAM[ 8]);
+  PLSH(4, ACC, 1, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PLSH(4, REG[0], 2, RAM[ 0]);
+  PLSH(4, ACC, 2, RAM[ 4]);
+  PLSH(4, ACC, 2, RAM[ 8]);
+  PLSH(4, ACC, 2, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PLSH(4, REG[0], 3, RAM[ 0]);
+  PLSH(4, ACC, 3, RAM[ 4]);
+  PLSH(4, ACC, 3, RAM[ 8]);
+  PLSH(4, ACC, 3, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+
+  PLRL(4, REG[0], 1, RAM[ 0]);
+  PLRL(4, ACC, 1, RAM[ 4]);
+  PLRL(4, ACC, 1, RAM[ 8]);
+  PLRL(4, ACC, 1, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PLRL(4, REG[0], 2, RAM[ 0]);
+  PLRL(4, ACC, 2, RAM[ 4]);
+  PLRL(4, ACC, 2, RAM[ 8]);
+  PLRL(4, ACC, 2, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PLRL(4, REG[0], 3, RAM[ 0]);
+  PLRL(4, ACC, 3, RAM[ 4]);
+  PLRL(4, ACC, 3, RAM[ 8]);
+  PLRL(4, ACC, 3, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  // Test parallel right shifts and rolls
+  MOV(0b1000, REG[0]);
+  MOV(0b0100, REG[1]);
+  MOV(0b0010, REG[2]);
+  MOV(0b0001, REG[3]);
+  NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRSH(4, REG[0], 1, RAM[ 0]);
+  PRSH(4, ACC, 1, RAM[ 4]);
+  PRSH(4, ACC, 1, RAM[ 8]);
+  PRSH(4, ACC, 1, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+
+  PRSH(4, REG[0], 2, RAM[ 0]);
+  PRSH(4, ACC, 2, RAM[ 4]);
+  PRSH(4, ACC, 2, RAM[ 8]);
+  PRSH(4, ACC, 2, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PRSH(4, REG[0], 3, RAM[ 0]);
+  PRSH(4, ACC, 3, RAM[ 4]);
+  PRSH(4, ACC, 3, RAM[ 8]);
+  PRSH(4, ACC, 3, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  NOP; NOP; NOP; NOP;
+
+  PRRL(4, REG[0], 1, RAM[ 0]);
+  PRRL(4, ACC, 1, RAM[ 4]);
+  PRRL(4, ACC, 1, RAM[ 8]);
+  PRRL(4, ACC, 1, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PRRL(4, REG[0], 2, RAM[ 0]);
+  PRRL(4, ACC, 2, RAM[ 4]);
+  PRRL(4, ACC, 2, RAM[ 8]);
+  PRRL(4, ACC, 2, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+  PRRL(4, REG[0], 3, RAM[ 0]);
+  PRRL(4, ACC, 3, RAM[ 4]);
+  PRRL(4, ACC, 3, RAM[ 8]);
+  PRRL(4, ACC, 3, RAM[12]);
+  NOP;
+
+  MOV(RAM[ 0], PUT[0]);
+  MOV(RAM[ 1], PUT[0]);
+  MOV(RAM[ 2], PUT[0]);
+  MOV(RAM[ 3], PUT[0]);
+
+  MOV(RAM[ 4], PUT[0]);
+  MOV(RAM[ 5], PUT[0]);
+  MOV(RAM[ 6], PUT[0]);
+  MOV(RAM[ 7], PUT[0]);
+
+  MOV(RAM[ 8], PUT[0]);
+  MOV(RAM[ 9], PUT[0]);
+  MOV(RAM[10], PUT[0]);
+  MOV(RAM[11], PUT[0]);
+
+  MOV(RAM[12], PUT[0]);
+  MOV(RAM[13], PUT[0]);
+  MOV(RAM[14], PUT[0]);
+  MOV(RAM[15], PUT[0]);
+
+  NOP; NOP; NOP; NOP;
+
+}

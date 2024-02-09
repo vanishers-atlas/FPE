@@ -1,0 +1,6 @@
+{
+    "ROM_A_subblock_0_init_mif": "..\\ROM_A_sb_0.mem",
+    "ROM_A_subblock_1_init_mif": "..\\ROM_A_sb_1.mem",
+    "ROM_A_subblock_2_init_mif": "..\\ROM_A_sb_2.mem",
+    "ROM_A_subblock_3_init_mif": "..\\ROM_A_sb_3.mem"
+}

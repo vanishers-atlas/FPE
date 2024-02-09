@@ -14,19 +14,25 @@ if __name__ == "__main__":
 
     import PALU
     import PALU_stalling
+    import PALU_no_read_rom
+    import PALU_parallel_rw_ram
 else:
     from . import basic
     from . import basic_stalling
 
     from . import PALU
     from . import PALU_stalling
+    from . import PALU_no_read_rom
+    from . import PALU_parallel_rw_ram
 
 test_sets = [
     basic,
     basic_stalling,
 
-    #PALU,
-    #PALU_stalling,
+    # PALU,
+    # PALU_stalling,
+    # PALU_no_read_rom,
+    # PALU_parallel_rw_ram,
 ]
 
 
