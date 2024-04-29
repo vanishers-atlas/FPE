@@ -1,11 +1,11 @@
-SHIFT_OUT = chr(0x0E)
-SHIFT_IN  = chr(0x0F)
+SHIFT_IN  = chr(0x0E)
+SHIFT_OUT = chr(0x0F)
 
 class IndentedString:
     def __init__(self):
         self.str = ""
 
-    def drop_last_X(this, X):
+    def drop_last(this, X):
         this.str = this.str[0:-X]
 
     def append_string(this, string):
@@ -19,21 +19,23 @@ class IndentedString:
                 char = it.__next__()
 
                 # Covert custom escape sequences into shift chars
-                if char == "\\":
+                if char == "@":
                     try:
                         char = it.__next__()
                         if char == ">":
                             result.str += SHIFT_IN
                         elif char == "<":
                             result.str += SHIFT_OUT
+                        elif char == "@":
+                            result.str += "@"
                         else:
-                            result.str += "\\" + char
+                            raise SyntaxError("unknown escape sequence, @" + char)
                     except StopIteration:
-                        result.str += "\\"
+                        raise ValueError("String ends mid escape sequence" + char)
                 # Copy across non escape sequences chars
                 else:
                     result.str += char
-        except Exception as e:
+        except StopIteration as e:
             pass
         return result
 

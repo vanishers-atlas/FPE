@@ -108,22 +108,22 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
 
         ]
 
-        ARCH_BODY += "process (sel, data_in)\>\n"
-        ARCH_BODY += "\<begin\>\n"
+        ARCH_BODY += "process (sel, data_in)@>\n"
+        ARCH_BODY += "@<begin@>\n"
 
         for i in range(CONFIG["outputs"]):
             ARCH_BODY += "data_out_%i <= (others => '0');\n"%(i, )
 
-        ARCH_BODY += "case sel is\>\n"
+        ARCH_BODY += "case sel is@>\n"
         for i in range(CONFIG["outputs"] - 1):
-            ARCH_BODY += "when \"%s\" =>\n\> data_out_%i <= data_in;\<\n"%(
+            ARCH_BODY += "when \"%s\" =>\n@> data_out_%i <= data_in;@<\n"%(
                 tc_utils.unsigned.encode(i, CONFIG["sel_width"]),
                 i,
             )
-        ARCH_BODY += "when others =>\n\> data_out_%i <= data_in;\<\n"%(CONFIG["outputs"] - 1, )
-        ARCH_BODY += "\<end case;\n"
+        ARCH_BODY += "when others =>\n@> data_out_%i <= data_in;@<\n"%(CONFIG["outputs"] - 1, )
+        ARCH_BODY += "@<end case;\n"
 
-        ARCH_BODY += "\<end process;\n"
+        ARCH_BODY += "@<end process;\n"
 
 
         # Save code to file

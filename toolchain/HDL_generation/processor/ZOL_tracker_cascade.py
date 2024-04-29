@@ -31,10 +31,10 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    return pathways
+    return dataMesh
 
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
@@ -140,7 +140,7 @@ def generate_state_machine(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "state_FSM : entity work.%s(arch)@>\n"%(sub_name, )
 
     assert len(sub_interface["generics"]) == 0
     # com_det.arch_body += "generic map ()\n"
@@ -151,7 +151,7 @@ def generate_state_machine(gen_det, com_det):
     assert "not_tracking" in sub_interface["ports"].keys()
     assert "overwrites_reached" in sub_interface["ports"].keys()
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_head += "signal not_tracking : std_logic;\n"
 
@@ -160,7 +160,7 @@ def generate_state_machine(gen_det, com_det):
     com_det.arch_body += "overwrites_reached => overwrites_reached_int,\n"
     com_det.arch_body += "not_tracking  => not_tracking\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
 
 def generate_stepdown_SRLs(gen_det, com_det):
@@ -172,11 +172,11 @@ def generate_stepdown_SRLs(gen_det, com_det):
 
     for rang in range(gen_det.config["cascades"] - 1):
         # Instantiate SRL for stepping down one stepdown to next
-        com_det.arch_body += "stepdown_SRL_%i : SRLC32E\>\n"%(rang, )
+        com_det.arch_body += "stepdown_SRL_%i : SRLC32E@>\n"%(rang, )
 
         com_det.arch_body += "generic map ( init => X\"00000001\")\n"
 
-        com_det.arch_body += "port map (\>\n"
+        com_det.arch_body += "port map (@>\n"
 
         com_det.arch_body += "A => \"11111\",\n"
 
@@ -191,8 +191,8 @@ def generate_stepdown_SRLs(gen_det, com_det):
         com_det.arch_head += "signal stepdown_SRL_%i_enable : std_logic := '0';\n"%(rang, )
         com_det.arch_body += "ce => stepdown_SRL_%i_enable,\n"%(rang, )
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\n\<);\<\n\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "\n@<);@<\n\n"
 
         # Generate SRL enable signal
         com_det.arch_body += "stepdown_SRL_%i_enable <= stepdown_%i and not (%s);\n\n"%(
@@ -214,11 +214,11 @@ def generate_counter_SRLs(gen_det, com_det):
 
     for counter in range(gen_det.config["cascades"]):
           # Instantiate SRL for stepping down one stepdown to next
-          com_det.arch_body += "counter_SRL_%i : SRLC32E\>\n"%(counter, )
+          com_det.arch_body += "counter_SRL_%i : SRLC32E@>\n"%(counter, )
 
           com_det.arch_body += "generic map ( init => X\"00000001\")\n"
 
-          com_det.arch_body += "port map (\>\n"
+          com_det.arch_body += "port map (@>\n"
 
           com_det.arch_body += "A => overwrites(%i downto %i),\n"%(5*counter + 4, 5*counter)
 
@@ -233,11 +233,11 @@ def generate_counter_SRLs(gen_det, com_det):
           com_det.arch_head += "signal counter_SRL_%i_enable : std_logic := '0';\n"%(counter, )
           com_det.arch_body += "ce => counter_SRL_%i_enable,\n"%(counter, )
 
-          com_det.arch_body.drop_last_X(2)
-          com_det.arch_body += "\n\<);\<\n\n"
+          com_det.arch_body.drop_last(2)
+          com_det.arch_body += "\n@<);@<\n\n"
 
           # Generate SRL enable signal
-          com_det.arch_body += "counter_SRL_%i_enable <= (\n\>(counter_SRL_%i_out and not_tracking)\n"%(counter, counter, )
+          com_det.arch_body += "counter_SRL_%i_enable <= (\n@>(counter_SRL_%i_out and not_tracking)\n"%(counter, counter, )
           com_det.arch_body += "or (stepdown_%i and not counter_SRL_%i_out"%(counter, counter,)
           # Add all higher order counters to enable,
           if counter + 1 < gen_det.config["cascades"]:
@@ -247,7 +247,7 @@ def generate_counter_SRLs(gen_det, com_det):
                     for c in range(counter + 1, gen_det.config["cascades"])
                 ])
               )
-          com_det.arch_body += ")\<\n);\n\n"
+          com_det.arch_body += ")@<\n);\n\n"
 
 
 def generate_overwrites_reached_logic(gen_det, com_det):

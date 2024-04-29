@@ -75,8 +75,8 @@ read_data_patern = re.compile("read_(\d+)_word_(\d+)")
 write_addr_patern = re.compile("write_(\d+)_addr")
 write_data_patern = re.compile("write_(\d+)_word_(\d+)")
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
 
     # Gather pathway ports
@@ -116,7 +116,12 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
         for read in read_addr_ports:
             if read < len(reads):
                 fetch = reads[read]
-                gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, fetch, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+                dataMesh.connect_sink(sink="%sread_%i_addr"%(instr_prefix, read, ),
+                    channel="%sfetch_addr_%i"%(lane, fetch, ),
+                    condition=instr,
+                    stage="fetch", inplace_channel=True,
+                    padding_type="unsigned", width=config["addr_width"]
+                )
 
         # Handle read_data_ports
         for read, word in read_data_ports:
@@ -124,13 +129,25 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
                 fetch = reads[read]
                 read_mods = asm_utils.access_mods(fetches[fetch])
                 if word == 0 or "BAPA" in read_mods and word < int(read_mods["BAPA"]):
-                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_%i"%(lane, fetch, word, ), "exe", instr, "%sread_%i_word_%i"%(instr_prefix, read, word, ), config["signal_padding"], config["data_width"])
+                    dataMesh.connect_driver(driver="%sread_%i_word_%i"%(instr_prefix, read, word, ),
+                        channel="%sfetch_data_%i_word_%i"%(lane, fetch, word, ),
+                        condition=instr,
+                        stage="exe", inplace_channel=True,
+                        padding_type=config["signal_padding"], width=config["data_width"]
+                    )
+
 
         # Handle write_data_ports
         for write in write_addr_ports:
             if write < len(writes):
                 store = writes[write]
-                gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, store, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+                dataMesh.connect_sink(sink="%swrite_%i_addr"%(instr_prefix, write, ),
+                    channel="%sstore_addr_%i"%(lane, store, ),
+                    condition=instr,
+                    stage="store", inplace_channel=True,
+                    padding_type="unsigned", width=config["addr_width"]
+                )
+
 
         # Handle write_data_ports
         for write, word in write_data_ports:
@@ -138,9 +155,15 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
                 store = writes[write]
                 write_mods = asm_utils.access_mods(stores[store])
                 if word == 0 or "BAPA" in write_mods and word < int(write_mods["BAPA"]):
-                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_%i"%(lane, store, word, ), "store", instr, "%swrite_%i_word_%i"%(instr_prefix, write, word, ), config["signal_padding"], config["data_width"])
+                    dataMesh.connect_sink(sink="%swrite_%i_word_%i"%(instr_prefix, write, word, ),
+                        channel="%sstore_data_%i_word_%i"%(lane, store, word, ),
+                        condition=instr,
+                        stage="store", inplace_channel=True,
+                        padding_type=config["signal_padding"], width=config["data_width"]
+                    )
 
-    return pathways
+
+    return dataMesh
 
 write_enable_pattern = re.compile("write_(\d+)_enable_(\d+)")
 
@@ -331,15 +354,15 @@ def gen_reads(gen_det, com_det):
             com_det.add_port("read_%i_word_%i"%(read, word,), "std_logic_vector(data_width - 1 downto 0)", "out")
             com_det.arch_head += "signal read_%i_word_%i_reg_in : std_logic_vector(data_width - 1 downto 0);\n"%(read, word,)
 
-            com_det.arch_body += " read_%i_word_%i_reg : entity work.%s(arch)\>\n"%(read, word, reg_name)
+            com_det.arch_body += " read_%i_word_%i_reg : entity work.%s(arch)@>\n"%(read, word, reg_name)
             com_det.arch_body += "generic map (data_width => data_width)\n"
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
             com_det.arch_body += "clock => clock,\n"
             if gen_det.config["stallable"]:
                 com_det.arch_body += "enable  => not stall,\n"
             com_det.arch_body += "data_in  => read_%i_word_%i_reg_in,\n"%(read, word,)
             com_det.arch_body += "data_out => read_%i_word_%i\n"%(read, word,)
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"
 
         com_det.arch_body += "\n"
 
@@ -367,17 +390,17 @@ def gen_reads(gen_det, com_det):
                 mux_tree_signals[addr_bit].append("read_%i_mux_%i_%i_out"%(read, addr_bit, mux_index, ))
 
                 # Instancate mux
-                com_det.arch_body += "read_%i_mux_%i_%i : entity work.%s(arch)\>\n"%(read, addr_bit, mux_index, mux_name, )
+                com_det.arch_body += "read_%i_mux_%i_%i : entity work.%s(arch)@>\n"%(read, addr_bit, mux_index, mux_name, )
 
                 com_det.arch_body += "generic map (data_width => data_width)\n"
 
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel(0) => read_%i_addr(%i),\n"%(read, addr_bit, )
                 com_det.arch_body += "data_in_0 => %s,\n"%(mux_tree_signals[addr_bit + 1][mux_index], )
                 com_det.arch_body += "data_in_1 => %s,\n"%(mux_tree_signals[addr_bit + 1][mux_index + num_muxes], )
                 com_det.arch_body += "data_out => read_%i_mux_%i_%i_out\n"%(read, addr_bit, mux_index, )
 
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
 
         # Connect up root(s) for mux tree
         start_word = 0
@@ -440,11 +463,11 @@ def gen_writes(gen_det, com_det):
                 )
 
                 # Instancate demux
-                com_det.arch_body += "write_%i_enable_%i_demux : entity work.%s(arch)\>\n"%(write, block_size, demux_name, )
+                com_det.arch_body += "write_%i_enable_%i_demux : entity work.%s(arch)@>\n"%(write, block_size, demux_name, )
 
                 com_det.arch_body += "generic map (data_width => 1)\n"
 
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel => write_%i_addr(%i downto %i),\n"%(write, lg_block_size + int(math.log(num_regions, 2)) - 1, lg_block_size, )
                 com_det.arch_body += "data_in(0) => write_%i_enable_%i,\n"%(write, block_size, )
 
@@ -454,8 +477,8 @@ def gen_writes(gen_det, com_det):
 
                     enable_demux_signals[block_size].append("write_%i_enable_%i_demux_out_%i"%(write, block_size, region, ) )
 
-                com_det.arch_body.drop_last_X(2)
-                com_det.arch_body += "\n\<);\n\<\n"
+                com_det.arch_body.drop_last(2)
+                com_det.arch_body += "\n@<);\n@<\n"
 
         for block in range(gen_det.config["num_blocks"]):
             com_det.add_port("block_%i_write_%i_enable"%(block, write, ), "std_logic", "out")
@@ -490,17 +513,17 @@ def gen_writes(gen_det, com_det):
                     # Instancate mux
                     com_det.arch_head += "signal write_%i_word_%i_muxed : std_logic_vector(data_width - 1 downto 0);\n"%(write, word, )
 
-                    com_det.arch_body += "write_%i_word_%i_mux : entity work.%s(arch)\>\n"%(write, word, mux_name, )
+                    com_det.arch_body += "write_%i_word_%i_mux : entity work.%s(arch)@>\n"%(write, word, mux_name, )
 
                     com_det.arch_body += "generic map (data_width => data_width)\n"
 
-                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "port map (\n@>"
                     com_det.arch_body += "sel(0) => %s,\n"%(" or ".join(mux_chain_sel_terms), )
                     com_det.arch_body += "data_in_0 => %s,\n"%(mux_chain_signals[index], )
                     com_det.arch_body += "data_in_1 => write_%i_word_%i,\n"%(write, word, )
                     com_det.arch_body += "data_out => write_%i_word_%i_muxed\n"%(write, word, )
 
-                    com_det.arch_body += "\<);\n\<\n"
+                    com_det.arch_body += "@<);\n@<\n"
 
                     mux_chain_signals.append("write_%i_word_%i_muxed"%(write, word, ))
                 else:

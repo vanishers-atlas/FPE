@@ -112,28 +112,28 @@ def generate_input_regs(gen_det, com_det):
         com_det.arch_head += "signal reg_%i_in, reg_%i_out : std_logic_vector(data_width - 1 downto 0);\n"%(input, input, )
         com_det.add_port("data_in_%i"%(input, ), "std_logic_vector(data_width - 1 downto 0)", "in")
 
-        com_det.arch_body += "reg_%i : entity work.%s(arch)\>\n"%(input, reg_name)
+        com_det.arch_body += "reg_%i : entity work.%s(arch)@>\n"%(input, reg_name)
 
         com_det.arch_body += "generic map (data_width => data_width)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         com_det.arch_body += "clock => clock,\n"
         com_det.arch_body += "enable => reg_enable,\n"
         com_det.arch_body += "data_in  => reg_%i_in,\n"%(input, )
         com_det.arch_body += "data_out => reg_%i_out\n"%(input, )
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
         if input != gen_det.config["inputs"] - 1:
-            com_det.arch_body += "reg_%i_mux : entity work.%s(arch)\>\n"%(input, mux_name, )
+            com_det.arch_body += "reg_%i_mux : entity work.%s(arch)@>\n"%(input, mux_name, )
 
             com_det.arch_body += "generic map (data_width => data_width)\n"
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
             com_det.arch_body += "sel => reg_muxes_sel,\n"
             com_det.arch_body += "data_in_0  => data_in_%i,\n"%(input, )
             com_det.arch_body += "data_in_1  => reg_%i_out,\n"%(input + 1, )
             com_det.arch_body += "data_out => reg_%i_in\n"%(input, )
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"
         else:
             com_det.arch_body += "reg_%i_in <= data_in_%i;\n"%(input, input, )
 
@@ -158,16 +158,16 @@ def generate_control_logic(gen_det, com_det):
     com_det.arch_head += "signal state_R : std_logic;\n"
     com_det.arch_head += "signal state_Q : std_logic;\n"
 
-    com_det.arch_body += "state_RS : entity work.%s(arch)\>\n"%(RS_name, )
+    com_det.arch_body += "state_RS : entity work.%s(arch)@>\n"%(RS_name, )
 
     com_det.arch_body += "generic map (stating_state => '0')\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "S => inputs_write,\n"
     com_det.arch_body += "R => state_R,\n"
     com_det.arch_body += "Q => state_Q\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.add_port("output_write", "std_logic", "out")
     com_det.arch_body += "output_write <= state_Q;\n"
@@ -178,9 +178,9 @@ def generate_control_logic(gen_det, com_det):
 
     com_det.add_import("UNISIM", "vcomponents", "all")
     assert gen_det.config["inputs"] <= 32
-    com_det.arch_body += "reset_delay : SRLC32E\n\>"
+    com_det.arch_body += "reset_delay : SRLC32E\n@>"
     com_det.arch_body += "generic map (INIT => X\"00000001\")\n"
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
 
     com_det.arch_body += "A => \"%s\",\n"%(tc_utils.unsigned.encode(gen_det.config["inputs"] - 1, 5), )
     com_det.arch_body += "D => state_R,\n"
@@ -188,4 +188,4 @@ def generate_control_logic(gen_det, com_det):
     com_det.arch_body += "CLK => clock,\n"
     com_det.arch_body += "CE => state_Q,\n"
     com_det.arch_body += "Q31 => open\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"

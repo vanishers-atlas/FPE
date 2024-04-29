@@ -69,7 +69,9 @@ def preprocess_config(config_in):
 
     # Handle program_flow section of config
     assert type(config_in["program_flow"]) == dict, "program_flow must be a dict"
-    config_out["program_flow"] = {}
+    config_out["program_flow"] = {
+        "jump_drivers" : []
+    }
 
     assert "PC_width" in config_in["program_flow"].keys()
     assert type(config_in["program_flow"]["PC_width"]) == int
@@ -158,7 +160,6 @@ def preprocess_config(config_in):
 
     assert not config_out["report_stall"] or config_out["report_stall"] and config_out["stallable"], "Cant report_stall in a non-stalling FPE"
 
-
     return config_out
 
 def handle_module_name(module_name, config):
@@ -198,19 +199,19 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
         # Init component_details
         com_det = gen_utils.component_details()
         controls = gen_utils.init_controls()
-        datapaths = gen_utils.init_datapaths()
+        dataMesh = gen_utils.DataMesh()
 
         # Include extremely commom libs
         com_det.add_import("ieee", "std_logic_1164", "all")
 
         # Generate VHDL
         gen_non_pipelined_signals(gen_det, com_det)
-        controls, datapaths = gen_execute_units(gen_det, com_det, controls, datapaths)
-        controls, datapaths = gen_data_memories(gen_det, com_det, controls, datapaths)
-        controls, datapaths = gen_addr_sources(gen_det, com_det, controls, datapaths)
-        controls, datapaths = gen_predecode_pipeline(gen_det, com_det, controls, datapaths)
-        controls, datapaths = gen_datapath_muxes(gen_det, com_det, controls, datapaths)
-        gen_instr_decoder(gen_det, com_det, controls, datapaths)
+        controls, dataMesh = gen_execute_units(gen_det, com_det, controls, dataMesh)
+        controls, dataMesh = gen_data_memories(gen_det, com_det, controls, dataMesh)
+        controls, dataMesh = gen_addr_sources(gen_det, com_det, controls, dataMesh)
+        controls, dataMesh = gen_predecode_pipeline(gen_det, com_det, controls, dataMesh)
+        controls = handle_datamesh(gen_det, com_det, controls, dataMesh)
+        gen_instr_decoder(gen_det, com_det, controls)
         gen_stall_signals(gen_det, com_det)
         gen_running_delays(gen_det, com_det)
 
@@ -267,7 +268,7 @@ exe_predeclared_ports = {
     "stall_in" : "stall_all_src",
 }
 
-def gen_execute_units(gen_det, com_det, controls, datapaths):
+def gen_execute_units(gen_det, com_det, controls, dataMesh):
 
     com_det.arch_body += "\n-- Exe components\n"
 
@@ -284,6 +285,7 @@ def gen_execute_units(gen_det, com_det, controls, datapaths):
             gen_det.config["instr_set"],
             {
                 **config,
+                "jump_width" : gen_det.config["program_flow"]["PC_width"],
                 "signal_padding" : gen_det.config["signal_padding"],
                 "stallable" : gen_det.config["stallable"],
             }
@@ -295,6 +297,9 @@ def gen_execute_units(gen_det, com_det, controls, datapaths):
             concat_naming=gen_det.concat_naming,
             force_generation=gen_det.force_generation
         )
+        if "jump_drivers" in sub_interface:
+            gen_det.config["program_flow"]["jump_drivers"] += sub_interface["jump_drivers"]
+
 
         exe_controls = exe_lib_lookup[exe].get_inst_controls(exe, exe + "_", gen_det.config["instr_set"], sub_interface, config)
         controls = gen_utils.merge_controls( controls, exe_controls )
@@ -305,9 +310,9 @@ def gen_execute_units(gen_det, com_det, controls, datapaths):
         for lane in gen_det.config["SIMD"]["lanes_names"]:
             inst = lane + exe
 
-            com_det.arch_body += "\n%s : entity work.%s(arch)\>\n"%(inst, sub_name)
+            com_det.arch_body += "\n%s : entity work.%s(arch)@>\n"%(inst, sub_name)
 
-            com_det.arch_body += "port map (\>\n"
+            com_det.arch_body += "port map (@>\n"
 
             # Loop over all ports
             for port in sorted(sub_interface["ports"].keys()):
@@ -334,18 +339,18 @@ def gen_execute_units(gen_det, com_det, controls, datapaths):
                         com_det.arch_head += "signal %s_%s : %s;\n"%(inst, port, detail["type"])
                     com_det.arch_body += "%s => %s_%s,\n"%(port, inst, port)
 
-            com_det.arch_body.drop_last_X(2)
-            com_det.arch_body += "\<\n);\n"
-            com_det.arch_body += "\<\n"
+            com_det.arch_body.drop_last(2)
+            com_det.arch_body += "@<\n);\n"
+            com_det.arch_body += "@<\n"
 
             # Check for stall out port
             if "stall_out" in sub_interface["ports"].keys():
                 gen_det.config["stall_sources"].append("%s_stall_out"%(inst, ))
 
 
-            datapaths = gen_utils.merge_datapaths(datapaths, exe_lib_lookup[exe].get_inst_pathways(exe, inst + "_", gen_det.config["instr_set"], sub_interface, config, lane) )
+            dataMesh = dataMesh.merge(exe_lib_lookup[exe].get_inst_dataMesh(exe, inst + "_", gen_det.config["instr_set"], sub_interface, config, lane) )
 
-    return controls, datapaths
+    return controls, dataMesh
 
 
 #####################################################################
@@ -379,7 +384,7 @@ mem_predeclared_ports_per_mem = {
     "ROM_B" : { },
 }
 
-def gen_data_memories(gen_det, com_det, controls, datapaths):
+def gen_data_memories(gen_det, com_det, controls, dataMesh):
 
     com_det.arch_body += "\n-- Memories components\n"
     # Interate over all data memories
@@ -421,45 +426,53 @@ def gen_data_memories(gen_det, com_det, controls, datapaths):
         except KeyError:
             pass
 
+
         if gen_det.config["data_memories"][mem]["cross_lane"]:
             instance_data_mem(gen_det, com_det, mem, mem, sub_name, sub_interface, control_ports, True)
 
-            # Handle pathways and controls
-            unlaned_datapaths = mem_lib_lookup[mem].get_inst_pathways(mem, mem + "_", gen_det.config["instr_set"], sub_interface, config, gen_det.config["SIMD"]["lanes_names"][0])
-            laned_datapaths = copy.deepcopy(unlaned_datapaths)
-            for vbus_name, vbus in unlaned_datapaths.get_all_vbuses().items():
-                for lane in gen_det.config["SIMD"]["lanes_names"][1:]:
-                    new_vbus_name = vbus_name.replace(gen_det.config["SIMD"]["lanes_names"][0], lane)
-                    laned_datapaths.add_vbus(new_vbus_name, copy.deepcopy(vbus))
-            datapaths = gen_utils.merge_datapaths(datapaths, laned_datapaths)
+            # Handle dataMesh and controls
+            unlaned_dataMesh = mem_lib_lookup[mem].get_inst_dataMesh(mem, mem + "_", gen_det.config["instr_set"], sub_interface, config, gen_det.config["SIMD"]["lanes_names"][0])
+            laned_dataMesh = gen_utils.DataMesh()
+
+            # Add lane fanning out code
+            assert len(gen_det.config["SIMD"]["lanes_names"][1:]) == 0
+
+            laned_dataMesh = unlaned_dataMesh
+            # for vbus_name, vbus in unlaned_dataMesh.get_all_vbuses().items():
+            #     for lane in gen_det.config["SIMD"]["lanes_names"][1:]:
+            #         new_vbus_name = vbus_name.replace(gen_det.config["SIMD"]["lanes_names"][0], lane)
+            #         laned_dataMesh.add_vbus(new_vbus_name, copy.deepcopy(vbus))
+
+            dataMesh = dataMesh.merge(laned_dataMesh)
 
         else:
             for lane in gen_det.config["SIMD"]["lanes_names"]:
                 inst = lane + mem
                 instance_data_mem(gen_det, com_det, mem, lane + mem, sub_name, sub_interface, control_ports, lane == gen_det.config["SIMD"]["lanes_names"][0])
 
-                # Handle pathways and controls
-                datapaths = gen_utils.merge_datapaths(datapaths, mem_lib_lookup[mem].get_inst_pathways(mem, inst + "_", gen_det.config["instr_set"], sub_interface, config, lane))
+                # Handle dataMesh and controls
+                lansd_dataMesh = mem_lib_lookup[mem].get_inst_dataMesh(mem, inst + "_", gen_det.config["instr_set"], sub_interface, config, lane)
+                dataMesh = dataMesh.merge(lansd_dataMesh)
 
-    return controls, datapaths
+    return controls, dataMesh
 
 def instance_data_mem(gen_det, com_det, mem, inst, sub_name, sub_interface, control_ports, declare_controls):
 
     # instantiate memory
-    com_det.arch_body += "\n%s : entity work.%s(arch)\>\n"%(inst, sub_name)
+    com_det.arch_body += "\n%s : entity work.%s(arch)@>\n"%(inst, sub_name)
 
     if len(sub_interface["generics"]) != 0:
-        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "generic map (@>\n"
 
         for generic in sorted(sub_interface["generics"]):
             details = sub_interface["generics"][generic]
             com_det.ripple_generic(inst + "_" + generic, details)
             com_det.arch_body += "%s => %s_%s,\n"%(generic, inst, generic)
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\<\n)\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "@<\n)\n"
 
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
 
     # Handle all ports
     for port in sorted(sub_interface["ports"].keys()):
@@ -492,10 +505,10 @@ def instance_data_mem(gen_det, com_det, mem, inst, sub_name, sub_interface, cont
 
             com_det.arch_body += "%s => %s_%s,\n"%(port, inst, port)
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n);\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n);\n"
 
-    com_det.arch_body += "\<\n"
+    com_det.arch_body += "@<\n"
 
     # Check for stall out port
     if "stall_out" in sub_interface["ports"].keys():
@@ -508,7 +521,7 @@ addr_sources_predeclared_ports = {
     "stall_in" : "stall_all_src",
 }
 
-def gen_addr_sources(gen_det, com_det, controls, datapaths):
+def gen_addr_sources(gen_det, com_det, controls, dataMesh):
 
     com_det.arch_body += "\n-- Address components\n"
     for bam, config in gen_det.config["address_sources"].items():
@@ -539,20 +552,20 @@ def gen_addr_sources(gen_det, com_det, controls, datapaths):
             assert interface["required_stages"] == ["prefetch",]
             gen_det.config["pipeline_stages"] = ["PM", "ID", "PREFETCH", "FETCH", "EXE", "STORE"]
 
-        com_det.arch_body += "\n%s : entity work.%s(arch)\>\n"%(bam, name)
+        com_det.arch_body += "\n%s : entity work.%s(arch)@>\n"%(bam, name)
 
         if len(interface["generics"]) != 0:
-            com_det.arch_body += "generic map (\>\n"
+            com_det.arch_body += "generic map (@>\n"
 
             for generic in sorted(interface["generics"]):
                 details = interface["generics"][generic]
                 com_det.ripple_generic(bam + "_" + generic, details)
                 com_det.arch_body += "%s => %s_%s,\n"%(generic, bam, generic)
 
-            com_det.arch_body.drop_last_X(2)
-            com_det.arch_body += "\<\n)\n"
+            com_det.arch_body.drop_last(2)
+            com_det.arch_body += "@<\n)\n"
 
-        com_det.arch_body += "port map (\>\n"
+        com_det.arch_body += "port map (@>\n"
 
         # Handle predeclared ports
         for port, signal in addr_sources_predeclared_ports.items():
@@ -570,10 +583,10 @@ def gen_addr_sources(gen_det, com_det, controls, datapaths):
 
                 com_det.arch_body += "%s => %s_%s,\n"%(port, bam, port, )
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\<\n);\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "@<\n);\n"
 
-        com_det.arch_body += "\<\n"
+        com_det.arch_body += "@<\n"
 
         # Check for stall out port
         if "stall_out" in interface["ports"].keys():
@@ -581,72 +594,65 @@ def gen_addr_sources(gen_det, com_det, controls, datapaths):
 
         controls = gen_utils.merge_controls( controls, BAM.get_inst_controls(bam, bam + "_", gen_det.config["instr_set"], interface, config) )
 
-        # Handle pathways and controls
-        undatapaths = BAM.get_inst_pathways(bam, bam + "_", gen_det.config["instr_set"], interface, config, gen_det.config["SIMD"]["lanes_names"][0])
-        laned_datapaths = copy.deepcopy(undatapaths)
-        for vbus_name, vbus in undatapaths.get_all_vbuses().items():
-            for lane in gen_det.config["SIMD"]["lanes_names"][1:]:
-                new_vbus_name = vbus_name.replace(gen_det.config["SIMD"]["lanes_names"][0], lane)
-                laned_datapaths.add_vbus(new_vbus_name, copy.deepcopy(vbus))
-        datapaths = gen_utils.merge_datapaths(datapaths, laned_datapaths)
+        # Handle dataMesh and controls
+        unlaned_dataMesh = BAM.get_inst_dataMesh(bam, bam + "_", gen_det.config["instr_set"], interface, config, gen_det.config["SIMD"]["lanes_names"][0])
+        laned_dataMesh = gen_utils.DataMesh()
 
-    return controls, datapaths
+        # Add lane fanning out code
+        assert len(gen_det.config["SIMD"]["lanes_names"][1:]) == 0
+        laned_dataMesh = unlaned_dataMesh
+        # for vbus_name, vbus in undataMesh.get_all_vbuses().items():
+        #     for lane in gen_det.config["SIMD"]["lanes_names"][1:]:
+        #         new_vbus_name = vbus_name.replace(gen_det.config["SIMD"]["lanes_names"][0], lane)
+        #         laned_dataMesh.add_vbus(new_vbus_name, copy.deepcopy(vbus))
+
+        dataMesh = dataMesh.merge(laned_dataMesh)
+
+    return controls, dataMesh
 
 #####################################################################
 
-def gen_predecode_pipeline(gen_det, com_det, controls, datapaths):
+def gen_predecode_pipeline(gen_det, com_det, controls, dataMesh):
 
     com_det.arch_body += "\n-- Program fetch components\n"
 
-    controls, datapaths = gen_program_counter(gen_det, com_det, controls, datapaths)
+    controls, dataMesh = gen_program_counter(gen_det, com_det, controls, dataMesh)
 
     if "hidden_ZOLs" in gen_det.config["program_flow"].keys() and len(gen_det.config["program_flow"]["hidden_ZOLs"]):
-        controls, datapaths = gen_hidden_ZOLs(gen_det, com_det, controls, datapaths)
+        controls, dataMesh = gen_hidden_ZOLs(gen_det, com_det, controls, dataMesh)
 
     if "declared_ZOLs" in gen_det.config["program_flow"].keys() and len(gen_det.config["program_flow"]["declared_ZOLs"]):
-        controls, datapaths = gen_declared_ZOLs(gen_det, com_det, controls, datapaths)
+        controls, dataMesh = gen_declared_ZOLs(gen_det, com_det, controls, dataMesh)
 
     if "rep_bank" in gen_det.config["program_flow"].keys() and len(gen_det.config["program_flow"]["rep_bank"]["loops"]):
-        controls, datapaths = gen_repeat_bank_loops(gen_det, com_det, controls, datapaths)
+        controls, dataMesh = gen_repeat_bank_loops(gen_det, com_det, controls, dataMesh)
 
     gen_program_memory(gen_det, com_det)
 
-    return controls, datapaths
+    return controls, dataMesh
 
 PC_predeclared_ports = {
     "clock" : "clock",
     "stall_in" : "stall_all_src",
     "kickoff" : "kickoff",
-    "ALU_jump" : "ALU_core_jump_taken",
 }
 
-def gen_program_counter(gen_det, com_det, controls, datapaths):
+def gen_program_counter(gen_det, com_det, controls, dataMesh):
     if gen_det.concat_naming:
         module_name = gen_det.module_name + "_PC"
     else:
         module_name = None
 
-    overwrite_sources  = []
-    if "hidden_ZOLs" in gen_det.config["program_flow"].keys() and len(gen_det.config["program_flow"]["hidden_ZOLs"]):
-        overwrite_sources.append("hidden_ZOLs")
-    if "declared_ZOLs" in gen_det.config["program_flow"].keys() and len(gen_det.config["program_flow"]["declared_ZOLs"]):
-        overwrite_sources.append("declared_ZOLs")
-    if "rep_bank" in gen_det.config["program_flow"].keys() and len(gen_det.config["program_flow"]["rep_bank"]["loops"]):
-        overwrite_sources.append("rep_bank_overwrite")
-
-    jump_sources = []
-
     config = PC.add_inst_config(
         "PC",
         gen_det.config["instr_set"],
         {
-            "PC_width" : gen_det.config["program_flow"]["PC_width"],
-            "overwrite_sources" : len(overwrite_sources),
-            "jump_sources" : len(jump_sources),
+            **gen_det.config["program_flow"],
 
             "stallable" : gen_det.config["stallable"],
         }
     )
+
     interface, name = PC.generate_HDL(
         config=config,
         output_path=gen_det.output_path,
@@ -655,25 +661,25 @@ def gen_program_counter(gen_det, com_det, controls, datapaths):
         force_generation=gen_det.force_generation
     )
     # controls
-    datapaths = gen_utils.merge_datapaths(datapaths, PC.get_inst_pathways("PC", "", gen_det.config["instr_set"], interface, config, gen_det.config["SIMD"]["lanes_names"][0]) )
+    dataMesh = dataMesh.merge(PC.get_inst_dataMesh("PC", "", gen_det.config["instr_set"], interface, config, gen_det.config["SIMD"]["lanes_names"][0]) )
     controls  = gen_utils.merge_controls( controls , PC.get_inst_controls("PC", "", gen_det.config["instr_set"], interface, config) )
 
     gen_det.config["program_flow"]["PC_width"] = interface["ports"]["value"]["width"]
 
-    com_det.arch_body += "\nPC : entity work.%s(arch)\>\n"%(name)
+    com_det.arch_body += "\nPC : entity work.%s(arch)@>\n"%(name)
 
     if len(interface["generics"]) != 0:
-        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "generic map (@>\n"
 
         for generic in sorted(interface["generics"].keys()):
             details = interface["generics"][generic]
             com_det.ripple_generic("PC_" + generic, details)
             com_det.arch_body += "%s => PC_%s,\n"%(generic, generic)
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\<\n)\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "@<\n)\n"
 
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
 
     # Handle predeclared ports
     for port, signal in PC_predeclared_ports.items():
@@ -689,30 +695,28 @@ def gen_program_counter(gen_det, com_det, controls, datapaths):
                 com_det.arch_head += "signal PC_%s : %s;\n"%(port, details["type"])
             com_det.arch_body += "%s => PC_%s,\n"%(port, port)
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n);\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n);\n"
 
-    com_det.arch_body += "\<\n\n"
+    com_det.arch_body += "@<\n\n"
 
-    for port, signal in enumerate(overwrite_sources):
+    for port, signal in enumerate(config["overwrite_sources"]):
         com_det.arch_head += "signal %s_value : std_logic_vector(%i downto 0);\n"%(signal, gen_det.config["program_flow"]["PC_width"] - 1, )
-        com_det.arch_head += "signal %s_overwrite : std_logic;\n"%(signal, )
-
-        com_det.arch_body += "PC_overwrite_source_%i_enable <= %s_overwrite;\n"%(port, signal, )
         com_det.arch_body += "PC_overwrite_source_%i_value <= %s_value;\n\n"%(port, signal, )
 
-    for port, signal in enumerate(jump_sources):
-        raise NotImplementedError()
-        com_det.arch_head += "signal %s_value : std_logic_vector(%i downto 0);\n"%(signal, gen_det.config["program_flow"]["PC_width"] - 1, )
         com_det.arch_head += "signal %s_overwrite : std_logic;\n"%(signal, )
-
         com_det.arch_body += "PC_overwrite_source_%i_enable <= %s_overwrite;\n"%(port, signal, )
-        com_det.arch_body += "PC_overwrite_source_%i_value <= %s_value;\n\n"%(port, signal, )
+
+    if "PC_only_jump" in config["jump_drivers"]:
+        com_det.arch_head += "signal PC_only_jump : std_logic;\n"
+    for port, signal in enumerate(config["jump_drivers"]):
+        com_det.arch_body += "PC_jump_driver_%i <= %s;\n"%(port, signal, )
+
 
     # Handle kickoff input
     com_det.add_port("kickoff", "std_logic", "in")
 
-    return controls, datapaths
+    return controls, dataMesh
 
 # Key is port name, value signal name
 ZOL_predeclared_ports = {
@@ -728,27 +732,27 @@ ZOL_declared_ports = [
     "set_overwrites", "set_enable",
 ]
 
-def gen_hidden_ZOLs(gen_det, com_det, controls, datapaths):
+def gen_hidden_ZOLs(gen_det, com_det, controls, dataMesh):
     ZOLs = {"hidden_ZOL_" + str(k) : v for k, v in gen_det.config["program_flow"]["hidden_ZOLs"].items()}
 
-    controls, datapaths, overwrites_encoding, overwrite_signal, value_signal = gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, "hidden_ZOLs")
+    controls, dataMesh, overwrites_encoding, overwrite_signal, value_signal = gen_zero_overhead_loops(gen_det, com_det, controls, dataMesh, ZOLs, "hidden_ZOLs")
     com_det.add_interface_item("hidden_ZOLs_overwrites_encoding", overwrites_encoding)
     com_det.arch_body += "hidden_ZOLs_overwrite <= %s;\n"%(overwrite_signal, )
     com_det.arch_body += "hidden_ZOLs_value <= %s;\n\n"%(value_signal, )
 
-    return controls, datapaths
+    return controls, dataMesh
 
-def gen_declared_ZOLs(gen_det, com_det, controls, datapaths):
+def gen_declared_ZOLs(gen_det, com_det, controls, dataMesh):
     ZOLs = gen_det.config["program_flow"]["declared_ZOLs"]
 
-    controls, datapaths, overwrites_encoding, overwrite_signal, value_signal = gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, "declared_ZOLs")
+    controls, dataMesh, overwrites_encoding, overwrite_signal, value_signal = gen_zero_overhead_loops(gen_det, com_det, controls, dataMesh, ZOLs, "declared_ZOLs")
     com_det.add_interface_item("declared_ZOLs_overwrites_encoding", overwrites_encoding)
     com_det.arch_body += "declared_ZOLs_overwrite <= %s;\n"%(overwrite_signal, )
     com_det.arch_body += "declared_ZOLs_value <= %s;\n\n"%(value_signal, )
 
-    return controls, datapaths
+    return controls, dataMesh
 
-def gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, muxing_prefix):
+def gen_zero_overhead_loops(gen_det, com_det, controls, dataMesh, ZOLs, muxing_prefix):
 
     overwrites_encoding = {}
 
@@ -775,20 +779,20 @@ def gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, muxing_
         overwrites_encoding[ZOL_name] = interface["overwrites_encoding"]
 
 
-        com_det.arch_body += "\n%s : entity work.%s(arch)\>\n"%(ZOL_name, name, )
+        com_det.arch_body += "\n%s : entity work.%s(arch)@>\n"%(ZOL_name, name, )
 
         if len(interface["generics"]) != 0:
-            com_det.arch_body += "generic map (\>\n"
+            com_det.arch_body += "generic map (@>\n"
 
             for generic in sorted(interface["generics"].keys()):
                 details = interface["generics"][generic]
                 com_det.ripple_generic(ZOL_name + "_" + generic, details)
                 com_det.arch_body += "%s => %s_%s,\n"%(generic, ZOL_name, generic, )
 
-            com_det.arch_body.drop_last_X(2)
-            com_det.arch_body += "\<\n)\n"
+            com_det.arch_body.drop_last(2)
+            com_det.arch_body += "@<\n)\n"
 
-        com_det.arch_body += "port map (\>\n"
+        com_det.arch_body += "port map (@>\n"
 
         if __debug__:
             for port in interface["ports"]:
@@ -811,13 +815,13 @@ def gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, muxing_
                     com_det.arch_head += "signal %s_%s : %s;\n"%(ZOL_name, port, details["type"], )
                 com_det.arch_body += "%s => %s_%s,\n"%(port, ZOL_name, port, )
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\<\n);\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "@<\n);\n"
 
-        com_det.arch_body += "\<\n\n"
+        com_det.arch_body += "@<\n\n"
 
-        # Handle pathways and controls
-        datapaths = gen_utils.merge_datapaths(datapaths, ZOL.get_inst_pathways(ZOL_name, ZOL_name + "_", gen_det.config["instr_set"], interface, ZOL_details, gen_det.config["SIMD"]["lanes_names"][0]))
+        # Handle dataMesh and controls
+        dataMesh = dataMesh.merge(ZOL.get_inst_dataMesh(ZOL_name, ZOL_name + "_", gen_det.config["instr_set"], interface, ZOL_details, gen_det.config["SIMD"]["lanes_names"][0]))
         controls = gen_utils.merge_controls(controls, ZOL.get_inst_controls(ZOL_name, ZOL_name + "_", gen_det.config["instr_set"], interface, ZOL_details) )
 
     # Build mux tree for ZOL overwrite and values
@@ -846,9 +850,9 @@ def gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, muxing_
                 com_det.arch_head += "signal %s_overwrite_%i_%i : std_logic;\n"%(muxing_prefix, lavel, pair, )
                 com_det.arch_body += "%s_overwrite_%i_%i <=  %s or %s;\n"%(muxing_prefix, lavel, pair, a_enable, b_enable, )
 
-                com_det.arch_body += "%s_value_mux_%i_%i : entity work.%s(arch)\>\n"%(muxing_prefix, lavel, pair, mux_2, )
+                com_det.arch_body += "%s_value_mux_%i_%i : entity work.%s(arch)@>\n"%(muxing_prefix, lavel, pair, mux_2, )
                 com_det.arch_body += "generic map (data_width => %i)\n"%(value_width, )
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel(0) => %s,\n"%(b_enable, )
                 com_det.arch_body += "data_in_0 => %s,\n"%(a_value, )
                 com_det.arch_body += "data_in_1 => %s,\n"%(b_value, )
@@ -856,7 +860,7 @@ def gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, muxing_
                 com_det.arch_head += "signal %s_value_mux_%i_%i_out : std_logic_vector(%i downto 0);\n"%(muxing_prefix, lavel, pair, value_width - 1, )
                 com_det.arch_body += "data_out => %s_value_mux_%i_%i_out\n"%(muxing_prefix, lavel, pair, )
 
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
 
                 mux_ends_new.append(("%s_overwrite_%i_%i"%(muxing_prefix, lavel, pair, ), "%s_value_mux_%i_%i_out"%(muxing_prefix, lavel, pair, ), ) )
 
@@ -869,7 +873,7 @@ def gen_zero_overhead_loops(gen_det, com_det, controls, datapaths, ZOLs, muxing_
         overwrite_signal = mux_ends[0][0]
         value_signal = mux_ends[0][1]
 
-    return controls, datapaths, overwrites_encoding, overwrite_signal, value_signal
+    return controls, dataMesh, overwrites_encoding, overwrite_signal, value_signal
 
 repeat_bank_predeclared_ports = {
     "clock" : "clock",
@@ -884,7 +888,7 @@ repeat_bank_declared_ports = [
     "stall_out",
 ]
 
-def gen_repeat_bank_loops(gen_det, com_det, controls, datapaths):
+def gen_repeat_bank_loops(gen_det, com_det, controls, dataMesh):
     if gen_det.concat_naming:
         module_name = gen_det.module_name + "_" + "repeat_bank"
     else:
@@ -907,19 +911,19 @@ def gen_repeat_bank_loops(gen_det, com_det, controls, datapaths):
     com_det.add_interface_item("rep_bank_preloaded_pc_values_encoding", interface["rep_bank_preloaded_pc_values_encoding"])
     com_det.add_interface_item("rep_bank_preloaded_overwrites_encoding", interface["rep_bank_preloaded_overwrites_encoding"])
 
-    com_det.arch_body += "repeat_bank : entity work.%s(arch)\>\n"%(name, )
+    com_det.arch_body += "repeat_bank : entity work.%s(arch)@>\n"%(name, )
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
 
     for generic in sorted(interface["generics"].keys()):
         details = interface["generics"][generic]
         com_det.ripple_generic("rep_bank_" + generic, details, )
         com_det.arch_body += "%s => rep_bank_%s,\n"%(generic, generic, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n)\n"
 
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
 
     if __debug__:
         for port in interface["ports"]:
@@ -942,10 +946,10 @@ def gen_repeat_bank_loops(gen_det, com_det, controls, datapaths):
                 com_det.arch_head += "signal rep_bank_%s : %s;\n"%(port, details["type"], )
             com_det.arch_body += "%s => rep_bank_%s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n);\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n);\n"
 
-    com_det.arch_body += "\<\n\n"
+    com_det.arch_body += "@<\n\n"
 
     # Update stalling structs
     if "stall_out" in interface["ports"].keys():
@@ -954,7 +958,7 @@ def gen_repeat_bank_loops(gen_det, com_det, controls, datapaths):
         gen_det.config["stalls"]["stall_rep_bank"] = ["rep_bank_stall_out", ]
 
 
-    return controls, datapaths
+    return controls, dataMesh
 
 def gen_program_memory(gen_det, com_det):
 
@@ -979,63 +983,181 @@ def gen_program_memory(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "\nPM : entity work.%s(arch)\>\n"%(name)
+    com_det.arch_body += "\nPM : entity work.%s(arch)@>\n"%(name)
     com_det.add_generic("PM_init_mif", "string")
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
     com_det.arch_body += "init_mif => PM_init_mif\n"
-    com_det.arch_body += "\<)\n"
+    com_det.arch_body += "@<)\n"
 
     com_det.arch_head += "signal PM_addr : std_logic_vector(%i downto 0);\n"%( gen_det.config["program_flow"]["PC_width"] - 1)
     com_det.arch_head += "signal PM_data : std_logic_vector(%i downto 0);\n"%( gen_det.config["instr_decoder"]["instr_width"] - 1)
 
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
     com_det.arch_body += "clock => clock,\n"
     if gen_det.config["stallable"]:
         com_det.arch_body += "stall_in => stall_all_src,\n"
     com_det.arch_body += "read_0_addr => PM_addr,\n"
     com_det.arch_body += "read_0_data => PM_data\n"
-    com_det.arch_body += "\<);\n"
+    com_det.arch_body += "@<);\n"
 
-    com_det.arch_body += "\<\n"
+    com_det.arch_body += "@<\n"
 
     com_det.arch_body += "PM_addr <= PC_value;\n"
 
 #####################################################################
 
-def gen_datapath_muxes(gen_det, com_det, controls, datapaths):
+def handle_datamesh(gen_det, com_det, controls, dataMesh):
 
     # Declare data paths for ID addrs
     # needs to happen before ID is generated so ID can be passed the mux controls
+    dataMesh = declare_ID_addrs(gen_det, com_det, dataMesh)
+
+    controls = gen_datapath_muxes(gen_det, com_det, controls, dataMesh)
+
+    return controls
+
+
+def declare_ID_addrs(gen_det, com_det, dataMesh):
     for instr in gen_det.config["instr_set"]:
         ID_addr = 0
-
         for read, access in enumerate(asm_utils.instr_fetches(instr)):
             addr_com = asm_utils.addr_com(asm_utils.access_addr(access))
+            # Handle addresses from the instruction decoder
             if addr_com == "ID":
                 for lane in gen_det.config["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath_source(datapaths, "%sfetch_addr_%i"%(lane, read), "fetch", instr, "ID_addr_%i_fetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                    dataMesh.connect_driver(driver="ID_addr_%i_fetch"%(ID_addr, ),
+                        channel="%sfetch_addr_%i"%(lane, read),
+                        condition=instr,
+                        stage="fetch", inplace_channel=True,
+                        padding_type="unsigned", width=gen_det.config["instr_decoder"]["addr_widths"][ID_addr]
+                    )
                 ID_addr += 1
+            # Handle addresses from a Block access manager, stated base/step
             elif gen_det.config["address_sources"][addr_com]["base_type"] == "ROM":
                 for lane in gen_det.config["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath_source(datapaths, "%sprefetch_addr_%i"%(lane, read, ), "prefetch", instr, "ID_addr_%i_prefetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                    dataMesh.connect_driver(driver="ID_addr_%i_prefetch"%(ID_addr, ),
+                        channel="%sprefetch_addr_%i"%(lane, read, ),
+                        condition=instr,
+                        stage="prefetch", inplace_channel=True,
+                        padding_type="unsigned", width=gen_det.config["instr_decoder"]["addr_widths"][ID_addr]
+                    )
                 ID_addr += 1
 
         for write, access in enumerate(asm_utils.instr_stores(instr)):
             addr_com = asm_utils.addr_com(asm_utils.access_addr(access))
+            # Handle addresses from the instruction decoder
             if addr_com == "ID":
                 for lane in gen_det.config["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath_source(datapaths, "%sstore_addr_%i"%(lane, write), "store", instr, "ID_addr_%i_store"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                    dataMesh.connect_driver(driver="ID_addr_%i_store"%(ID_addr, ),
+                        channel="%sstore_addr_%i"%(lane, write),
+                        condition=instr,
+                        stage="store", inplace_channel=True,
+                        padding_type="unsigned", width=gen_det.config["instr_decoder"]["addr_widths"][ID_addr]
+                    )
+
                 ID_addr += 1
+            # Handle addresses from a Block access manager, stated base/step
             elif gen_det.config["address_sources"][addr_com]["base_type"] == "ROM":
                 for lane in gen_det.config["SIMD"]["lanes_names"]:
-                    gen_utils.add_datapath_source(datapaths, "%sprefetch_addr_%i"%(lane, write, ), "prefetch", instr, "ID_addr_%i_prefetch"%(ID_addr, ), "unsigned",  gen_det.config["instr_decoder"]["addr_widths"][ID_addr])
+                    dataMesh.connect_driver(driver="ID_addr_%i_prefetch"%(ID_addr, ),
+                        channel="%sprefetch_addr_%i"%(lane, write, ),
+                        condition=instr,
+                        stage="prefetch", inplace_channel=True,
+                        padding_type="unsigned", width=gen_det.config["instr_decoder"]["addr_widths"][ID_addr]
+                    )
                 ID_addr += 1
 
-    mux_controls, com_det.arch_head, com_det.arch_body = gen_utils.gen_datapath_muxes(datapaths, gen_det.output_path, gen_det.force_generation, com_det.arch_head, com_det.arch_body)
-    controls = gen_utils.merge_controls(controls, mux_controls)
+    return dataMesh
 
-    return controls, datapaths
+def gen_datapath_muxes(gen_det, com_det, controls, dataMesh):
+
+    datapaths = dataMesh.compute_datapaths()
+
+    # Henerate connection VHDL for each sink
+    for sink, details in datapaths.items():
+        # Group together all the conditions that map to the same source
+        sources = {}
+        for condition, connection in details.get_connections():
+            try:
+                sources[connection.end()].append(condition)
+            except KeyError:
+                sources[connection.end()] = [condition, ]
+
+        # Cennection required connection
+        sink_width = details.get_fixed_width()
+        num_sources = len(sources.keys())
+        assert num_sources > 0
+        if num_sources == 1:
+            source = list(sources.keys())[0]
+            connection = details.get_connection(sources[source][0])
+            source_width = connection.width()
+            padding_type = connection.padding_type()
+
+            com_det.arch_body += "%s <= %s;\n\n"%(
+                sink,
+                gen_utils.connect_signals(source, source_width, sink_width, padding_type),
+            )
+        else:
+            # Generate mux component
+            mux_interface, mux_name = mux.generate_HDL(
+                {
+                    "inputs"  : num_sources,
+                },
+                output_path=gen_det.output_path,
+                module_name=None,
+                concat_naming=False,
+                force_generation=gen_det.force_generation
+            )
+
+            # Instaniate Mux, while generating control sel_signal
+            control_signal = sink + "_mux_sel"
+            control_width = mux_interface["sel_width"]
+
+            com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(control_signal, control_width - 1, )
+            com_det.arch_head += "signal %s_mux_out : std_logic_vector(%i downto 0);\n"%(sink, sink_width - 1, )
+
+            com_det.arch_body += "%s_mux : entity work.%s(arch)@>\n"%(sink, mux_name, )
+
+            com_det.arch_body += "generic map (data_width => %i)\n"%(sink_width, )
+
+            com_det.arch_body += "port map (\n@>"
+            com_det.arch_body += "sel =>  %s,\n"%(control_signal, )
+
+            # Handle connected input ports
+            control_values = {}
+            for sel_value, (source, instrs) in enumerate(sources.items()):
+                details.get_connection(sources[source][0])
+
+                source_width = max([details.get_connection(instr).width() for instr in instrs])
+                padding_type = details.get_connection(instrs[0]).padding_type()
+                if __debug__:
+                    for instr in instrs[1:]:
+                        assert padding_type == details.get_connection(instr).padding_type()
+
+                control_value = tc_utils.unsigned.encode(sel_value, control_width)
+                control_values[control_value] = instrs
+
+                com_det.arch_body += "data_in_%i => %s,\n"%(
+                    sel_value,
+                    gen_utils.connect_signals(source, source_width, sink_width, padding_type),
+                )
+
+            # Pull down unconnected input ports
+            for sel_value in range(num_sources, mux_interface["number_inputs"]):
+                com_det.arch_body += "data_in_%i => (others => '0'),\n"%(sel_value, )
+
+            com_det.arch_body += "data_out => %s_mux_out\n"%(sink)
+
+            com_det.arch_body += "@<);\n@<\n"
+
+            # Connect mux output to sink signal
+            com_det.arch_body += "%s <= %s_mux_out;\n"%(sink, sink, )
+
+            # Default any inused instrs to all 0
+            gen_utils.add_control(controls, details.get_stage(), control_signal, control_values, "std_logic_vector", control_width)
+
+    return controls
 
 #####################################################################
 
@@ -1049,7 +1171,7 @@ ID_non_fanout_ports = [
     "enable",
 ]
 
-def gen_instr_decoder(gen_det, com_det, controls, datapaths):
+def gen_instr_decoder(gen_det, com_det, controls):
 
     if gen_det.concat_naming:
         module_name = gen_det.module_name + "_ID"
@@ -1067,9 +1189,9 @@ def gen_instr_decoder(gen_det, com_det, controls, datapaths):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "\nID : entity work.%s(arch)\>\n"%(name, )
+    com_det.arch_body += "\nID : entity work.%s(arch)@>\n"%(name, )
 
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
 
     # Handle predeclared ports
     for port, signal in ID_predeclared_ports.items():
@@ -1086,10 +1208,10 @@ def gen_instr_decoder(gen_det, com_det, controls, datapaths):
                 com_det.arch_head += "signal ID_%s : %s;\n"%(port, details["type"], )
             com_det.arch_body += "%s => ID_%s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n);\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n);\n"
 
-    com_det.arch_body += "\<\n"
+    com_det.arch_body += "@<\n"
 
     com_det.arch_body += "ID_instr <= PM_data;\n"
     com_det.arch_body += "ID_enable <= running_ID;\n"
@@ -1138,15 +1260,15 @@ def gen_running_delays(gen_det, com_det):
     )
 
     for i, (stage_in, stage_out) in enumerate(zip(gen_det.config["pipeline_stages"][:-1], gen_det.config["pipeline_stages"][1:])):
-        com_det.arch_body += "running_delay_%i : entity work.%s(arch)\>\n"%(i, DELAY_NAME, )
+        com_det.arch_body += "running_delay_%i : entity work.%s(arch)@>\n"%(i, DELAY_NAME, )
 
         com_det.arch_body += "generic map (init_value => 0)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stallable"]:
             com_det.arch_body += "enable => not stall_all_src,\n"
         com_det.arch_body += "data_in (0) => running_%s,\n"%(stage_in, )
         com_det.arch_body += "data_out(0) => running_%s\n"%(stage_out, )
-        com_det.arch_body += "\<);\<\n\n"
+        com_det.arch_body += "@<);@<\n\n"

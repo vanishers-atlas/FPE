@@ -74,22 +74,31 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    # Get pathways from subcomponents
-    packer_pathways = ALU_packer.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
-    pathways = gen_utils.merge_datapaths(pathways, packer_pathways)
-    unpacker_pathways = ALU_unpacker.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
-    pathways = gen_utils.merge_datapaths(pathways, unpacker_pathways)
+    # Get dataMesh from subcomponents
     if "shifter" in  config.keys():
-        shifter_pathways = ALU_shifter.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
-        pathways = gen_utils.merge_datapaths(pathways, shifter_pathways)
+        shifter_dataMesh = ALU_shifter.get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
+        dataMesh = dataMesh.merge(shifter_dataMesh)
 
-    return pathways
+    packer_dataMesh = ALU_packer.get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
+    dataMesh = dataMesh.merge(packer_dataMesh)
+
+    core_dataMesh = core_module_LUT[config["core_type"]].get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
+    dataMesh = dataMesh.merge(core_dataMesh)
+
+    unpacker_dataMesh = ALU_unpacker.get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
+    dataMesh = dataMesh.merge(unpacker_dataMesh)
+
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
+
+    if "shifter" in  config.keys():
+        shifter_controls = ALU_shifter.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
+        controls = gen_utils.merge_controls(controls, shifter_controls)
 
     packer_controls = ALU_packer.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
     controls = gen_utils.merge_controls(controls, packer_controls)
@@ -99,10 +108,6 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
 
     unpacker_controls = ALU_unpacker.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
     controls = gen_utils.merge_controls(controls, unpacker_controls)
-
-    if "shifter" in  config.keys():
-        shifter_controls = ALU_shifter.get_inst_controls(instr_id, instr_prefix, instr_set, interface, config)
-        controls = gen_utils.merge_controls(controls, shifter_controls)
 
     return controls
 
@@ -114,6 +119,10 @@ def preprocess_config(config_in):
     assert type(config_in["data_width"]) == int, "data_width must be an int"
     assert config_in["data_width"] >= 1, "data_width must be greater than 0"
     config_out["data_width"] = config_in["data_width"]
+
+    assert type(config_in["jump_width"]) == int, "Jump width must be an int"
+    assert config_in["jump_width"] >= 1, "jump_width must be greater than 0"
+    config_out["jump_width"] = config_in["jump_width"]
 
     assert type(config_in["stallable"]) == bool, "stallable must be a bool"
     config_out["stallable"] = config_in["stallable"]
@@ -219,17 +228,17 @@ packer_fanin_signals = {
     "stall_in" : "stall"
 }
 packer_ripple_up_signals = [
-    ( re.compile("fetched_(\d+)_word_(\d+)"), lambda m : "packer_fetched_%s_word_%s"%(m.group(1), m.group(2), ) ),
-    ( re.compile("input_(\d+)_(\d+)_source_sel"), lambda m : "packer_input_%s_%s_source_sel"%(m.group(1), m.group(2), ) ),
-    ( re.compile("input_(\d+)_packing_sel"), lambda m : "packer_input_%s_packing_sel"%(m.group(1), ) ),
-    ( re.compile("input_(\d+)_block_size_sel"), lambda m : "packer_input_%s_block_size_sel"%(m.group(1), ) ),
+    ( re.compile("fetched_(\\d+)_word_(\\d+)"), lambda m : "packer_fetched_%s_word_%s"%(m.group(1), m.group(2), ) ),
+    ( re.compile("input_(\\d+)_(\\d+)_source_sel"), lambda m : "packer_input_%s_%s_source_sel"%(m.group(1), m.group(2), ) ),
+    ( re.compile("input_(\\d+)_packing_sel"), lambda m : "packer_input_%s_packing_sel"%(m.group(1), ) ),
+    ( re.compile("input_(\\d+)_block_size_sel"), lambda m : "packer_input_%s_block_size_sel"%(m.group(1), ) ),
 ]
 packer_internal_inputs = [
-    ( re.compile("acc_word_(\d+)"), lambda m : "unpacker_acc_word_%s"%(m.group(1), ) ),
-    ( re.compile("shifter_word_(\d+)"), lambda m : "shifter_result_word_%s"%(m.group(1), ) )
+    ( re.compile("acc_word_(\\d+)"), lambda m : "unpacker_acc_word_%s"%(m.group(1), ) ),
+    ( re.compile("shifter_word_(\\d+)"), lambda m : "shifter_result_word_%s"%(m.group(1), ) )
 ]
 packer_internal_output = [
-    ( re.compile("result_(\d+)"), lambda m : "operand_%s_packed"%(m.group(1), ) ),
+    ( re.compile("result_(\\d+)"), lambda m : "operand_%s_packed"%(m.group(1), ) ),
 ]
 
 def gen_packer(gen_det, com_det):
@@ -247,9 +256,9 @@ def gen_packer(gen_det, com_det):
     )
     com_det.add_interface_item("packer", sub_interface)
 
-    com_det.arch_body += "packer : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "packer : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     # Handle fanin signals
     for port, signal in packer_fanin_signals.items():
@@ -286,8 +295,8 @@ def gen_packer(gen_det, com_det):
                 com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
     # Pass operand widths to core
     operand = 0
@@ -317,10 +326,10 @@ core_ripple_up_signals = [
 ]
 
 core_internal_inputs = [
-    ( re.compile("operand_(\d+)"), lambda m : "operand_%s_packed"%(m.group(1), ) ),
+    ( re.compile("operand_(\\d+)"), lambda m : "operand_%s_packed"%(m.group(1), ) ),
 ]
 core_internal_output = [
-    ( re.compile("result_(\d+)"), lambda m : "core_result_%s"%(m.group(1), ) ),
+    ( re.compile("result_(\\d+)"), lambda m : "core_result_%s"%(m.group(1), ) ),
 ]
 
 def gen_core(gen_det, com_det):
@@ -337,11 +346,12 @@ def gen_core(gen_det, com_det):
         concat_naming=gen_det.concat_naming,
         force_generation=gen_det.force_generation
     )
-    com_det.add_interface_item("core", sub_interface)
+    if "jump_drivers" in sub_interface:
+        com_det.add_interface_item("jump_drivers", sub_interface["jump_drivers"])
 
-    com_det.arch_body += "core : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "core : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     # Handle fanin signals
     for port, signal in packer_fanin_signals.items():
@@ -377,8 +387,8 @@ def gen_core(gen_det, com_det):
 
                 com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
     # Pass result widths to unpacker
     operand = 0
@@ -396,14 +406,14 @@ unpacker_fanin_signals = {
 }
 unpacker_ripple_up_signals = [
     ( re.compile("enable"), lambda m : "unpacker_enable" ),
-    ( re.compile("stored_(\d+)_word_(\d+)"), lambda m : "result_%s_word_%s"%(m.group(1), m.group(2), ) ),
-    ( re.compile("([\d\w]+)_word_(\d+)_sel"), lambda m : "unpacker_%s_word_%s_sel"%(m.group(1), m.group(2), ) ),
+    ( re.compile("stored_(\\d+)_word_(\\d+)"), lambda m : "result_%s_word_%s"%(m.group(1), m.group(2), ) ),
+    ( re.compile("([\\d\\w]+)_word_(\\d+)_sel"), lambda m : "unpacker_%s_word_%s_sel"%(m.group(1), m.group(2), ) ),
 ]
 unpacker_internal_inputs = [
-    ( re.compile("result_(\d+)"), lambda m : "core_result_%s"%(m.group(1), ) ),
+    ( re.compile("result_(\\d+)"), lambda m : "core_result_%s"%(m.group(1), ) ),
 ]
 unpacker_internal_output = [
-    ( re.compile("acc_word_(\d+)"), lambda m : "unpacker_acc_word_%s"%(m.group(1), ) ),
+    ( re.compile("acc_word_(\\d+)"), lambda m : "unpacker_acc_word_%s"%(m.group(1), ) ),
 ]
 
 def gen_unpacker(gen_det, com_det):
@@ -421,9 +431,9 @@ def gen_unpacker(gen_det, com_det):
     )
     com_det.add_interface_item("unpacker", sub_interface)
 
-    com_det.arch_body += "unpacker : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "unpacker : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     # Handle fanin signals
     for port, signal in packer_fanin_signals.items():
@@ -460,8 +470,8 @@ def gen_unpacker(gen_det, com_det):
                 com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
 
 #####################################################################
@@ -471,15 +481,15 @@ shifter_fanin_signals = {
     "stall_in" : "stall"
 }
 shifter_ripple_up_signals = [
-    ( re.compile("fetched_word_(\d+)"), lambda m : "shifter_fetched_word_%s"%(m.group(1), ) ),
-    ( re.compile("word_(\d+)_operand_sel"), lambda m : "shifter_word_%s_operand_sel"%(m.group(1), ) ),
-    ( re.compile("word_(\d+)_shift_sel"), lambda m : "shifter_word_%s_shift_sel"%(m.group(1), ) ),
+    ( re.compile("fetched_word_(\\d+)"), lambda m : "shifter_fetched_word_%s"%(m.group(1), ) ),
+    ( re.compile("word_(\\d+)_operand_sel"), lambda m : "shifter_word_%s_operand_sel"%(m.group(1), ) ),
+    ( re.compile("word_(\\d+)_shift_sel"), lambda m : "shifter_word_%s_shift_sel"%(m.group(1), ) ),
 ]
 shifter_internal_inputs = [
-    ( re.compile("acc_word_(\d+)"), lambda m : "unpacker_acc_word_%s"%(m.group(1), ) ),
+    ( re.compile("acc_word_(\\d+)"), lambda m : "unpacker_acc_word_%s"%(m.group(1), ) ),
 ]
 shifter_internal_output = [
-    ( re.compile("result_word_(\d+)"), lambda m : "shifter_result_word_%s"%(m.group(1), ) ),
+    ( re.compile("result_word_(\\d+)"), lambda m : "shifter_result_word_%s"%(m.group(1), ) ),
 ]
 
 def gen_shifter(gen_det, com_det):
@@ -498,9 +508,9 @@ def gen_shifter(gen_det, com_det):
         )
         com_det.add_interface_item("shifter", sub_interface)
 
-        com_det.arch_body += "shifter : entity work.%s(arch)\>\n"%(sub_name, )
+        com_det.arch_body += "shifter : entity work.%s(arch)@>\n"%(sub_name, )
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         # Handle fanin signals
         for port, signal in packer_fanin_signals.items():
@@ -536,5 +546,5 @@ def gen_shifter(gen_det, com_det):
 
                     com_det.arch_body += "%s => %s,\n"%(port, transform(match), )
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\n\<);\n\<\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "\n@<);\n@<\n"

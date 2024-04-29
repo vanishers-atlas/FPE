@@ -97,9 +97,16 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-fetched_operand_pattern = re.compile("shifter_fetched_word_(\d*)")
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+SHIFTER_MNEMONICS = (
+    "LSH", "PLSH",
+    "RSH", "PRSH",
+    "LRL", "PLRL",
+    "RRL", "PRRL",
+)
+
+fetched_operand_pattern = re.compile("shifter_fetched_word_(\\d*)")
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     # Handle fetched_operand ports
     for port in interface["ports"]:
@@ -107,19 +114,24 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
         if match:
             word = int(match.group(1))
             for instr in instr_set:
-                if instr_id in asm_utils.instr_exe_units(instr):
+                if (instr_id in asm_utils.instr_exe_units(instr)
+                    and asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))[0] in SHIFTER_MNEMONICS
+                ):
                     operands = asm_utils.instr_operands(instr)
                     if len(operands) > 0 and not asm_utils.access_is_internal(operands[0]):
                         operand_mods = asm_utils.access_mods(operands[0])
                         if word == 0 or "BAPA" in operand_mods and word < int(operand_mods["BAPA"]):
-                            gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_%i"%(lane, word),
-                                "exe", instr, instr_prefix + port, config["signal_padding"], interface["ports"][port]["width"]
+                            dataMesh.connect_sink(sink=instr_prefix + port,
+                                channel="%sfetch_data_0_word_%i"%(lane, word),
+                                condition=instr,
+                                stage="exe", inplace_channel=True,
+                                padding_type=config["signal_padding"], width=interface["ports"][port]["width"]
                             )
 
-    return pathways
+    return dataMesh
 
-operand_sel_map_pattern = re.compile("shifter_word_(\d*)_operand_sel")
-shift_sel_pattern = re.compile("shifter_word_(\d*)_shift_sel")
+operand_sel_map_pattern = re.compile("shifter_word_(\\d*)_operand_sel")
+shift_sel_pattern = re.compile("shifter_word_(\\d*)_shift_sel")
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
 
@@ -345,11 +357,11 @@ def gen_input_handling(gen_det, com_det):
                 force_generation=gen_det.force_generation
             )
 
-            com_det.arch_body += "word_%i_operand_mux : entity work.%s(arch)\>\n"%(word, mux_name, )
+            com_det.arch_body += "word_%i_operand_mux : entity work.%s(arch)@>\n"%(word, mux_name, )
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
 
             com_det.add_port("word_%i_operand_sel"%(word, ), "std_logic_vector", "in", mux_interface["sel_width"])
             com_det.arch_body += "sel => word_%i_operand_sel,\n"%(word, )
@@ -365,7 +377,7 @@ def gen_input_handling(gen_det, com_det):
 
             com_det.arch_body += "data_out  => word_%i_muxed \n"%(word, )
 
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"
 
 def gen_shifting(gen_det, com_det):
     for word, word_details in enumerate(gen_det.config["supported_packings"]):
@@ -457,11 +469,11 @@ def gen_shifting(gen_det, com_det):
                 force_generation=gen_det.force_generation
             )
 
-            com_det.arch_body += "word_%i_shift_mux : entity work.%s(arch)\>\n"%(word, mux_name, )
+            com_det.arch_body += "word_%i_shift_mux : entity work.%s(arch)@>\n"%(word, mux_name, )
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
 
             com_det.add_port("word_%i_shift_sel"%(word, ), "std_logic_vector", "in", mux_interface["sel_width"])
             com_det.arch_body += "sel => word_%i_shift_sel,\n"%(word, )
@@ -478,4 +490,4 @@ def gen_shifting(gen_det, com_det):
 
             com_det.arch_body += "data_out  => result_word_%i \n"%(word, )
 
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"

@@ -1,17 +1,32 @@
 {
-  "external_stall" : true,
-  "report_stall" : true,
-
-  "SIMD": {
+    "SIMD": {
+        "force_lanes": false,
         "lanes": 1
     },
-    "address_sources": {},
+    "address_sources": {
+        "BAM_0": {
+            "addr_max": 15,
+            "offset_max": 15,
+            "step_max": 1
+        },
+        "BAM_1": {
+            "addr_max": 15,
+            "offset_max": 15,
+            "step_max": 1
+        }
+    },
     "data_memories": {
-        "IMM": {},
         "PUT": {
-            "data_width": 4,
             "FIFO_handshakes": false,
-            "FIFOs": 1
+            "FIFOs": 1,
+            "cross_lane": false,
+            "data_width": 4
+        },
+        "ROM_A": {
+            "cross_lane": false,
+            "data_width": 4,
+            "depth": 16,
+            "type": "DIST"
         }
     },
     "execute_units": {
@@ -20,6 +35,13 @@
         }
     },
     "instr_decoder": {},
-    "program_flow": {},
+    "program_flow": {
+        "hidden_ZOLs": {
+            "pune_single_iteration": false,
+            "tracker_type": "ripple"
+        }
+    },
+    "external_stall": true,
+    "report_stall": true,
     "signal_padding": "unsigned"
 }

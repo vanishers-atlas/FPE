@@ -22,6 +22,9 @@ if __name__ == "__main__":
     import JGE_stalling
     import JNE_stalling
 
+    import JNE_JEQ
+    import JNE_JEQ_stalling
+
     import JNE_JLT
     import JNE_JLE
     import JNE_JGT
@@ -46,6 +49,9 @@ else:
     from . import JGE_stalling
     from . import JNE_stalling
 
+    from . import JNE_JEQ
+    from . import JNE_JEQ_stalling
+
     from . import JNE_JLT
     from . import JNE_JLE
     from . import JNE_JGT
@@ -58,29 +64,18 @@ else:
 
 
 test_sets = [
-    JEQ,
-    JLT,
-    JGT,
-    JLE,
-    JGE,
-    JNE,
+    JEQ, JEQ_stalling,
+    JLT, JLT_stalling,
+    JGT, JGT_stalling,
+    JLE, JLE_stalling,
+    JGE, JGE_stalling,
+    JNE,JNE_stalling,
+    JNE_JEQ, JNE_JEQ_stalling,
 
-    JEQ_stalling,
-    JLT_stalling,
-    JGT_stalling,
-    JLE_stalling,
-    JGE_stalling,
-    JNE_stalling,
-
-    JNE_JLT,
-    JNE_JLE,
-    JNE_JGT,
-    JNE_JGE,
-
-    JNE_JLT_stalling,
-    JNE_JLE_stalling,
-    JNE_JGT_stalling,
-    JNE_JGE_stalling,
+    JNE_JLT, JNE_JLT_stalling,
+    JNE_JLE, JNE_JLE_stalling,
+    JNE_JGT, JNE_JGT_stalling,
+    JNE_JGE, JNE_JGE_stalling,
 ]
 
 def run_sweep(path="."):

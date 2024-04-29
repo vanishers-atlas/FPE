@@ -26,18 +26,27 @@ def add_inst_config(instr_id, instr_set, config):
                 raise ValueError("Unknow instr mnemonic, " + mnemonic)
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     if config["seekable"]:
         for instr in instr_set:
             if instr_id in asm_utils.instr_exe_units(instr):
                 mnemonic = asm_utils.instr_mnemonic(instr)
                 if   mnemonic == "ZOL_SEEK":
-                    gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ), "exe", instr, instr_prefix + "seek_overwrite_value", "unsigned", interface["ports"]["seek_overwrite_value"]["width"])
-                    gen_utils.add_datapath_dest(pathways, "%sfetch_data_1_word_0"%(lane, ), "exe", instr, instr_prefix + "seek_check_value", "unsigned", interface["ports"]["seek_check_value"]["width"])
-
-    return pathways
+                    dataMesh.connect_sink(sink=instr_prefix + "seek_overwrite_value",
+                        channel="%sfetch_data_0_word_0"%(lane, ),
+                        condition=instr,
+                        stage="exe", inplace_channel=True,
+                        padding_type="unsigned", width=interface["ports"]["seek_overwrite_value"]["width"]
+                    )
+                    dataMesh.connect_sink(sink=instr_prefix + "seek_check_value",
+                        channel="%sfetch_data_1_word_0"%(lane, ),
+                        condition=instr,
+                        stage="exe", inplace_channel=True,
+                        padding_type="unsigned", width=interface["ports"]["seek_check_value"]["width"]
+                    )
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -193,14 +202,14 @@ def generate_check_and_overwrite_values(gen_det, com_det):
 
         com_det.arch_body += "-- Register check_value\n"
 
-        com_det.arch_body += "check_value_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "check_value_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
-        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "generic map (@>\n"
         com_det.arch_body += "data_width => %i,\n"%(gen_det.config["PC_width"], )
         com_det.arch_body += "force_value => %i\n"%(2**gen_det.config["PC_width"] - 1, )
-        com_det.arch_body += "\<\n)\n"
+        com_det.arch_body += "@<\n)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         if not gen_det.config["stallable"]:
             com_det.arch_body += "enable => seek_enable,\n"
@@ -211,19 +220,19 @@ def generate_check_and_overwrite_values(gen_det, com_det):
         com_det.arch_body += "data_in  => seek_check_value,\n"
         com_det.arch_body += "data_out => check_value_int\n"
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
 
         com_det.arch_body += "-- Register overwrite_value\n"
 
-        com_det.arch_body += "overwrite_value_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "overwrite_value_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
-        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "generic map (@>\n"
         com_det.arch_body += "data_width => %i,\n"%(gen_det.config["PC_width"], )
         com_det.arch_body += "force_value => %i\n"%(2**gen_det.config["PC_width"] - 1, )
-        com_det.arch_body += "\<\n)\n"
+        com_det.arch_body += "@<\n)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         if not gen_det.config["stallable"]:
             com_det.arch_body += "enable => seek_enable,\n"
@@ -234,7 +243,7 @@ def generate_check_and_overwrite_values(gen_det, com_det):
         com_det.arch_body += "data_in  => seek_overwrite_value,\n"
         com_det.arch_body += "data_out => overwrite_value_int\n"
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
 
 def generate_PC_check_handling(gen_det, com_det):

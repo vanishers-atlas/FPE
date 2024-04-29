@@ -29,16 +29,16 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
     tracker_mod = tracker_module_LUT[config["tracker_type"]]
 
-    # Get pathways from subcomponents
-    interface_pathways = ZOL_PC_interface.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
-    tracker_pathways = tracker_mod.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
-    pathways = gen_utils.merge_datapaths(interface_pathways, tracker_pathways)
+    # Get dataMesh from subcomponents
+    interface_dataMesh = ZOL_PC_interface.get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
+    tracker_dataMesh = tracker_mod.get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
+    dataMesh = interface_dataMesh.merge(tracker_dataMesh)
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -178,18 +178,18 @@ def generate_PC_interface(gen_det, com_det):
 
     # Instancate PC_interface subunit
     com_det.arch_body += "-- PC interface handling\n"
-    com_det.arch_body += "PC_interface : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "PC_interface : entity work.%s(arch)@>\n"%(sub_name, )
 
     if len(sub_interface["generics"]):
-        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "generic map (@>\n"
 
         for generic, details in sub_interface["generics"].items():
             com_det.ripple_generic(generic, details)
             com_det.arch_body += "%s => %s,\n"%(generic, generic, )
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += ")\<\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += ")@<\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if __debug__:
         for port in sub_interface["ports"].keys():
@@ -217,8 +217,8 @@ def generate_PC_interface(gen_det, com_det):
                 com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
             com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
 
 #####################################################################
@@ -254,7 +254,7 @@ def generate_tracker(gen_det, com_det):
 
     # Instancate PC_interface subunit
     com_det.arch_body += "-- overwrites tracker handling\n"
-    com_det.arch_body += "tracker : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "tracker : entity work.%s(arch)@>\n"%(sub_name, )
 
     if len(sub_interface["generics"]):
         assert len(sub_interface["generics"]) == 1
@@ -262,7 +262,7 @@ def generate_tracker(gen_det, com_det):
         com_det.ripple_generic("overwrites", sub_interface["generics"]["overwrites"])
         com_det.arch_body += "generic map ( overwrites => overwrites )\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if __debug__:
         for port in sub_interface["ports"]:
@@ -290,5 +290,5 @@ def generate_tracker(gen_det, com_det):
                 com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
             com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"

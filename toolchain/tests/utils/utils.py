@@ -26,15 +26,17 @@ def run_toolchain(program, parameters, generics, output_dir, processor_name, con
         config
     )
 
+
     print("\nRunning RTL Generator")
-    generator.generate(
+    _,_ = generator.generate_module(
         "processor.sFPE",
-        processor_name,
         config,
+        processor_name,
         output_dir,
         concat_naming = concat_naming,
         force_generation = force_generation
     )
+
 
     print("\nRunning Assembler")
     assembler.run(
@@ -45,6 +47,7 @@ def run_toolchain(program, parameters, generics, output_dir, processor_name, con
         processor_name,
         output_dir
     )
+
 
     print("\nToolchain finished")
 
@@ -78,6 +81,8 @@ def run_simulation(files, simulate_dir, part, design_top, sim_top, time):
     print("\nRunning Vivado")
     journal = "%s\\test.jou"%(simulate_dir)
     log = "%s\\test.log"%(simulate_dir)
+    # print(script)
+    # exit()
     subprocess.run(
         [   "vivado.bat",
             "-mode"   , "batch",
@@ -87,6 +92,7 @@ def run_simulation(files, simulate_dir, part, design_top, sim_top, time):
             "-tempDir", simulate_dir
         ]
     )
+    # exit()
 
     # Check for error found by vivaso
     print("\nChecking Vivado Output")

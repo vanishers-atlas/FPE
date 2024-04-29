@@ -216,11 +216,11 @@ def generate_files(*args):
         text += "use %s.%s.%s;\n"%(element["library"], element["package"], element["parts"])
 
     # start entity
-    text += "\nentity " + module_name +" is\n\>"
+    text += "\nentity " + module_name +" is\n@>"
 
     # Handle generics
     if len(interface["generics"]) != 0:
-        text += "generic (\n\>"
+        text += "generic (\n@>"
 
         # Handle old list style generics
         if type(interface["generics"]) == list:
@@ -236,12 +236,12 @@ def generate_files(*args):
                     text += "%s : %s(%i downto 0);\n"%(generic, details["type"], details["width"] - 1, )
                 except Exception as e:
                     text += "%s : %s;\n"%(generic, details["type"], )
-        text.drop_last_X(2)
-        text += "\n\<);\n"
+        text.drop_last(2)
+        text += "\n@<);\n"
 
     # Handle ports
     if len(interface["ports"]) != 0:
-        text += "port (\n\>"
+        text += "port (\n@>"
         # Handle old list style ports
         if type(interface["ports"]) == list:
             for port in interface["ports"]:
@@ -256,20 +256,20 @@ def generate_files(*args):
                     text += "%s : %s %s(%i downto 0);\n"%(port, details["direction"], details["type"], details["width"] - 1, )
                 except Exception as e:
                     text += "%s : %s %s;\n"%(port, details["direction"], details["type"], )
-        text.drop_last_X(2)
-        text += "\n\<);"
+        text.drop_last(2)
+        text += "\n@<);"
 
     # end entity and start architecture
-    text += "\n\<end entity;\n"
-    text += "\narchitecture arch of " + module_name + " is\n\>"
+    text += "\n@<end entity;\n"
+    text += "\narchitecture arch of " + module_name + " is\n@>"
 
     # Handle arch signals
     text += arch_head
 
     # Handle arch body
-    text += "\<begin\n\>"
+    text += "@<begin\n@>"
     text += arch_body
-    text += "\<end architecture;\n"
+    text += "@<end architecture;\n"
 
     print("Creating %s.vhd and %s.inter"%(module_name, module_name) )
     with open(output_path + "\\" + module_name + ".vhd", "w") as f:

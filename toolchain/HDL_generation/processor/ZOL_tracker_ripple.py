@@ -31,10 +31,10 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    return pathways
+    return dataMesh
 
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
@@ -152,7 +152,7 @@ def generate_state_machine(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "state_FSM : entity work.%s(arch)@>\n"%(sub_name, )
 
     assert len(sub_interface["generics"]) == 0
     # com_det.arch_body += "generic map ()\n"
@@ -163,7 +163,7 @@ def generate_state_machine(gen_det, com_det):
     assert "not_tracking" in sub_interface["ports"].keys()
     assert "overwrites_reached" in sub_interface["ports"].keys()
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_head += "signal not_tracking : std_logic;\n"
 
@@ -172,7 +172,7 @@ def generate_state_machine(gen_det, com_det):
     com_det.arch_body += "overwrites_reached => overwrites_reached_int,\n"
     com_det.arch_body += "not_tracking  => not_tracking\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
 def generate_SRLs(gen_det, com_det):
     com_det.arch_body += "-- Ripple iteration tracker\n"
@@ -182,9 +182,9 @@ def generate_SRLs(gen_det, com_det):
     for ripple in range(gen_det.config["tallies"]):
         com_det.arch_head += "signal ripple_%i_out : std_logic;\n"%(ripple, )
 
-        com_det.arch_body += "ripple_%i : SRLC32E\n\>"%(ripple)
+        com_det.arch_body += "ripple_%i : SRLC32E\n@>"%(ripple)
         com_det.arch_body += "generic map (INIT => X\"00000000\")\n"
-        com_det.arch_body += "port map (\>\n"
+        com_det.arch_body += "port map (@>\n"
 
         com_det.arch_body += "A => overwrites(%i downto %i),\n"%(5*ripple + 4, 5*ripple)
 
@@ -198,7 +198,7 @@ def generate_SRLs(gen_det, com_det):
         com_det.arch_body += "CLK => clock,\n"
         com_det.arch_body += "CE => match_found,\n"
         com_det.arch_body += "Q31 => open\n"
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
     # Connect output of final SRLC32E to overwrites_reached
     com_det.arch_body += "overwrites_reached_int <=  ripple_%i_out;\n"%(gen_det.config["tallies"] - 1)

@@ -14,10 +14,10 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -93,16 +93,16 @@ def generate_FSM(gen_det, com_det):
     com_det.arch_head += "signal curr_state, next_state : std_logic := '1';\n\n"
 
     com_det.arch_body += "-- State Buffering\n"
-    com_det.arch_body += "process (clock)\>\n"
-    com_det.arch_body += "\<begin\>\n"
-    com_det.arch_body += "if rising_edge(clock) and match_found = '1' then\>\n"
+    com_det.arch_body += "process (clock)@>\n"
+    com_det.arch_body += "@<begin@>\n"
+    com_det.arch_body += "if rising_edge(clock) and match_found = '1' then@>\n"
     com_det.arch_body += "curr_state <= next_state;\n"
-    com_det.arch_body += "\<end if;\n"
-    com_det.arch_body += "\<end process;\n\n"
+    com_det.arch_body += "@<end if;\n"
+    com_det.arch_body += "@<end process;\n\n"
 
     com_det.arch_body += "-- next_state computing\n"
-    com_det.arch_body += "next_state <=\> '0' when curr_state = '1' and match_found = '1'\n"
+    com_det.arch_body += "next_state <=@> '0' when curr_state = '1' and match_found = '1'\n"
     com_det.arch_body += "else '1' when curr_state = '0' and overwrites_reached = '1'\n"
-    com_det.arch_body += "else curr_state;\<\n\n"
+    com_det.arch_body += "else curr_state;@<\n\n"
 
     com_det.arch_body += "not_tracking <= curr_state;\n"

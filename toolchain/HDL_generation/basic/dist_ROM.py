@@ -165,7 +165,7 @@ def gen_value_array(gen_det, com_det):
             acc = int(acc / 1024)
 
         # Define function for loading values into data_array
-        com_det.arch_head += "impure function init_mem(mem_file_name : in string) return data_array is\n\>"
+        com_det.arch_head += "impure function init_mem(mem_file_name : in string) return data_array is\n@>"
 
         com_det.arch_head += "-- Declare file handle\n"
         com_det.arch_head += "file mem_file : text;\n"
@@ -179,9 +179,9 @@ def gen_value_array(gen_det, com_det):
         for counter in range(len(loop_counts) + 1):
             com_det.arch_head += "variable counter_%i : integer;\n" % (counter,)
 
-        com_det.arch_head += "variable temp_mem : data_array;\n\<"
+        com_det.arch_head += "variable temp_mem : data_array;\n@<"
 
-        com_det.arch_head += "begin\n\>"
+        com_det.arch_head += "begin\n@>"
 
         com_det.arch_head += "-- open passed file\n"
         com_det.arch_head += "file_open(mem_file, mem_file_name,  read_mode);\n"
@@ -190,22 +190,22 @@ def gen_value_array(gen_det, com_det):
             if count != 0:
                 for counter in range(power):
                     com_det.arch_head += "counter_%i  := 0;\n" % (counter + 1,)
-                    com_det.arch_head += "for counter_%i in 0 to 1023 loop\n\>" % (counter + 1,)
+                    com_det.arch_head += "for counter_%i in 0 to 1023 loop\n@>" % (counter + 1,)
 
                 com_det.arch_head += "counter_0  := 0;\n"
-                com_det.arch_head += "for counter_0 in 0 to %i loop\n\>" % (count - 1,)
+                com_det.arch_head += "for counter_0 in 0 to %i loop\n@>" % (count - 1,)
                 com_det.arch_head += "readline(mem_file, data_line);\n"
                 com_det.arch_head += "read(data_line, word_value);\n"
                 com_det.arch_head += "temp_mem(addr) := word_value;\n"
                 com_det.arch_head += "addr := addr + 1;\n"
-                com_det.arch_head += "\<end loop;\n"
+                com_det.arch_head += "@<end loop;\n"
 
                 for counter in range(power):
-                    com_det.arch_head += "\<end loop;\n"
+                    com_det.arch_head += "@<end loop;\n"
 
         com_det.arch_head += "return temp_mem;\n"
 
-        com_det.arch_head += "\<end function;\n\n"
+        com_det.arch_head += "@<end function;\n\n"
 
         # Create internal data array
         com_det.arch_head += "signal internal_data : data_array := init_mem(init_mif);\n\n"
@@ -213,7 +213,7 @@ def gen_value_array(gen_det, com_det):
         for addr in range(gen_det.config["depth"]):
             com_det.add_generic("init_%i"%(addr, ), "integer")
 
-        com_det.arch_head += "signal internal_data : data_array := (\>%s\<\n);\n\n"%(
+        com_det.arch_head += "signal internal_data : data_array := (@>%s@<\n);\n\n"%(
             ",\n".join([
                 "std_logic_vector(to_unsigned(init_%i, data_width - 1))"%(addr, )
                 for addr in range(gen_det.config["depth"])
@@ -223,7 +223,7 @@ def gen_value_array(gen_det, com_det):
         for addr in range(gen_det.config["depth"]):
             com_det.add_generic("init_%i"%(addr, ), "std_logic_vector(%i downto 0)"%(gen_det.config["width"] - 1, ))
 
-        com_det.arch_head += "signal internal_data : data_array := (\>%s\<\n);\n\n"%(
+        com_det.arch_head += "signal internal_data : data_array := (@>%s@<\n);\n\n"%(
             ",\n".join([
                 "init_%i"%(addr, )
                 for addr in range(gen_det.config["depth"])
@@ -237,29 +237,29 @@ def gen_read_logic(gen_det, com_det):
     for read in range(gen_det.config["reads"]):
         # Setup sensativity listTo_int
         if   not gen_det.config["synchronous"] and not gen_det.config["has_enable"]:
-            com_det.arch_body += "process (read_%i_addr)\>\n"%(read, )
+            com_det.arch_body += "process (read_%i_addr)@>\n"%(read, )
         elif not gen_det.config["synchronous"] and gen_det.config["has_enable"]:
-            com_det.arch_body += "process (read_%i_addr, read_enable)\>\n"%(read, )
+            com_det.arch_body += "process (read_%i_addr, read_enable)@>\n"%(read, )
         else:#gen_det.config["synchronous"] and not gen_det.config["has_enable"]:
-            com_det.arch_body += "process (clock)\>\n"
-        com_det.arch_body += "\<begin\>\n"
+            com_det.arch_body += "process (clock)@>\n"
+        com_det.arch_body += "@<begin@>\n"
 
         # Handle clock gating for synchronous
         if gen_det.config["synchronous"]:
-            com_det.arch_body += "if rising_edge(clock) then\>\n"
+            com_det.arch_body += "if rising_edge(clock) then@>\n"
 
         # Handle enable gating for enable
         if gen_det.config["has_enable"]:
-            com_det.arch_body += "if read_enable = '1' then\>\n"
+            com_det.arch_body += "if read_enable = '1' then@>\n"
 
         com_det.arch_body += "read_%i_data <= internal_data(to_integer(unsigned(read_%i_addr)));\n"%(read, read, )
 
         # Close enable gating if
         if gen_det.config["has_enable"]:
-            com_det.arch_body += "\<end if;\n"
+            com_det.arch_body += "@<end if;\n"
 
         # Close Clock gating if
         if gen_det.config["synchronous"]:
-            com_det.arch_body += "\<end if;\n"
+            com_det.arch_body += "@<end if;\n"
 
-        com_det.arch_body += "\<end process;\n\n"
+        com_det.arch_body += "@<end process;\n\n"

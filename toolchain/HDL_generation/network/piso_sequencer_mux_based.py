@@ -101,16 +101,16 @@ def generate_input_regs(gen_det, com_det):
 
         com_det.arch_head += "signal data_in_%i_buffered : std_logic_vector(data_width - 1 downto 0);\n"%(input, )
 
-        com_det.arch_body += "data_in_%i_buffer : entity work.%s(arch)\>\n"%(input, reg_name)
+        com_det.arch_body += "data_in_%i_buffer : entity work.%s(arch)@>\n"%(input, reg_name)
 
         com_det.arch_body += "generic map (data_width => data_width)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         com_det.arch_body += "clock => clock,\n"
         com_det.arch_body += "enable => inputs_write,\n"
         com_det.arch_body += "data_in  => data_in_%i,\n"%(input, )
         com_det.arch_body += "data_out => data_in_%i_buffered\n"%(input, )
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
 def generate_output_mux(gen_det, com_det):
 
@@ -129,16 +129,16 @@ def generate_output_mux(gen_det, com_det):
 
     com_det.arch_head += "signal output_mux_sel : std_logic_vector(%i downto 0);\n"%(gen_det.config["output_mux_sel_width"] - 1, )
 
-    com_det.arch_body += "output_mux : entity work.%s(arch)\>\n"%(mux_name, )
+    com_det.arch_body += "output_mux : entity work.%s(arch)@>\n"%(mux_name, )
 
     com_det.arch_body += "generic map (data_width => data_width)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "sel => output_mux_sel,\n"
     for input in range(gen_det.config["inputs"]):
         com_det.arch_body += "data_in_%i  => data_in_%i_buffered,\n"%(input, input, )
     com_det.arch_body += "data_out => data_out\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
 def generate_control_logic(gen_det, com_det):
 
@@ -157,16 +157,16 @@ def generate_control_logic(gen_det, com_det):
     com_det.arch_head += "signal state_R : std_logic;\n"
     com_det.arch_head += "signal state_Q : std_logic;\n"
 
-    com_det.arch_body += "state_RS : entity work.%s(arch)\>\n"%(RS_name, )
+    com_det.arch_body += "state_RS : entity work.%s(arch)@>\n"%(RS_name, )
 
     com_det.arch_body += "generic map (stating_state => '0')\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "S => inputs_write,\n"
     com_det.arch_body += "R => state_R,\n"
     com_det.arch_body += "Q => state_Q\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.add_port("output_write", "std_logic", "out")
     com_det.arch_body += "output_write <= state_Q;\n"
@@ -187,19 +187,19 @@ def generate_control_logic(gen_det, com_det):
 
     com_det.arch_head += "signal sel_counter_curr, sel_counter_next : std_logic_vector(%i downto 0);\n"%(gen_det.config["output_mux_sel_width"] - 1, )
 
-    com_det.arch_body += "sel_counter : entity work.%s(arch)\>\n"%(reg_name, )
+    com_det.arch_body += "sel_counter : entity work.%s(arch)@>\n"%(reg_name, )
 
-    com_det.arch_body += "generic map (\n\>"
+    com_det.arch_body += "generic map (\n@>"
     com_det.arch_body += "data_width => %i,\n"%(gen_det.config["output_mux_sel_width"], )
     com_det.arch_body += "force_value => 0\n"
-    com_det.arch_body += "\<)\n"
+    com_det.arch_body += "@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "enable => state_Q,\n"
     com_det.arch_body += "data_in  => sel_counter_next,\n"
     com_det.arch_body += "data_out => sel_counter_curr\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.arch_body += "output_mux_sel <= sel_counter_curr;\n\n"
 

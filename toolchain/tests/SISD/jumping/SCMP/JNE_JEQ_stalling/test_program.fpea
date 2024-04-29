@@ -1,0 +1,143 @@
+{
+	RESET BAM[0];
+	RESET BAM[1];
+	NOP;
+
+	JMP(scmp_F_F_compare);
+	NOP;
+	NOP;
+	NOP;
+
+	// Include a JEQ to force using of = != encoding for JNE
+	JEQ(scmp_F_F_compare);
+	NOP;
+	NOP;
+	NOP;
+
+	// Test comparing 2 fetched values
+	ZOL(16)
+	{
+		ZOL(16)
+		{
+			scmp_F_F_compare:
+				SCMP(ROMA[BAM[0]], ROMA[BAM[1]<FORWARD,STEP:1>]);
+				NOP;
+
+				JNE(scmp_F_F_jump);
+				NOP;
+				NOP;
+				NOP;
+
+			scmp_F_F_fallthrough:
+				MOV(0, PUT[0]);
+				JMP(scmp_F_F_collect);
+				NOP;
+				NOP;
+				NOP;
+
+			scmp_F_F_jump:
+				MOV(1, PUT[0]);
+
+			scmp_F_F_collect:
+				NOP;
+		}
+		SEEK BAM[0](1)<FORWARD>;
+		NOP;
+	}
+	NOP;
+
+	// Test comparing fetched and acc values
+	ZOL(16)
+	{
+		ZOL(16)
+		{
+			scmp_F_A_compare:
+				MOV(ROMA[BAM[1]<FORWARD,STEP:1>], ACC);
+				SCMP(ROMA[BAM[0]], ACC);
+				NOP;
+
+				JNE(scmp_F_A_jump);
+				NOP;
+				NOP;
+				NOP;
+
+			scmp_F_A_fallthrough:
+				MOV(0, PUT[0]);
+				JMP(scmp_F_A_collect);
+				NOP;
+				NOP;
+				NOP;
+
+			scmp_F_A_jump:
+				MOV(1, PUT[0]);
+
+			scmp_F_A_collect:
+				NOP;
+		}
+		SEEK BAM[0](1)<FORWARD>;
+		NOP;
+	}
+	NOP;
+
+	// Test comparing acc and fetched values
+	ZOL(16)
+	{
+		ZOL(16)
+		{
+			scmp_A_F_compare:
+				MOV(ROMA[BAM[0]], ACC);
+				SCMP(ACC, ROMA[BAM[1]<FORWARD,STEP:1>]);
+				NOP;
+
+				JNE(scmp_A_F_jump);
+				NOP;
+				NOP;
+				NOP;
+
+			scmp_A_F_fallthrough:
+				MOV(0, PUT[0]);
+				JMP(scmp_A_F_collect);
+				NOP;
+				NOP;
+				NOP;
+
+			scmp_A_F_jump:
+				MOV(1, PUT[0]);
+
+			scmp_A_F_collect:
+				NOP;
+		}
+		SEEK BAM[0](1)<FORWARD>;
+		NOP;
+	}
+	NOP;
+
+	// Test comparing 2 acc values
+	ZOL(16)
+	{
+		scmp_A_A_compare:
+			MOV(ROMA[BAM[0]<FORWARD,STEP:1>], ACC);
+			SCMP(ACC, ACC);
+			NOP;
+
+			JNE(scmp_A_A_jump);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_A_A_fallthrough:
+			MOV(0, PUT[0]);
+			JMP(scmp_A_A_collect);
+			NOP;
+			NOP;
+			NOP;
+
+		scmp_A_A_jump:
+			MOV(1, PUT[0]);
+
+		scmp_A_A_collect:
+			NOP;
+	}
+
+	NOP;
+}

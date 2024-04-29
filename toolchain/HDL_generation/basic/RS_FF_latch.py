@@ -115,34 +115,34 @@ def generate_logic(gen_det, com_det):
     # Generate process start
     if gen_det.config["clocked"]:
         com_det.arch_body  += "process (clock)\n"
-        com_det.arch_body  += "begin\n\>"
-        com_det.arch_body += "if rising_edge(clock) then\n\>"
+        com_det.arch_body  += "begin\n@>"
+        com_det.arch_body += "if rising_edge(clock) then\n@>"
     else:
         com_det.arch_body  += "process (R, S"
 
         if gen_det.config["has_enable"]:
             com_det.arch_body  += ", enable"
         com_det.arch_body  += ")\n"
-        com_det.arch_body  += "begin\n\>"
+        com_det.arch_body  += "begin\n@>"
 
     if gen_det.config["has_enable"]:
-        com_det.arch_body += "if enable = '1' then\n\>"
+        com_det.arch_body += "if enable = '1' then\n@>"
 
-    com_det.arch_body += "if R = '1' and S = '0' then\n\>"
+    com_det.arch_body += "if R = '1' and S = '0' then\n@>"
     com_det.arch_body += "state <= '0';\n"
-    com_det.arch_body += "\<elsif R = '0' and S = '1' then\n\>"
+    com_det.arch_body += "@<elsif R = '0' and S = '1' then\n@>"
     com_det.arch_body += "state <= '1';\n"
-    com_det.arch_body += "\<elsif R = '1' and S = '1' then\n\>"
+    com_det.arch_body += "@<elsif R = '1' and S = '1' then\n@>"
     com_det.arch_body += "state <= 'X';\n"
-    com_det.arch_body += "\<end if;\n"
+    com_det.arch_body += "@<end if;\n"
 
 
     if gen_det.config["has_enable"]:
-        com_det.arch_body += "\<end if;\n"
+        com_det.arch_body += "@<end if;\n"
 
     if gen_det.config["clocked"]:
-        com_det.arch_body += "\<end if;\n"
+        com_det.arch_body += "@<end if;\n"
 
-    com_det.arch_body += "\<end process;\n"
+    com_det.arch_body += "@<end process;\n"
 
     com_det.arch_body += "Q <= state;\n"

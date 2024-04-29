@@ -19,12 +19,12 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     raise NotImplementedError()
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -159,19 +159,19 @@ def gen_preloaded_ROM(gen_det, com_det):
     )
 
     # Instancate ROM
-    com_det.arch_body += "loop_ROM : entity work.%s(arch)\>\n"%(rom_name, )
+    com_det.arch_body += "loop_ROM : entity work.%s(arch)@>\n"%(rom_name, )
 
-    com_det.arch_body += "generic map (\n\>"
+    com_det.arch_body += "generic map (\n@>"
     for loop_id in range(gen_det.config["depth"]):
         com_det.add_generic("loop_%i_start_value"%(loop_id, ), "std_logic_vector", gen_det.config["PC_width"])
         com_det.add_generic("loop_%i_end_value"%(loop_id, ), "std_logic_vector", gen_det.config["PC_width"])
         com_det.arch_body += "init_%i => loop_%i_start_value & loop_%i_end_value,\n"%(loop_id, loop_id, loop_id, )
     for loop_id in range(gen_det.config["depth"], 2**rom_interface["addr_width"]):
         com_det.arch_body += "init_%i => (others => '0'),\n"%(loop_id, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     if gen_det.config["stallable"]:
         com_det.arch_body += "read_enable => not stall_in,\n"
@@ -182,7 +182,7 @@ def gen_preloaded_ROM(gen_det, com_det):
     com_det.arch_head += "signal loop_data : std_logic_vector(%i downto 0);\n"%(2*gen_det.config["PC_width"]  - 1, )
     com_det.arch_body += "read_0_data => loop_data\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.add_port("loop_start", "std_logic_vector", "out", gen_det.config["PC_width"])
     com_det.add_port("loop_end", "std_logic_vector", "out", gen_det.config["PC_width"])

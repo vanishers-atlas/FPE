@@ -25,12 +25,12 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     raise NotImplementedError()
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -208,18 +208,18 @@ def gen_loop_id_FSM(gen_det, com_det):
 
     # Instancate FSM subunit
     com_det.arch_body += "-- Loop_id FSM subunit\n"
-    com_det.arch_body += "loop_id_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "loop_id_FSM : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
 
     for generic, details in sub_interface["generics"].items():
         assert generic == "starting_loop_id" or (generic.startswith("loop_") and generic.endswith(("_on_overwrite", "_on_fallthrough", "_on_overwrite_stall", "_on_fallthrough_stall")) )
         com_det.ripple_generic(generic, details)
         com_det.arch_body += "%s => %s,\n"%(generic, generic, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if __debug__:
         for port in sub_interface["ports"].keys():
@@ -250,8 +250,8 @@ def gen_loop_id_FSM(gen_det, com_det):
                     com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
             com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
 #####################################################################
 
@@ -292,9 +292,9 @@ def gen_PC_interface(gen_det, com_det):
 
     # Instancate FSM subunit
     com_det.arch_body += "-- PC-interface subunit\n"
-    com_det.arch_body += "PC_interface : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "PC_interface : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if __debug__:
         for port in sub_interface["ports"].keys():
@@ -327,8 +327,8 @@ def gen_PC_interface(gen_det, com_det):
                     com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
             com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
 #####################################################################
 
@@ -365,18 +365,18 @@ def gen_loop_storage(gen_det, com_det):
 
     # Instancate loop_storage subunit
     com_det.arch_body += "-- Loop storage subunit\n"
-    com_det.arch_body += "loop_storage : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "loop_storage : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
 
     for generic, details in sub_interface["generics"].items():
         assert generic.startswith("loop_") and (generic.endswith("_start_value") or generic.endswith("_end_value"))
         com_det.ripple_generic(generic, details)
         com_det.arch_body += "%s => %s,\n"%(generic, generic, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if __debug__:
         for port in sub_interface["ports"].keys():
@@ -400,8 +400,8 @@ def gen_loop_storage(gen_det, com_det):
                     com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
             com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
 
 #####################################################################
@@ -440,18 +440,18 @@ def gen_trackers(gen_det, com_det):
 
     # Instancate trackers subunit
     com_det.arch_body += "-- trackers subunit\n"
-    com_det.arch_body += "trackers : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "trackers : entity work.%s(arch)@>\n"%(sub_name, )
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
 
     for generic, details in sub_interface["generics"].items():
         assert generic.startswith("loop_") and generic.endswith("_overwrites")
         com_det.ripple_generic(generic, details)
         com_det.arch_body += "%s => %s,\n"%(generic, generic, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if __debug__:
         for port in sub_interface["ports"].keys():
@@ -475,5 +475,5 @@ def gen_trackers(gen_det, com_det):
                     com_det.arch_head += "signal %s : %s;\n"%(port, port_details["type"], )
             com_det.arch_body += "%s => %s,\n"%(port, port, )
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"

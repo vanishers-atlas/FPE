@@ -29,8 +29,8 @@ def add_inst_config(instr_id, instr_set, config):
 read_addr_patern = re.compile("read_(\d+)_addr")
 read_data_patern = re.compile("read_(\d+)_data")
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     # Gather pathway ports
     read_addr_ports = []
@@ -55,15 +55,28 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
         for read in read_addr_ports:
             if read < len(reads):
                 fetch = reads[read]
-                gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, fetch, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+                dataMesh.connect_sink(sink="%sread_%i_addr"%(instr_prefix, read, ),
+                    channel="%sfetch_addr_%i"%(lane, fetch, ),
+                    condition=instr,
+                    stage="fetch", inplace_channel=True,
+                    padding_type="unsigned", width=config["addr_width"]
+                )
+
 
         # Handle read_data_ports
         for read in read_data_ports:
             if read < len(reads):
                 fetch = reads[read]
-                gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_0"%(lane, fetch, ), "exe", instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+                dataMesh.connect_driver(driver="%sread_%i_data"%(instr_prefix, read, ),
+                    channel="%sfetch_data_%i_word_0"%(lane, fetch, ),
+                    condition=instr,
+                    stage="exe", inplace_channel=True,
+                    padding_type=config["signal_padding"], width=config["data_width"]
+                )
 
-    return pathways
+
+
+    return dataMesh
 
 read_adv_pattern = re.compile("read_(\d*)_adv")
 read_enable_pattern = re.compile("read_(\d*)_enable")
@@ -277,11 +290,11 @@ def gen_stalling_logic(gen_det, com_det):
                 for read in range(gen_det.config["reads"]):
                     com_det.arch_head += "signal read_%i_FIFO_valid : std_logic;\n"%(read, )
 
-                    com_det.arch_body += "read_%i_FIFO_valid_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
+                    com_det.arch_body += "read_%i_FIFO_valid_mux : entity work.%s(arch)@>\n"%(read, mux_name, )
 
                     com_det.arch_body += "generic map (data_width => 1)\n"
 
-                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "port map (\n@>"
                     com_det.arch_body += "sel => read_%i_addr,\n"%(read, )
                     for i in range(0, gen_det.config["FIFOs"]):
                         com_det.arch_body += "data_in_%i(0) => FIFO_%i_validated,\n"%(i, i, )
@@ -289,7 +302,7 @@ def gen_stalling_logic(gen_det, com_det):
                         com_det.arch_body += "data_in_%i(0) => '0',\n"%(i, )
                     com_det.arch_body += "data_out(0) => read_%i_FIFO_valid\n"%(read, )
 
-                    com_det.arch_body += "\<);\n\<\n"
+                    com_det.arch_body += "@<);\n@<\n"
 
                 # This code may need reworking, depending on how vivado handles many termed logic expressions
                 com_det.arch_body += "generated_stall <= running and %s;\n"%(
@@ -362,11 +375,11 @@ def gen_read_data_logic(gen_det, com_det):
     for read in range(gen_det.config["reads"]):
         com_det.arch_head += "signal read_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(read, gen_det.config["data_width"] - 1)
 
-        com_det.arch_body += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+        com_det.arch_body += "read_%i_buffer : entity work.%s(arch)@>\n"%(read, reg_name)
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stall_type"] == "PASSIVE":
                 com_det.arch_body += "enable => not stall,\n"
@@ -374,7 +387,7 @@ def gen_read_data_logic(gen_det, com_det):
             com_det.arch_body += "enable => read_%i_enable and not stall,\n"%(read, )
         com_det.arch_body += "data_in  => read_%i_data_buffer_in,\n"%(read, )
         com_det.arch_body += "data_out => read_%i_data\n"%(read, )
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
     # read_data assignment logic
     com_det.arch_body += "\n-- read_data assignment logic\n"
@@ -393,11 +406,11 @@ def gen_read_data_logic(gen_det, com_det):
         )
 
         for read in range(gen_det.config["reads"]):
-            com_det.arch_body += "read_%i_data_mux : entity work.%s(arch)\>\n"%(read, mux_name, )
+            com_det.arch_body += "read_%i_data_mux : entity work.%s(arch)@>\n"%(read, mux_name, )
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
             com_det.arch_body += "sel => read_%i_addr,\n"%(read, )
             for i in range(0, gen_det.config["FIFOs"]):
                 com_det.arch_body += "data_in_%i => FIFO_%i_data,\n"%(i, i, )
@@ -405,4 +418,4 @@ def gen_read_data_logic(gen_det, com_det):
                 com_det.arch_body += "data_in_%i => (others => '0'),\n"%(i, )
             com_det.arch_body += "data_out => read_%i_data_buffer_in\n"%(read, )
 
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"

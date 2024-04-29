@@ -24,12 +24,12 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     raise NotImplementedError()
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -165,15 +165,15 @@ def gen_loop_id_reg(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "loop_id_reg : entity work.%s(arch)\>\n"%(reg_name, )
+    com_det.arch_body += "loop_id_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
     com_det.arch_body += "data_width => %i,\n"%(gen_det.config["loop_id_width"], )
     com_det.add_generic("starting_loop_id", "integer",)
     com_det.arch_body += "force_value => starting_loop_id\n"
-    com_det.arch_body += "\<)\n"
+    com_det.arch_body += "@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_body += "clock => clock,\n"
     if gen_det.config["stallable"]:
@@ -185,7 +185,7 @@ def gen_loop_id_reg(gen_det, com_det):
     com_det.arch_head += "signal curr_loop_id : std_logic_vector(%i downto 0);\n"%(gen_det.config["loop_id_width"]  - 1, )
     com_det.arch_body += "data_out => curr_loop_id\n"
 
-    com_det.arch_body += "\<);\n\<"
+    com_det.arch_body += "@<);\n@<"
 
     com_det.arch_body += "\n"
 
@@ -220,9 +220,9 @@ def gen_update_ROM(gen_det, com_det):
     )
 
     # Instancate ROM
-    com_det.arch_body += "next_loop_id_ROM : entity work.%s(arch)\>\n"%(rom_name, )
+    com_det.arch_body += "next_loop_id_ROM : entity work.%s(arch)@>\n"%(rom_name, )
 
-    com_det.arch_body += "generic map (\n\>"
+    com_det.arch_body += "generic map (\n@>"
     if gen_det.config["stall_on_id_change"] == "CONDITIONALLY":
         for index in range(0, 2*gen_det.config["num_states"], 2):
             loop_id = math.floor(index/2)
@@ -241,15 +241,15 @@ def gen_update_ROM(gen_det, com_det):
             com_det.arch_body += "init_%i => loop_%i_on_fallthrough,\n"%(index + 1, loop_id, )
     for index in range(2*gen_det.config["num_states"], 2**rom_interface["addr_width"]):
         com_det.arch_body += "init_%i => (others => '0'),\n"%(index, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "read_0_addr => curr_loop_id & last_iteration,\n"
     com_det.arch_head += "signal rom_data : std_logic_vector(%i downto 0);\n"%(rom_width - 1, )
     com_det.arch_body += "read_0_data => rom_data\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.arch_head += "signal next_loop_id : std_logic_vector(%i downto 0);\n"%(gen_det.config["loop_id_width"]  - 1, )
     if gen_det.config["stall_on_id_change"] == "CONDITIONALLY":
@@ -275,11 +275,11 @@ def gen_loop_id_delay(gen_det, com_det):
     )
 
 
-    com_det.arch_body += "loop_id_delay : entity work.%s(arch)\>\n"%(name, )
+    com_det.arch_body += "loop_id_delay : entity work.%s(arch)@>\n"%(name, )
 
     com_det.arch_body += "generic map (init_value => starting_loop_id)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_body += "clock => clock,\n"
     if gen_det.config["stallable"]:
@@ -289,7 +289,7 @@ def gen_loop_id_delay(gen_det, com_det):
     com_det.arch_head += "signal loop_id_delay_out : std_logic_vector(%i downto 0);\n"%(gen_det.config["loop_id_width"]  - 1, )
     com_det.arch_body += "data_out => loop_id_delay_out\n"
 
-    com_det.arch_body += "\<);\<\n\n"
+    com_det.arch_body += "@<);@<\n\n"
 
     com_det.add_port("loop_id_delayed", "std_logic_vector", "out", gen_det.config["loop_id_width"])
     com_det.arch_body += "loop_id_delayed <= loop_id_delay_out;\n\n"

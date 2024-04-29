@@ -57,7 +57,7 @@ def handle_module_name(module_name, config):
         # Handle enable
         if config["has_enable"] == True:
             generated_name += "_enable"
-            
+
         # Handle force
         if   config["force_type"] == "NONE":
             generated_name += "_no_force"
@@ -181,42 +181,42 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
 
         # Generate process start
         if CONFIG["force_type"] == "ASYNC":
-            ARCH_BODY += "process (clock, force)\>\n"
+            ARCH_BODY += "process (clock, force)@>\n"
         else:
-            ARCH_BODY += "process (clock)\>\n"
-        ARCH_BODY += "\<begin\n\>"
+            ARCH_BODY += "process (clock)@>\n"
+        ARCH_BODY += "@<begin\n@>"
 
         # Handle ASYNC force
         if CONFIG["force_type"] == "ASYNC":
-            ARCH_BODY += "if force = '1' then\n\>"
+            ARCH_BODY += "if force = '1' then\n@>"
             ARCH_BODY += "data_internal <= std_logic_vector(to_unsigned(force_value, data_out'length));\n"
-            ARCH_BODY += "\<els"
+            ARCH_BODY += "@<els"
 
-        ARCH_BODY += "if rising_edge(clock) then\n\>"
+        ARCH_BODY += "if rising_edge(clock) then\n@>"
 
         # Handle SYNC force
         if CONFIG["force_type"] == "SYNC":
-            ARCH_BODY += "if force = '1' then\n\>"
+            ARCH_BODY += "if force = '1' then\n@>"
             ARCH_BODY += "data_internal <= std_logic_vector(to_unsigned(force_value, data_out'length));\n"
 
             if CONFIG["has_enable"]:
-                ARCH_BODY += "\<els"
+                ARCH_BODY += "@<els"
             else:
-                ARCH_BODY += "\<else\>\n"
+                ARCH_BODY += "@<else@>\n"
 
         # Handle enable
         if CONFIG["has_enable"]:
-            ARCH_BODY += "if enable = '1' then\n\>"
+            ARCH_BODY += "if enable = '1' then\n@>"
 
         # Handle registoring the input value
         ARCH_BODY += "data_internal <= data_in;\n"
 
         # Close extra if
         if CONFIG["force_type"] == "ASYNC" or CONFIG["has_enable"]:
-            ARCH_BODY += "\<end if;\n"
+            ARCH_BODY += "@<end if;\n"
 
-        ARCH_BODY += "\<end if;\n"
-        ARCH_BODY += "\<end process;\n"
+        ARCH_BODY += "@<end if;\n"
+        ARCH_BODY += "@<end process;\n"
 
         # Handle registoring the input value
         ARCH_BODY += "data_out <= data_internal;\n"

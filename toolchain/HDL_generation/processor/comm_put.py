@@ -29,8 +29,8 @@ def add_inst_config(instr_id, instr_set, config):
 write_addr_patern = re.compile("write_(\d+)_addr")
 write_data_patern = re.compile("write_(\d+)_data")
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     # Gather pathway ports
     write_addr_ports = []
@@ -54,15 +54,26 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
         for write in write_addr_ports:
             if write < len(writes):
                 store = writes[write]
-                gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, store, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+                dataMesh.connect_sink(sink="%swrite_%i_addr"%(instr_prefix, write, ),
+                    channel="%sstore_addr_%i"%(lane, store, ),
+                    condition=instr,
+                    stage="store", inplace_channel=True,
+                    padding_type="unsigned", width=config["addr_width"]
+                )
 
         # Handle write_data_ports
         for write in write_data_ports:
             if write < len(writes):
                 store = writes[write]
-                gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_0"%(lane, store, ), "store", instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
+                dataMesh.connect_sink(sink="%swrite_%i_data"%(instr_prefix, write, ),
+                    channel="%sstore_data_%i_word_0"%(lane, store, ),
+                    condition=instr,
+                    stage="store", inplace_channel=True,
+                    padding_type=config["signal_padding"], width=config["data_width"]
+                )
 
-    return pathways
+
+    return dataMesh
 
 write_enables_pattern = re.compile("write_(\d+)_enable")
 
@@ -236,11 +247,11 @@ def gen_stalling_logic(gen_det, com_det):
                 force_generation=gen_det.force_generation
             )
 
-            com_det.arch_body += "FIFOs_ready_buffer : entity work.%s(arch)\>\n"%(reg_name, )
+            com_det.arch_body += "FIFOs_ready_buffer : entity work.%s(arch)@>\n"%(reg_name, )
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["FIFOs"], )
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
             com_det.arch_body += "clock => clock,\n"
             com_det.arch_body += "data_in  => (%s),\n"%(
                 ", ".join(
@@ -251,7 +262,7 @@ def gen_stalling_logic(gen_det, com_det):
                 )
             )
             com_det.arch_body += "data_out => FIFOs_ready_buffered\n"
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"
 
 
 
@@ -290,17 +301,17 @@ def gen_FIFO_write_logic(gen_det, com_det):
         com_det.arch_head += "signal FIFO_%i_write_buffer_in : std_logic;\n"%(FIFO,)
         com_det.arch_head += "signal FIFO_%i_write_buffer_out : std_logic;\n"%(FIFO,)
 
-        com_det.arch_body += "FIFO_%i_write_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
+        com_det.arch_body += "FIFO_%i_write_buffer : entity work.%s(arch)@>\n"%(FIFO, reg_name)
 
         com_det.arch_body += "generic map (data_width => 1)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         com_det.arch_body += "clock => clock,\n"
         if gen_det.config["stall_type"] != "NONE":
             com_det.arch_body += "enable => not stall,\n"
         com_det.arch_body += "data_in(0) => FIFO_%i_write_buffer_in,\n"%(FIFO, )
         com_det.arch_body += "data_out(0) => FIFO_%i_write_buffer_out\n"%(FIFO, )
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
         if gen_det.config["stall_type"] == "NONE":
             com_det.arch_body += "FIFO_%i_write <= FIFO_%i_write_buffer_out;\n"%(FIFO, FIFO, )
@@ -347,17 +358,17 @@ def gen_FIFO_data_logic (gen_det, com_det):
     for FIFO in range(gen_det.config["FIFOs"]):
         com_det.arch_head += "signal FIFO_%i_data_buffer_in : std_logic_vector(%i downto 0);\n"%(FIFO, gen_det.config["data_width"] - 1)
 
-        com_det.arch_body += "FIFO_%i_data_buffer : entity work.%s(arch)\>\n"%(FIFO, reg_name)
+        com_det.arch_body += "FIFO_%i_data_buffer : entity work.%s(arch)@>\n"%(FIFO, reg_name)
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         if gen_det.config["stall_type"] != "NONE":
             com_det.arch_body += "enable => not stall,\n"
         com_det.arch_body += "clock => clock,\n"
         com_det.arch_body += "data_in  => FIFO_%i_data_buffer_in,\n"%(FIFO, )
         com_det.arch_body += "data_out => FIFO_%i_data\n"%(FIFO, )
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
     # FIFO_data assignment logic
     com_det.arch_body += "\n-- FIFO_data assignment logic\n"

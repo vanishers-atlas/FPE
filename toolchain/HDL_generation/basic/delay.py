@@ -146,7 +146,7 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
                 force_generation=FORCE_GENERATION
             )
 
-            ARCH_BODY += "delay_reg : entity work.%s(arch)\>\n"%(reg_name)
+            ARCH_BODY += "delay_reg : entity work.%s(arch)@>\n"%(reg_name)
 
             if not CONFIG["inited"]:
                 ARCH_BODY += "generic map (data_width => %i)\n"%(CONFIG["width"])
@@ -158,18 +158,18 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
                     },
                 ]
 
-                ARCH_BODY += "generic map (\>\n"
+                ARCH_BODY += "generic map (@>\n"
                 ARCH_BODY += "data_width => %i,\n"%(CONFIG["width"])
                 ARCH_BODY += "force_value => init_value\n"
-                ARCH_BODY += "\<)\n"
+                ARCH_BODY += "@<)\n"
 
-            ARCH_BODY += "port map (\n\>"
+            ARCH_BODY += "port map (\n@>"
             ARCH_BODY += "clock => clock,\n"
             if CONFIG["has_enable"]:
                 ARCH_BODY += "enable => enable,\n"
             ARCH_BODY += "data_in  => data_in,\n"
             ARCH_BODY += "data_out => data_out\n"
-            ARCH_BODY += "\<);\n\<"
+            ARCH_BODY += "@<);\n@<"
         # Delay of depth 2+. is a shift reg
         else:
             if CONFIG["inited"]:
@@ -184,23 +184,23 @@ def generate_HDL(config, output_path, module_name, concat_naming=False, force_ge
                 ARCH_HEAD += "type data_array is array(%i downto 0) of std_logic_vector(%i downto 0);\n"%(CONFIG["depth"] - 1, CONFIG["width"] - 1,  )
             ARCH_HEAD += "signal data : data_array;\n"
 
-            ARCH_BODY += "process (clock)\>\n"
-            ARCH_BODY += "\<begin\>\n"
+            ARCH_BODY += "process (clock)@>\n"
+            ARCH_BODY += "@<begin@>\n"
 
-            ARCH_BODY += "if rising_edge(clock) then\>\n"
+            ARCH_BODY += "if rising_edge(clock) then@>\n"
 
             if CONFIG["has_enable"]:
-                ARCH_BODY += "if enable = '1' then\>\n"
+                ARCH_BODY += "if enable = '1' then@>\n"
 
             ARCH_BODY += "data(data'left - 1 downto 0) <= data(data'left downto 1);\n"
             ARCH_BODY += "data(data'left) <= data_in;\n"
 
             if CONFIG["has_enable"]:
-                ARCH_BODY += "\<end if;\n"
+                ARCH_BODY += "@<end if;\n"
 
-            ARCH_BODY += "\<end if;\n"
+            ARCH_BODY += "@<end if;\n"
 
-            ARCH_BODY += "\<end process;\n"
+            ARCH_BODY += "@<end process;\n"
 
             ARCH_BODY += "data_out <= data(0);\n"
 

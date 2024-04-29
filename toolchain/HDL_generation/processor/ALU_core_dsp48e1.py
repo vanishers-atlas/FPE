@@ -127,12 +127,20 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    raise NotImplementedError()
+    # Handle fetched_operand ports
+    for instr in instr_set:
+        if asm_utils.instr_mnemonic(instr)  in ["JEQ", "JNE", "JGT", "JGE", "JLT", "JLE", ]:
+            dataMesh.connect_sink(sink="PC_jump_value",
+                channel="%sfetch_data_0_word_0"%(lane, ),
+                condition=instr,
+                stage="exe", inplace_channel=True,
+                padding_type="unsigned", width=config["jump_width"]
+            )
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -1143,11 +1151,11 @@ def handle_ports(gen_det, com_det):
             if muxed_width < 30:
                 com_det.arch_body += "DSP_A(29 downto %i) <= (others => '0');\n\n"%(A_width, )
 
-            com_det.arch_body += "DSP_A_mux : entity work.%s(arch)\>\n"%(mux_name, )
+            com_det.arch_body += "DSP_A_mux : entity work.%s(arch)@>\n"%(mux_name, )
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(muxed_width, )
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
 
             com_det.arch_body += "sel(0) => DSP_AB_sel,\n"
 
@@ -1165,7 +1173,7 @@ def handle_ports(gen_det, com_det):
 
             com_det.arch_body += "data_out  => DSP_A(%i downto 0) \n"%(muxed_width - 1, )
 
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"
         else:
             raise ValueError("AB can only be up to 48 bits in width")
     elif gen_det.config["DSP_mult_used"]:
@@ -1216,9 +1224,9 @@ def handle_ports(gen_det, com_det):
 def gen_DSP_slice(gen_det, com_det):
     com_det.add_import("UNISIM", "vcomponents", "all")
 
-    com_det.arch_body  += "DSP48E1_inst : DSP48E1\>\n"
+    com_det.arch_body  += "DSP48E1_inst : DSP48E1@>\n"
 
-    com_det.arch_body  += "generic map (\>\n"
+    com_det.arch_body  += "generic map (@>\n"
 
     # Disable cascading
     com_det.arch_body  += "-- Disable cascading \n"
@@ -1303,9 +1311,9 @@ def gen_DSP_slice(gen_det, com_det):
     com_det.arch_body  += "INMODEREG  => 1,\n"
     com_det.arch_body  += "CARRYINSELREG => 1\n"
 
-    com_det.arch_body  += "\<)\n"
+    com_det.arch_body  += "@<)\n"
 
-    com_det.arch_body  += "port map (\>\n"
+    com_det.arch_body  += "port map (@>\n"
 
     # Disable casxading
     com_det.arch_body  += "-- Disable casxading \n"
@@ -1400,9 +1408,9 @@ def gen_DSP_slice(gen_det, com_det):
     com_det.arch_body  += "RSTINMODE => '0',\n"
     com_det.arch_body  += "RSTALLCARRYIN => '0',\n"
     com_det.arch_body  += "RSTALUMODE => '0'\n"
-    com_det.arch_body  += "\<);\n"
+    com_det.arch_body  += "@<);\n"
 
-    com_det.arch_body  += "\<\n"
+    com_det.arch_body  += "@<\n"
 
 def handle_statuses_and_jumping(gen_det, com_det):
 
@@ -1435,14 +1443,14 @@ def handle_statuses_and_jumping(gen_det, com_det):
         if gen_det.config["signed_compare"] and ("greater" in gen_det.config["jumps"] or "lesser" in gen_det.config["jumps"]):
             com_det.arch_head += "signal operand_0_sign, operand_0_sign_delayed : std_logic;\n"
             if   "acc" in gen_det.config["sign_0_sources"] and "operand" in gen_det.config["sign_0_sources"]:
-                com_det.arch_body += "operand_0_sign_mux: entity work.%s(arch)\>\n"%(mux_2, )
+                com_det.arch_body += "operand_0_sign_mux: entity work.%s(arch)@>\n"%(mux_2, )
                 com_det.arch_body += "generic map (data_width => 1)\n"
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel(0) => DSP_op_mode(4),\n"
                 com_det.arch_body += "data_in_0(0) => DSP_P(%i),\n"%(gen_det.config["data_width"] - 1, )
                 com_det.arch_body += "data_in_1(0) => operand_0(%i),\n"%(gen_det.config["data_width"] - 1, )
                 com_det.arch_body += "data_out(0)  => operand_0_sign\n"
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
             elif "acc" in gen_det.config["sign_0_sources"] and "operand" in gen_det.config["sign_0_sources"]:
                 com_det.arch_body += "operand_0_sign <= DSP_P(%i) a;\n\n"%(gen_det.config["data_width"] - 1, )
             elif "acc" not in gen_det.config["sign_0_sources"] and "operand" not in gen_det.config["sign_0_sources"]:
@@ -1452,14 +1460,14 @@ def handle_statuses_and_jumping(gen_det, com_det):
 
             com_det.arch_head += "signal operand_1_sign, operand_1_sign_delayed : std_logic;\n"
             if   "acc" in gen_det.config["sign_1_sources"] and "operand" in gen_det.config["sign_1_sources"]:
-                com_det.arch_body += "operand_1_sign_mux: entity work.%s(arch)\>\n"%(mux_2, )
+                com_det.arch_body += "operand_1_sign_mux: entity work.%s(arch)@>\n"%(mux_2, )
                 com_det.arch_body += "generic map (data_width => 1)\n"
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel(0) => DSP_op_mode(0),\n"
                 com_det.arch_body += "data_in_0(0) => DSP_P(%i),\n"%(gen_det.config["data_width"] - 1, )
                 com_det.arch_body += "data_in_1(0) => operand_1(%i),\n"%(gen_det.config["data_width"] - 1, )
                 com_det.arch_body += "data_out(0)  => operand_1_sign\n"
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
             elif "acc" in gen_det.config["sign_1_sources"] and "operand" in gen_det.config["sign_1_sources"]:
                 com_det.arch_body += "operand_1_sign <= DSP_P(%i) a;\n\n"%(gen_det.config["data_width"] - 1, )
             elif "acc" not in gen_det.config["sign_1_sources"] and "operand" not in gen_det.config["sign_1_sources"]:
@@ -1468,11 +1476,11 @@ def handle_statuses_and_jumping(gen_det, com_det):
                 raise ValueError("Unknow combination of sources; %s"%(gen_det.config["sign_0_sources"],) )
 
 
-            com_det.arch_body += "operand_sign_reg : entity work.%s(arch)\>\n"%(reg_name, )
+            com_det.arch_body += "operand_sign_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
             com_det.arch_body += "generic map (data_width => 2)\n"
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
             com_det.arch_body += "clock => clock,\n"
 
             com_det.add_port("hold_operand_signs", "std_logic", "in")
@@ -1485,7 +1493,7 @@ def handle_statuses_and_jumping(gen_det, com_det):
             com_det.arch_body += "data_out(0) => operand_0_sign_delayed,\n"
             com_det.arch_body += "data_out(1) => operand_1_sign_delayed\n"
 
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"
 
         status_reg_width = 0
         if "equal" in gen_det.config["jumps"] or "not_equal" in gen_det.config["jumps"] :
@@ -1509,26 +1517,26 @@ def handle_statuses_and_jumping(gen_det, com_det):
             if gen_det.config["signed_compare"]:
                 com_det.arch_head += "signal SCMP_greater : std_logic;\n"
 
-                com_det.arch_body  += "SCMP_greater <=\>"
+                com_det.arch_body  += "SCMP_greater <=@>"
                 # +ve - -ve; +ve < -ve
                 com_det.arch_body += "( (not operand_0_sign_delayed and operand_1_sign_delayed)\n"
                 # +ve - +ve => +ve, either A > B or A = B therefore check pattern match
                 com_det.arch_body += "or (operand_0_sign_delayed and operand_1_sign_delayed and not DSP_P(%i) and not DSP_pattern_found)\n"%(gen_det.config["data_width"] - 1, )
                 # -ve - -ve => +ve, either A > B or A = B therefore check pattern match)
                 com_det.arch_body += "or (not operand_0_sign_delayed and not operand_1_sign_delayed and not DSP_P(%i) and not DSP_pattern_found)\n"%(gen_det.config["data_width"] - 1, )
-                com_det.arch_body += "\<);\<\n"
+                com_det.arch_body += "@<);@<\n"
 
 
             com_det.arch_head += "signal status_greater_next : std_logic;\n"
             if   gen_det.config["signed_compare"] and gen_det.config["unsigned_compare"]:
-                com_det.arch_body += "status_greater_next_mux: entity work.%s(arch)\>\n"%(mux_2, )
+                com_det.arch_body += "status_greater_next_mux: entity work.%s(arch)@>\n"%(mux_2, )
                 com_det.arch_body += "generic map (data_width => 1)\n"
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel(0) => CMP_sel,\n"
                 com_det.arch_body += "data_in_0(0) => UCMP_greater,\n"
                 com_det.arch_body += "data_in_1(0) => SCMP_greater,\n"
                 com_det.arch_body += "data_out(0)  => status_greater_next\n"
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
             elif gen_det.config["signed_compare"]:
                 com_det.arch_body  += "status_greater_next <= SCMP_greater;\n"
             elif gen_det.config["unsigned_compare"]:
@@ -1543,36 +1551,36 @@ def handle_statuses_and_jumping(gen_det, com_det):
 
             if gen_det.config["signed_compare"]:
                 com_det.arch_head += "signal SCMP_lesser : std_logic;\n"
-                com_det.arch_body  += "SCMP_lesser <=\>"
+                com_det.arch_body  += "SCMP_lesser <=@>"
                 # -ve - +ve; -ve < +ve
                 com_det.arch_body += "( (operand_0_sign_delayed and not operand_1_sign_delayed)\n"
                 # +ve - X => -ve, X either -ve and result overflowed (-ve < +ve) or X larger +ve (therefore <)
                 com_det.arch_body += "or (operand_0_sign_delayed and DSP_P(%i))\n"%(gen_det.config["data_width"] - 1, )
                 # X - +ve => -ve, X either -ve (-ve < +ve) or X smaller +ve (therefore <)
                 com_det.arch_body += "or (not operand_1_sign_delayed and DSP_P(%i))\n"%(gen_det.config["data_width"] - 1, )
-                com_det.arch_body += "\<);\<\n"
+                com_det.arch_body += "@<);@<\n"
 
             com_det.arch_head += "signal status_lesser_next : std_logic;\n"
             if   gen_det.config["signed_compare"] and gen_det.config["unsigned_compare"]:
-                com_det.arch_body += "status_lesser_next_mux: entity work.%s(arch)\>\n"%(mux_2, )
+                com_det.arch_body += "status_lesser_next_mux: entity work.%s(arch)@>\n"%(mux_2, )
                 com_det.arch_body += "generic map (data_width => 1)\n"
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "sel(0) => CMP_sel,\n"
                 com_det.arch_body += "data_in_0(0) => UCMP_lesser,\n"
                 com_det.arch_body += "data_in_1(0) => SCMP_lesser,\n"
                 com_det.arch_body += "data_out(0)  => status_lesser_next\n"
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
             elif gen_det.config["signed_compare"]:
                 com_det.arch_body  += "status_lesser_next <= SCMP_lesser;\n"
             elif gen_det.config["unsigned_compare"]:
                 com_det.arch_body  += "status_lesser_next <= UCMP_lesser;\n"
 
         # Generate status reg
-        com_det.arch_body += "status_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "status_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(status_reg_width, )
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         com_det.arch_body += "clock => clock,\n"
 
         com_det.add_port("update_statuses", "std_logic", "in")
@@ -1592,7 +1600,7 @@ def handle_statuses_and_jumping(gen_det, com_det):
         if "lesser" in gen_det.config["jumps"]:
             com_det.arch_body += "%i => status_lesser_next, "%(index, )
             index += 1
-        com_det.arch_body.drop_last_X(2)
+        com_det.arch_body.drop_last(2)
         com_det.arch_body += "),\n"
 
         index = 0
@@ -1609,12 +1617,15 @@ def handle_statuses_and_jumping(gen_det, com_det):
             com_det.arch_body += "data_out(%i) => status_lesser,\n"%(index, )
             index += 1
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\n\<);\n\<\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "\n@<);\n@<\n"
+
+        # Declare and flag jump taken signel
+        com_det.add_port("jump_taken", "std_logic", "out")
+        com_det.add_interface_item("jump_drivers", ["ALU_core_jump_taken", ])
 
         # Generate jumping logic
-        com_det.add_port("jump_taken", "std_logic", "out")
-        com_det.arch_body += "jump_taken <=\>"
+        com_det.arch_body += "jump_taken <=@>"
         if "equal" in gen_det.config["jumps"] :
             com_det.add_port("jump_equal", "std_logic", "in")
             com_det.arch_body += "(jump_equal and status_equals)\n or "
@@ -1627,5 +1638,5 @@ def handle_statuses_and_jumping(gen_det, com_det):
         if "lesser" in gen_det.config["jumps"]:
             com_det.add_port("jump_lesser", "std_logic", "in")
             com_det.arch_body += "(jump_lesser and status_lesser)\n or "
-        com_det.arch_body.drop_last_X(5)
-        com_det.arch_body += ";\<\n\n"
+        com_det.arch_body.drop_last(5)
+        com_det.arch_body += ";@<\n\n"

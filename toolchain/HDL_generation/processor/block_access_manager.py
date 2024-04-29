@@ -30,8 +30,8 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     base_addr = "base_addr" in interface["ports"].keys()
 
@@ -40,24 +40,44 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
         accesses = asm_utils.instr_fetches(instr) + asm_utils.instr_stores(instr)
         for access, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(access)) for access in accesses]):
             if base_addr and addr_comp == instr_id:
-                gen_utils.add_datapath_dest(pathways, "%sprefetch_addr_%i"%(lane, access), "prefetch", instr, "%sbase_addr"%(instr_prefix, ), "unsigned", interface["ports"]["base_addr"]["width"])
+                dataMesh.connect_sink(sink="%sbase_addr"%(instr_prefix, ),
+                    channel="%sprefetch_addr_%i"%(lane, access),
+                    condition=instr,
+                    stage="prefetch", inplace_channel=True,
+                    padding_type="unsigned", width=interface["ports"]["base_addr"]["width"]
+                )
+
 
         for fetch, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(fetch)) for fetch in asm_utils.instr_fetches(instr) ]):
             if addr_comp == instr_id:
-                gen_utils.add_datapath_source(pathways, "%sfetch_addr_%i"%(lane, fetch), "fetch", instr, "%saddr_0_fetch"%(instr_prefix, ), "unsigned", config["addr_width"])
+                dataMesh.connect_driver(driver="%saddr_0_fetch"%(instr_prefix, ),
+                    channel="%sfetch_addr_%i"%(lane, fetch),
+                    condition=instr,
+                    stage="fetch", inplace_channel=True,
+                    padding_type="unsigned", width=config["addr_width"]
+                )
                 prefetch_needed = base_addr
 
         for write, addr_comp in enumerate([ asm_utils.addr_com(asm_utils.access_addr(store)) for store in asm_utils.instr_stores(instr) ]):
             if addr_comp == instr_id:
-                gen_utils.add_datapath_source(pathways, "%sstore_addr_%i"%(lane, write), "store", instr, "%saddr_0_store"%(instr_prefix, ), "unsigned", config["addr_width"])
+                dataMesh.connect_driver(driver="%saddr_0_store"%(instr_prefix, ),
+                    channel="%sstore_addr_%i"%(lane, write),
+                    condition=instr,
+                    stage="store", inplace_channel=True,
+                    padding_type="unsigned", width=config["addr_width"]
+                )
                 prefetch_needed = base_addr
 
         if instr_id in asm_utils.instr_exe_units(instr):
             if asm_utils.instr_mnemonic(instr) == "BAM_SEEK":
-                gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ), "exe", instr, "%sfetched_step"%(instr_prefix, ), "unsigned", config["step_width"])
+                dataMesh.connect_sink(sink="%sfetched_step"%(instr_prefix, ),
+                    channel="%sfetch_data_0_word_0"%(lane),
+                    condition=instr,
+                    stage="exe", inplace_channel=True,
+                    padding_type="unsigned", width=config["step_width"]
+                )
 
-
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -323,16 +343,16 @@ def gen_offset_registor(gen_det, com_det):
     com_det.arch_head += "signal next_offset : std_logic_vector(%i downto 0);\n"%(gen_det.config["offset_width"] - 1, )
     com_det.arch_head += "signal curr_offset : std_logic_vector(%i downto 0);\n"%(gen_det.config["offset_width"] - 1, )
 
-    com_det.arch_body += "offset_acc : entity work.%s(arch)\>\n"%(reg_name)
+    com_det.arch_body += "offset_acc : entity work.%s(arch)@>\n"%(reg_name)
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
 
     com_det.arch_body += "force_value => 0,\n"
     com_det.arch_body += "data_width => %i\n"%(gen_det.config["offset_width"])
 
-    com_det.arch_body += "\<)\n"
+    com_det.arch_body += "@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => movement_enable and not stall,\n"
@@ -345,7 +365,7 @@ def gen_offset_registor(gen_det, com_det):
     com_det.arch_body += "data_out => curr_offset,\n"
     com_det.arch_body += "force => reset\n"
 
-    com_det.arch_body += "\<);\n\<"
+    com_det.arch_body += "@<);\n@<"
 
     return gen_det, com_det
 
@@ -431,18 +451,18 @@ def gen_step_logic(gen_det, com_det):
 
 
 
-        com_det.arch_body += "step_select_mux : entity work.%s(arch)\>\n"%(mux_name, )
+        com_det.arch_body += "step_select_mux : entity work.%s(arch)@>\n"%(mux_name, )
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["step_width"], )
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         com_det.arch_body += "sel(0)    => step_select,\n"
         com_det.arch_body += "data_in_0 => internal_step,\n"
         com_det.arch_body += "data_in_1 => fetched_step,\n"
         com_det.arch_body += "data_out  => selected_step\n"
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
     elif fetched_step:
         gen_det, com_det = gen_step_fetched_logic(gen_det, com_det)
         com_det.arch_body += "selected_step <= fetched_step;\n"
@@ -511,9 +531,9 @@ def gen_base_logic(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "pre_addr_0_store_delay : entity work.%s(arch)\>\n"%(delay_name)
+    com_det.arch_body += "pre_addr_0_store_delay : entity work.%s(arch)@>\n"%(delay_name)
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => not stall,\n"
@@ -522,7 +542,7 @@ def gen_base_logic(gen_det, com_det):
     com_det.arch_body += "data_in  => addr_0_fetch_internal,\n"
     com_det.arch_body += "data_out => addr_0_store\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     return gen_det, com_det
 
@@ -553,18 +573,18 @@ def gen_base_type_ROM(gen_det, com_det):
     )
 
     # Instancate ROM
-    com_det.arch_body += "internal_base_ROM : entity work.%s(arch)\>\n"%(rom_name, )
+    com_det.arch_body += "internal_base_ROM : entity work.%s(arch)@>\n"%(rom_name, )
 
-    com_det.arch_body += "generic map (\n\>"
+    com_det.arch_body += "generic map (\n@>"
     for index in range(gen_det.config["internal_bases"]):
         com_det.add_generic("base_%i"%(index, ), "std_logic_vector", gen_det.config["addr_width"])
         com_det.arch_body += "init_%i => base_%i,\n"%(index, index, )
     for index in range(gen_det.config["internal_bases"], 2**rom_interface["addr_width"]):
         com_det.arch_body += "init_%i => (others => '0'),\n"%(index, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => not stall,\n"
@@ -575,7 +595,7 @@ def gen_base_type_ROM(gen_det, com_det):
     com_det.arch_body += "read_0_addr => base_addr,\n"
     com_det.arch_body += "read_0_data => selected_base\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
 
     return gen_det, com_det

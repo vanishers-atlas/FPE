@@ -59,11 +59,11 @@ read_data_patern = re.compile("read_(\d+)_data")
 write_addr_patern = re.compile("write_(\d+)_addr")
 write_data_patern = re.compile("write_(\d+)_data")
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     if "BAPA" in config.keys():
-        pathways = mem_BAPA_harness.get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane)
+        dataMesh = mem_BAPA_harness.get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane)
     else:
         # Gather pathway ports
         read_addr_ports = []
@@ -100,27 +100,50 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
             for read in read_addr_ports:
                 if read < len(reads):
                     fetch = reads[read]
-                    gen_utils.add_datapath_dest(pathways, "%sfetch_addr_%i"%(lane, fetch, ), "fetch", instr, "%sread_%i_addr"%(instr_prefix, read, ), "unsigned", config["addr_width"])
+                    dataMesh.connect_sink(sink="%sread_%i_addr"%(instr_prefix, read, ),
+                        channel="%sfetch_addr_%i"%(lane, fetch, ),
+                        condition=instr,
+                        stage="fetch", inplace_channel=True,
+                        padding_type="unsigned", width=config["addr_width"]
+                    )
 
             # Handle read_data_ports
             for read in read_data_ports:
                 if read < len(reads):
                     fetch = reads[read]
-                    gen_utils.add_datapath_source(pathways, "%sfetch_data_%i_word_0"%(lane, fetch, ), "exe", instr, "%sread_%i_data"%(instr_prefix, read, ), config["signal_padding"], config["data_width"])
+                    dataMesh.connect_driver(driver="%sread_%i_data"%(instr_prefix, read, ),
+                        channel="%sfetch_data_%i_word_0"%(lane, fetch, ),
+                        condition=instr,
+                        stage="exe", inplace_channel=True,
+                        padding_type=config["signal_padding"], width=config["data_width"]
+                    )
+
 
             # Handle write_data_ports
             for write in write_addr_ports:
                 if write < len(writes):
                     store = writes[write]
-                    gen_utils.add_datapath_dest(pathways, "%sstore_addr_%i"%(lane, store, ), "store", instr, "%swrite_%i_addr"%(instr_prefix, write, ), "unsigned", config["addr_width"])
+                    dataMesh.connect_sink(sink="%swrite_%i_addr"%(instr_prefix, write, ),
+                        channel="%sstore_addr_%i"%(lane, store, ),
+                        condition=instr,
+                        stage="store", inplace_channel=True,
+                        padding_type="unsigned", width=config["addr_width"]
+                    )
+
 
             # Handle write_data_ports
             for write in write_data_ports:
                 if write < len(writes):
                     store = writes[write]
-                    gen_utils.add_datapath_dest(pathways, "%sstore_data_%i_word_0"%(lane, store, ), "store", instr, "%swrite_%i_data"%(instr_prefix, write, ), config["signal_padding"], config["data_width"])
+                    dataMesh.connect_sink(sink="%swrite_%i_data"%(instr_prefix, write, ),
+                        channel="%sstore_data_%i_word_0"%(lane, store, ),
+                        condition=instr,
+                        stage="store", inplace_channel=True,
+                        padding_type=config["signal_padding"], width=config["data_width"]
+                    )
 
-    return pathways
+
+    return dataMesh
 
 write_enables_pattern = re.compile("write_(\d+)_enable")
 
@@ -314,14 +337,14 @@ def gen_BAPA_regfile(gen_det, com_det):
     )
 
     # Instancate BAPA harness
-    com_det.arch_body += "BAPA_harness : entity work.%s(arch)\>\n"%(harness_name, )
+    com_det.arch_body += "BAPA_harness : entity work.%s(arch)@>\n"%(harness_name, )
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
     com_det.arch_body += "data_width => %i,\n"%(gen_det.config["data_width"], )
     com_det.arch_body += "block_addr_width => %i\n"%(subblock_addr_width, )
-    com_det.arch_body += "\<)\n"
+    com_det.arch_body += "@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     # Handle fanin signals
     for signal in hardness_fanin_signals:
@@ -389,8 +412,8 @@ def gen_BAPA_regfile(gen_det, com_det):
                 com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(port, width - 1, )
             com_det.arch_body += "%s => %s,\n"%(port, port)
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<);\n@<\n"
 
     # Generate subblock
     if gen_det.concat_naming :
@@ -408,14 +431,14 @@ def gen_BAPA_regfile(gen_det, com_det):
 
     # Instancate sub blocks
     for subblock in range(num_subblocks):
-        com_det.arch_body += "subblock_%i : entity work.%s(arch)\>\n"%(subblock, subblock_name, )
+        com_det.arch_body += "subblock_%i : entity work.%s(arch)@>\n"%(subblock, subblock_name, )
 
         if subblock_interface["generics"]:
-            com_det.arch_body += "generic map (\>\n"
+            com_det.arch_body += "generic map (@>\n"
             raise NotImplementedError()
-            com_det.arch_body += "\<)\n"
+            com_det.arch_body += "@<)\n"
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         # Handle fanin signals
         for signal in subblock_fanin_signals:
@@ -430,8 +453,8 @@ def gen_BAPA_regfile(gen_det, com_det):
                 com_det.arch_body += "%s => block_%i_%s,\n"%(port, subblock, port, )
 
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\n\<);\n\<\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "\n@<);\n@<\n"
 
 #####################################################################
 
@@ -446,7 +469,7 @@ def gen_ram(gen_det, com_det):
         com_det.ports_config = "QUAD"
     else:
         raise ValueError("regfile only supports up 3 reads per cycle")
-        
+
     ram_interface, ram_name = dist_RAM.generate_HDL(
         {
             "depth" : gen_det.config["depth"],
@@ -464,9 +487,9 @@ def gen_ram(gen_det, com_det):
     com_det.arch_head += "-- RAM signals\n"
     com_det.arch_body += "-- RAM block\n"
 
-    com_det.arch_body += "RAM_core : entity work.%s(arch)\>\n"%(ram_name, )
+    com_det.arch_body += "RAM_core : entity work.%s(arch)@>\n"%(ram_name, )
     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
 
 
@@ -516,8 +539,8 @@ def gen_ram(gen_det, com_det):
     else:
         raise NotImplementedError("Unknown read behavour")
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<);\n@<\n"
 
 def gen_reads(gen_det, com_det):
 
@@ -544,11 +567,11 @@ def gen_reads(gen_det, com_det):
         if gen_det.config["buffer_reads"]:
             # Generate output buffers
 
-            com_det.arch_body += "read_%i_buffer : entity work.%s(arch)\>\n"%(read, reg_name)
+            com_det.arch_body += "read_%i_buffer : entity work.%s(arch)@>\n"%(read, reg_name)
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"])
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
 
             if gen_det.config["stallable"]:
                 com_det.arch_body += "enable  => not stall_in,\n"
@@ -557,7 +580,7 @@ def gen_reads(gen_det, com_det):
             com_det.arch_body += "data_in  => read_%i_data_internal,\n"%(read, )
             com_det.arch_body += "data_out => read_%i_data\n"%(read, )
 
-            com_det.arch_body += "\<);\n\<"
+            com_det.arch_body += "@<);\n@<"
 
             com_det.arch_body += "\n"
         else:

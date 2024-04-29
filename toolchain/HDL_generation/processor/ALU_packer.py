@@ -27,9 +27,8 @@ def add_inst_config(instr_id, instr_set, config):
             mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
             operands = asm_utils.instr_operands(instr)
 
+            # 1non-parallel, commutative operations
             if   mnemonic in ["MOV", "ADD", "NOT", "AND", "NAND", "OR", "NOR", "XOR", "XNOR", ]:
-                # 1non-parallel, commutative operations
-
                 # Handle operands
                 for index, operand in enumerate(operands):
                     # Check for fetched operand
@@ -55,11 +54,12 @@ def add_inst_config(instr_id, instr_set, config):
                     # Flag up any unknown cases
                     else:
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
+            # ALU jumping operations
             elif mnemonic in ["JEQ", "JNE", "JGT", "JGE", "JLT", "JLE", ]:
+                # No data read bby ALU so operands not handled
                 pass
+            # non-parallel, multiple operation
             elif mnemonic in ["MUL", ]:
-                # non-parallel, multiple operation
-
                 # Handle operands
                 for index, operand in enumerate(operands):
                     # Check for fetched operand
@@ -91,9 +91,8 @@ def add_inst_config(instr_id, instr_set, config):
                     # Flag up any unknown cases
                     else:
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
+            # non-parallel, shift operations
             elif mnemonic in ["LSH", "RSH", "LRL", "RRL", ]:
-                # non-parallel, shift operations
-
                 # Handle operands
                 for index, operand in enumerate(operands):
                     # Record required port(s)
@@ -108,9 +107,8 @@ def add_inst_config(instr_id, instr_set, config):
                     except IndexError:
                         supported_packings.append(set())
                         supported_packings[index].add(( ("shifter", ), ("unpadded", ), 1 ))
+            # non-parallel, non-commutative operations
             elif mnemonic in ["SUB", "UCMP", "SCMP", ]:
-                # non-parallel, non-commutative operations
-
                 # Handle operands
                 for index, operand in enumerate(operands):
                     # Check for fetched operand
@@ -132,9 +130,8 @@ def add_inst_config(instr_id, instr_set, config):
                     # Flag up any unknown cases
                     else:
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
+            # non-padding-parallel, commutative operations
             elif mnemonic in ["PMOV", "PNOT", "PAND", "PNAND", "POR", "PNOR", "PXOR", "PXNOR", ]:
-                # non-padding-parallel, commutative operations
-
                 num_words = int(mnemonic_parts[-1])
 
                 # Handle operands
@@ -172,9 +169,8 @@ def add_inst_config(instr_id, instr_set, config):
                     # Flag up any unknown cases
                     else:
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
+            # parallel shift operations
             elif mnemonic in ["PLSH", "PRSH", "PLRL", "PRRL", ]:
-                # parallel shift operations
-
                 num_words = int(mnemonic_parts[-1])
 
                 # Handle operands
@@ -191,9 +187,8 @@ def add_inst_config(instr_id, instr_set, config):
                     except IndexError:
                         supported_packings.append(set())
                         supported_packings[index].add(( ("shifter", ), ("unpadded", ), num_words, ))
+            # monopadded parallel, commutative operations
             elif mnemonic in ["PADD", ]:
-                # monopadded parallel, commutative operations
-
                 num_words = int(mnemonic_parts[-1])
 
                 # Handle operands
@@ -232,9 +227,8 @@ def add_inst_config(instr_id, instr_set, config):
                     # Flag up any unknown cases
                     else:
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
+            # monopadded parallel, non-commutative operations
             elif mnemonic in ["PSUB", ]:
-                # single bit padded parallel, non-commutative operations
-
                 num_words = int(mnemonic_parts[-1])
 
                 # Handle operands
@@ -278,15 +272,33 @@ def add_inst_config(instr_id, instr_set, config):
                         raise ValueError("Unknown internal, " + asm_utils.access_internal(operand))
             else:
                 raise ValueError("Unsupported mnemonic, " + mnemonic)
+
     config["fetched_operands"] = list(fetched_operands)
     config["internal_operands"] = internal_operands
     config["supported_packings"] = [ list(v) for v in supported_packings ]
 
     return config
 
-fetched_operand_pattern = re.compile("packer_fetched_(\d*)_word_(\d*)")
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+PACKER_MNEMONICS = (
+    "MOV"   , "PMOV"    ,
+
+    "NOT"   , "PNOT"    ,
+    "AND"   , "PAND"    ,
+    "NAND"  , "PNAND"   ,
+    "OR"    , "POR"     ,
+    "NOR"   , "PNOR"    ,
+    "XOR"   , "PXOR"    ,
+    "XNOR"  , "PXNOR"   ,
+
+    "ADD"   , "PADD"    ,
+    "SUB"   , "PSUB"    ,
+    "MUL"   ,
+
+    "UCMP"  , "SCMP"    ,
+)
+fetched_operand_pattern = re.compile("packer_fetched_(\\d*)_word_(\\d*)")
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     # Handle fetched_operand ports
     for port in interface["ports"]:
@@ -295,7 +307,7 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
             operand = int(match.group(1))
             word = int(match.group(2))
             for instr in instr_set:
-                if instr_id in asm_utils.instr_exe_units(instr):
+                if instr_id in asm_utils.instr_exe_units(instr) and asm_utils.instr_mnemonic(instr) in PACKER_MNEMONICS:
                     operands = asm_utils.instr_operands(instr)
                     if len(operands) > operand and not asm_utils.access_is_internal(operands[operand]):
                         fetches = [ asm_utils.access_is_internal(operand) for operand in operands ]
@@ -303,15 +315,17 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
 
                         operand_mods = asm_utils.access_mods(operands[operand])
                         if word == 0 or "BAPA" in operand_mods and word < int(operand_mods["BAPA"]):
-                            gen_utils.add_datapath_dest(pathways, "%sfetch_data_%i_word_%i"%(lane, fetch, word),
-                                "exe", instr, instr_prefix + port, config["signal_padding"], interface["ports"][port]["width"]
+                            dataMesh.connect_sink(sink=instr_prefix + port,
+                                channel="%sfetch_data_%i_word_%i"%(lane, fetch, word),
+                                condition=instr,
+                                stage="exe", inplace_channel=True,
+                                padding_type=config["signal_padding"], width=interface["ports"][port]["width"]
                             )
+    return dataMesh
 
-    return pathways
-
-block_size_sel_pattern =  re.compile("packer_input_(\d*)_block_size_sel")
-source_sel_pattern = re.compile("packer_input_(\d*)_(\d*)_source_sel")
-packing_sel_pattern = re.compile("packer_input_(\d*)_packing_sel")
+block_size_sel_pattern =  re.compile("packer_input_(\\d*)_block_size_sel")
+source_sel_pattern = re.compile("packer_input_(\\d*)_(\\d*)_source_sel")
+packing_sel_pattern = re.compile("packer_input_(\\d*)_packing_sel")
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
 
@@ -493,8 +507,8 @@ def preprocess_config(config_in):
                 assert type(num_words) == int
                 assert num_words >= 0
     supported_packings = []
-    for operand, pathways in enumerate(config_in["supported_packings"]):
-        for pathway in pathways:
+    for operand, dataMesh in enumerate(config_in["supported_packings"]):
+        for pathway in dataMesh:
             source_signal = pathway[0][0]
             if source_signal in ["fetched", ]:
                 source_signal = "fetched_%i"%(pathway[0][1], )
@@ -544,6 +558,8 @@ def handle_module_name(module_name, config):
         return module_name
 
 #####################################################################
+
+
 
 def generate_HDL(config, output_path, module_name=None, concat_naming=False, force_generation=False):
     # Check and preprocess parameters
@@ -622,11 +638,11 @@ def gen_packer(gen_det, com_det):
                     force_generation=gen_det.force_generation
                 )
 
-                com_det.arch_body += "input_%i_%i_source_mux : entity work.%s(arch)\>\n"%(operand, word, mux_name, )
+                com_det.arch_body += "input_%i_%i_source_mux : entity work.%s(arch)@>\n"%(operand, word, mux_name, )
 
                 com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
 
                 com_det.add_port("input_%i_%i_source_sel"%(operand, word, ), "std_logic_vector", "in", mux_interface["sel_width"])
                 com_det.arch_body += "sel => input_%i_%i_source_sel,\n"%(operand, word, )
@@ -642,7 +658,7 @@ def gen_packer(gen_det, com_det):
 
                 com_det.arch_body += "data_out  => input_%i_%i_source \n"%(operand, word, )
 
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
 
         # Compute packed width
         packed_width = 0
@@ -686,11 +702,11 @@ def gen_packer(gen_det, com_det):
                 for _ in range(word):
                     MSB = LSB + gen_det.config["data_width"]
 
-                    com_det.arch_body += "input_%i_unpadded_word_%i_mux : entity work.%s(arch)\>\n"%(operand, word, mux_2, )
+                    com_det.arch_body += "input_%i_unpadded_word_%i_mux : entity work.%s(arch)@>\n"%(operand, word, mux_2, )
 
                     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "port map (\n@>"
 
                     com_det.arch_body += "sel(0) => input_%i_block_size_sel(%i),\n"%(operand, sel_bit, )
 
@@ -699,7 +715,7 @@ def gen_packer(gen_det, com_det):
 
                     com_det.arch_body += "data_out  => input_%i_unpadded(%i downto %i)\n"%(operand, MSB - 1, LSB, )
 
-                    com_det.arch_body += "\<);\n\<\n"
+                    com_det.arch_body += "@<);\n@<\n"
 
                     LSB = MSB
                     word += 1
@@ -725,11 +741,11 @@ def gen_packer(gen_det, com_det):
 
                     MSB = LSB + gen_det.config["data_width"]
 
-                    com_det.arch_body += "input_%i_single_one_word_%i_mux : entity work.%s(arch)\>\n"%(operand, word, mux_2, )
+                    com_det.arch_body += "input_%i_single_one_word_%i_mux : entity work.%s(arch)@>\n"%(operand, word, mux_2, )
 
                     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "port map (\n@>"
 
                     com_det.arch_body += "sel(0) => input_%i_block_size_sel(%i),\n"%(operand, sel_bit, )
 
@@ -738,7 +754,7 @@ def gen_packer(gen_det, com_det):
 
                     com_det.arch_body += "data_out  => input_%i_single_one(%i downto %i)\n"%(operand, MSB - 1, LSB, )
 
-                    com_det.arch_body += "\<);\n\<\n"
+                    com_det.arch_body += "@<);\n@<\n"
 
                     LSB = MSB
                     word += 1
@@ -764,11 +780,11 @@ def gen_packer(gen_det, com_det):
 
                     MSB = LSB + gen_det.config["data_width"]
 
-                    com_det.arch_body += "input_%i_single_zero_word_%i_mux : entity work.%s(arch)\>\n"%(operand, word, mux_2, )
+                    com_det.arch_body += "input_%i_single_zero_word_%i_mux : entity work.%s(arch)@>\n"%(operand, word, mux_2, )
 
                     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-                    com_det.arch_body += "port map (\n\>"
+                    com_det.arch_body += "port map (\n@>"
 
                     com_det.arch_body += "sel(0) => input_%i_block_size_sel(%i),\n"%(operand, sel_bit, )
 
@@ -777,7 +793,7 @@ def gen_packer(gen_det, com_det):
 
                     com_det.arch_body += "data_out  => input_%i_single_zero(%i downto %i)\n"%(operand, MSB - 1, LSB, )
 
-                    com_det.arch_body += "\<);\n\<\n"
+                    com_det.arch_body += "@<);\n@<\n"
 
                     LSB = MSB
                     word += 1
@@ -800,11 +816,11 @@ def gen_packer(gen_det, com_det):
                 force_generation=gen_det.force_generation
             )
 
-            com_det.arch_body += "input_%i_packing_mux : entity work.%s(arch)\>\n"%(operand, mux_name, )
+            com_det.arch_body += "input_%i_packing_mux : entity work.%s(arch)@>\n"%(operand, mux_name, )
 
             com_det.arch_body += "generic map (data_width => %i)\n"%(packed_width, )
 
-            com_det.arch_body += "port map (\n\>"
+            com_det.arch_body += "port map (\n@>"
 
             com_det.add_port("input_%i_packing_sel"%(operand, ), "std_logic_vector", "in", mux_interface["sel_width"])
             com_det.arch_body += "sel => input_%i_packing_sel ,\n"%(operand, )
@@ -820,4 +836,4 @@ def gen_packer(gen_det, com_det):
 
             com_det.arch_body += "data_out  => result_%i \n"%(operand, )
 
-            com_det.arch_body += "\<);\n\<\n"
+            com_det.arch_body += "@<);\n@<\n"

@@ -34,20 +34,26 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     for instr in instr_set:
         if instr_id in asm_utils.instr_exe_units(instr):
             mnemonic = asm_utils.instr_mnemonic(instr)
             if   mnemonic == "ZOL_SET":
-                gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ), "exe", instr, instr_prefix + "set_overwrites", "unsigned", interface["ports"]["set_overwrites"]["width"])
+                dataMesh.connect_sink(sink=instr_prefix + "set_overwrites",
+                    channel="%sfetch_data_0_word_0"%(lane, ),
+                    condition=instr,
+                    stage="exe", inplace_channel=True,
+                    padding_type="unsigned", width=interface["ports"]["set_overwrites"]["width"]
+                )
+
             elif mnemonic in ["ZOL_SEEK", ]:
                 pass
             else:
                 raise ValueError("Unknow instr mnemonic, " + mnemonic)
 
-    return pathways
+    return dataMesh
 
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
@@ -194,7 +200,7 @@ def generate_state_machine(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "state_FSM : entity work.%s(arch)\>\n"%(sub_name, )
+    com_det.arch_body += "state_FSM : entity work.%s(arch)@>\n"%(sub_name, )
 
     assert len(sub_interface["generics"]) == 0
     # com_det.arch_body += "generic map ()\n"
@@ -207,7 +213,7 @@ def generate_state_machine(gen_det, com_det):
     assert "setup" in sub_interface["ports"]
     assert "PC_running" in sub_interface["ports"]
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_head += "signal setup : std_logic;\n"
 
@@ -217,7 +223,7 @@ def generate_state_machine(gen_det, com_det):
     com_det.arch_body += "PC_running  => PC_running,\n"
     com_det.arch_body += "setup  => setup\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
 
 def generate_overwrites_value(gen_det, com_det):
@@ -244,11 +250,11 @@ def generate_overwrites_value(gen_det, com_det):
 
         com_det.arch_body += "-- overwrites register\n"
 
-        com_det.arch_body += "overwrites_reg : entity work.%s(arch)\>\n"%(reg_name, )
+        com_det.arch_body += "overwrites_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         if not gen_det.config["stallable"]:
             com_det.arch_body += "enable => set_enable,\n"
@@ -262,7 +268,7 @@ def generate_overwrites_value(gen_det, com_det):
         com_det.arch_head += "signal overwrites : std_logic_vector(%i downto 0);\n"%(gen_det.config["bits"] - 1)
         com_det.arch_body += "data_out => overwrites\n"
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
 
 def generate_counter_reg(gen_det, com_det):
@@ -281,11 +287,11 @@ def generate_counter_reg(gen_det, com_det):
 
     com_det.arch_body += "-- counter register\n"
 
-    com_det.arch_body += "counter_reg : entity work.%s(arch)\>\n"%(reg_name, )
+    com_det.arch_body += "counter_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_head += "signal curr_count, next_count : std_logic_vector(%i downto 0);\n"%(gen_det.config["bits"] - 1)
 
@@ -297,7 +303,7 @@ def generate_counter_reg(gen_det, com_det):
     com_det.arch_body += "data_in  => next_count,\n"
     com_det.arch_body += "data_out => curr_count\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     mux_interface, mux_name = mux.generate_HDL(
         {
@@ -311,11 +317,11 @@ def generate_counter_reg(gen_det, com_det):
 
     com_det.arch_body += "-- Mux next_count\n"
 
-    com_det.arch_body += "next_count_mux : entity work.%s(arch)\>\n"%(mux_name, )
+    com_det.arch_body += "next_count_mux : entity work.%s(arch)@>\n"%(mux_name, )
 
     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     com_det.arch_body += "sel(0)    => setup,\n"
     com_det.arch_body += "data_in_0 => decremented_count,\n"
@@ -327,21 +333,21 @@ def generate_counter_reg(gen_det, com_det):
 
         com_det.arch_body += "data_out  => next_count_int\n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     if gen_det.config["settable"]:
-        com_det.arch_body += "next_count_int_mux : entity work.%s(arch)\>\n"%(mux_name, )
+        com_det.arch_body += "next_count_int_mux : entity work.%s(arch)@>\n"%(mux_name, )
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["bits"], )
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
 
         com_det.arch_body += "sel(0)    => set_enable,\n"
         com_det.arch_body += "data_in_0 => next_count_int,\n"
         com_det.arch_body += "data_in_1 => set_overwrites,\n"
         com_det.arch_body += "data_out  => next_count\n"
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
 
 

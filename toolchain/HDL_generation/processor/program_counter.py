@@ -23,43 +23,44 @@ import json
 
 def add_inst_config(instr_id, instr_set, config):
 
-    PC_only_jump = False
-    ALU_jump = False
+    # Handle overwrites
+    config["overwrite_sources"]  = []
+    if "hidden_ZOLs" in config.keys() and len(config["hidden_ZOLs"]):
+        config["overwrite_sources"].append("hidden_ZOLs")
+    if "declared_ZOLs" in config.keys() and len(config["declared_ZOLs"]):
+        config["overwrite_sources"].append("declared_ZOLs")
+    if "rep_bank" in config.keys() and len(config["rep_bank"]["loops"]):
+        config["overwrite_sources"].append("rep_bank_overwrite")
 
+    # Handle PC only jumping, eg jmp
     for instr in instr_set:
-        if instr_id in asm_utils.instr_exe_units(instr):
-            mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
-            if mnemonic == "JMP":
-                PC_only_jump = True
-
-            if mnemonic in ["JEQ", "JNE", "JGT", "JGE", "JLT", "JLE", ]:
-                ALU_jump = True
-
-    config["PC_only_jump"] = PC_only_jump
-    config["ALU_jump"] = ALU_jump
+        print(instr, asm_utils.instr_exe_units(instr))
+        if asm_utils.instr_mnemonic(instr) == "JMP":
+            config["jump_drivers"].append("PC_only_jump")
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     # Handle fetched_operand ports
-    if "jump_value" in interface["ports"]:
+    if "PC_only_jump" in config["jump_drivers"]:
         for instr in instr_set:
-            if instr_id in asm_utils.instr_exe_units(instr):
-                mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
-                if mnemonic in ["JMP", "JEQ", "JNE", "JGT", "JGE", "JLT", "JTE", ]:
-                    gen_utils.add_datapath_dest(pathways, "%sfetch_data_0_word_0"%(lane, ),
-                        "exe", instr, instr_prefix + "PC_jump_value", "unsigned", interface["ports"]["jump_value"]["width"]
-                    )
+            if asm_utils.instr_mnemonic(instr) == "JMP":
+                dataMesh.connect_sink(sink="PC_jump_value",
+                    channel="%sfetch_data_0_word_0"%(lane, ),
+                    condition=instr,
+                    stage="exe", inplace_channel=True,
+                    padding_type="unsigned", width=config["PC_width"]
+                )
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
 
     # Handle acc_enable control
-    if "PC_only_jump" in interface["ports"].keys():
+    if "PC_only_jump" in config["jump_drivers"]:
         PC_only_jump = { "0" : [], "1" : [], }
         for instr in instr_set:
             mnemonic, *mnemonic_parts = asm_utils.mnemonic_decompose(asm_utils.instr_mnemonic(instr))
@@ -67,7 +68,7 @@ def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
                 PC_only_jump["1"].append(instr)
             else:
                 PC_only_jump["0"].append(instr)
-        gen_utils.add_control(controls, "exe", instr_prefix + "PC_PC_only_jump", PC_only_jump, "std_logic")
+        gen_utils.add_control(controls, "exe", "PC_only_jump", PC_only_jump, "std_logic")
 
 
     return controls
@@ -88,14 +89,12 @@ def preprocess_config(config_in):
     config_out["PC_width"] = config_in["PC_width"]
 
     # Hanlde overwrite sources
-    assert type(config_in["overwrite_sources"]) == int
-    assert config_in["overwrite_sources"] >= 0
+    assert type(config_in["overwrite_sources"]) == list
     config_out["overwrite_sources"] = config_in["overwrite_sources"]
 
     # Handle jump sources
-    assert type(config_in["jump_sources"]) == int
-    assert config_in["jump_sources"] >= 0
-    config_out["jump_sources"] = config_in["jump_sources"]
+    assert type(config_in["jump_drivers"]) == list
+    config_out["jump_drivers"] = config_in["jump_drivers"]
 
     return config_out
 
@@ -185,14 +184,14 @@ def gen_running_FF(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "running_FF : entity work.%s(arch)\>\n"%(RSFF_name, )
+    com_det.arch_body += "running_FF : entity work.%s(arch)@>\n"%(RSFF_name, )
     com_det.arch_body += "generic map ( stating_state => '0')\n"
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "S => kickoff and not program_end_reached,\n"
     com_det.arch_body += "R =>program_end_reached,\n"
     com_det.arch_body += "Q => running_internal\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.arch_body += "running <= running_internal;\n\n"
 
@@ -214,13 +213,13 @@ def gen_value_reg(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "value_reg : entity work.%s(arch)\>\n"%(reg_name, )
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "value_reg : entity work.%s(arch)@>\n"%(reg_name, )
+    com_det.arch_body += "generic map (@>\n"
     com_det.arch_body += "data_width => %i,\n"%(gen_det.config["PC_width"], )
     com_det.arch_body += "force_value => 0\n"
-    com_det.arch_body += "\<)\n"
+    com_det.arch_body += "@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     com_det.arch_body += "force => program_end_reached,\n"
     if gen_det.config["stallable"]:
@@ -232,7 +231,7 @@ def gen_value_reg(gen_det, com_det):
 
     com_det.arch_body += "data_in  => next_value,\n"
     com_det.arch_body += "data_out => curr_value\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.add_port("value", "std_logic_vector", "out", gen_det.config["PC_width"])
     com_det.arch_body += "value <= curr_value;\n\n"
@@ -252,13 +251,13 @@ def gen_end_checking(gen_det, com_det):
 
     com_det.arch_head += "signal end_value_found : std_logic;\n"
 
-    com_det.arch_body += "end_value_check : entity work.%s(arch)\>\n"%(cmp, )
+    com_det.arch_body += "end_value_check : entity work.%s(arch)@>\n"%(cmp, )
     com_det.arch_body += "generic map (const => end_value)\n"
 
-    com_det.arch_body += "port map (\n\>"
-    com_det.arch_body += "value_in => next_value,\n"
+    com_det.arch_body += "port map (\n@>"
+    com_det.arch_body += "value_in => curr_value,\n"
     com_det.arch_body += "match => end_value_found\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
 
     com_det.arch_head += "signal program_end_reached : std_logic;\n"
@@ -281,15 +280,15 @@ def gen_next_value_logic(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    for overwrite in range(gen_det.config["overwrite_sources"]):
+    for overwrite in range(len(gen_det.config["overwrite_sources"])):
         com_det.add_port("overwrite_source_%i_enable"%(overwrite, ), "std_logic", "in")
         com_det.add_port("overwrite_source_%i_value"%(overwrite, ), "std_logic_vector", "in", gen_det.config["PC_width"])
 
-        com_det.arch_body += "overwrite_mux_%i : entity work.%s(arch)\>\n"%(overwrite, mux_2, )
+        com_det.arch_body += "overwrite_mux_%i : entity work.%s(arch)@>\n"%(overwrite, mux_2, )
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["PC_width"], )
 
-        com_det.arch_body += "port map (\n\>"
+        com_det.arch_body += "port map (\n@>"
         com_det.arch_body += "sel(0) => overwrite_source_%i_enable,\n"%(overwrite, )
 
 
@@ -301,29 +300,36 @@ def gen_next_value_logic(gen_det, com_det):
         com_det.arch_body += "data_out  => %s\n"%(value_tail, )
         value_tail = "overwrite_tail_value_%i"%(overwrite, )
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
-    for jump in range(gen_det.config["jump_sources"]):
-        com_det.add_port("jump_source_%i_enable"%(jump, ), "std_logic", "in")
-        com_det.add_port("jump_source_%i_value"%(jump, ), "std_logic_vector", "in", gen_det.config["PC_width"])
+    if gen_det.config["jump_drivers"]:
+        com_det.add_port("jump_value", "std_logic_vector", "in", gen_det.config["PC_width"])
 
-        com_det.arch_body += "jump_mux_%i : entity work.%s(arch)\>\n"%(jump, mux_2, )
+        com_det.arch_head += "signal jump_taken : std_logic;\n"
+
+        com_det.arch_body += "jump_taken <= "
+        for driver in range(len(gen_det.config["jump_drivers"])):
+            com_det.add_port("jump_driver_%i"%(driver, ), "std_logic", "in")
+            com_det.arch_body += "jump_driver_%i or "%(driver, )
+        com_det.arch_body.drop_last(3)
+        com_det.arch_body += ";\n"
+
+        com_det.arch_body += "jump_mux : entity work.%s(arch)@>\n"%(mux_2, )
 
         com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["PC_width"], )
 
-        com_det.arch_body += "port map (\n\>"
-        com_det.arch_body += "sel(0) => jump_source_%i_enable,\n"%(jump, )
+        com_det.arch_body += "port map (\n@>"
+        com_det.arch_body += "sel(0) => jump_taken,\n"
 
+        com_det.arch_head += "signal non_jump_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
 
-        com_det.arch_head += "signal jump_tail_value_%i : std_logic_vector(%i downto 0);\n"%(jump, gen_det.config["PC_width"] - 1, )
-
-        com_det.arch_body += "data_in_0 =>  jump_tail_value_%i,\n"%(jump, )
-        com_det.arch_body += "data_in_1 => ump_source_%i_value,\n"%(jump, )
+        com_det.arch_body += "data_in_0 => non_jump_value,\n"
+        com_det.arch_body += "data_in_1 => jump_value,\n"
 
         com_det.arch_body += "data_out  => %s\n"%(value_tail, )
-        value_tail = "jump_tail_value_%i"%(jump, )
+        value_tail = "non_jump_value"
 
-        com_det.arch_body += "\<);\n\<\n"
+        com_det.arch_body += "@<);\n@<\n"
 
 
     com_det.arch_head += "signal inc_value : std_logic_vector(%i downto 0);\n"%(gen_det.config["PC_width"] - 1, )
@@ -338,12 +344,12 @@ def gen_next_value_logic(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "value_inc : entity work.%s(arch)\>\n"%(inc, )
+    com_det.arch_body += "value_inc : entity work.%s(arch)@>\n"%(inc, )
     com_det.arch_body += "generic map (const => 1)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "value_in => curr_value,\n"
     com_det.arch_body += "value_out => inc_value\n"
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     com_det.arch_body += " %s <= inc_value;\n\n"%(value_tail, )

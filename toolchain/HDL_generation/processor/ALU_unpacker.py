@@ -105,8 +105,8 @@ def add_inst_config(instr_id, instr_set, config):
     return config
 
 stored_results_pattern = re.compile("result_(\d*)_word_(\d*)")
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
     # Handle stored_operand ports
     for port in interface["ports"]:
@@ -120,11 +120,13 @@ def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane
                     if len(results) > store and not asm_utils.access_is_internal(results[store]):
                         result_mods = asm_utils.access_mods(results[store])
                         if word == 0 or "BAPA" in result_mods and word < int(result_mods["BAPA"]):
-                            gen_utils.add_datapath_source(pathways, "%sstore_data_%i_word_%i"%(lane, store, word),
-                                "store", instr, instr_prefix + port, config["signal_padding"], interface["ports"][port]["width"]
+                            dataMesh.connect_driver(driver=instr_prefix + port,
+                                channel="%sstore_data_%i_word_%i"%(lane, store, word),
+                                condition=instr,
+                                stage="store", inplace_channel=True,
+                                padding_type=config["signal_padding"], width=interface["ports"][port]["width"]
                             )
-
-    return pathways
+    return dataMesh
 
 output_mux_sel_pattern = re.compile("unpacker_([\w\d]+)_word_(\d*)_sel")
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
@@ -379,9 +381,9 @@ def gen_unpacker(gen_det, com_det):
                 com_det.add_port("%s_word_%i_sel"%(output, word, ), "std_logic_vector", "in", mux_interface["sel_width"])
                 com_det.arch_head += "signal %s_word_%i_sel_buffered : std_logic_vector(%i downto 0);\n"%(output, word, mux_interface["sel_width"] - 1, )
 
-                com_det.arch_body += "%s_word_%i_sel_buffer : entity work.%s(arch)\>\n"%(output, word, reg_name, )
+                com_det.arch_body += "%s_word_%i_sel_buffer : entity work.%s(arch)@>\n"%(output, word, reg_name, )
                 com_det.arch_body += "generic map (data_width => %i)\n"%(mux_interface["sel_width"], )
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
                 com_det.arch_body += "clock => clock,\n"
                 if gen_det.config["stallable"]:
                     com_det.arch_body += "enable  => enable and not stall_in,\n"
@@ -389,13 +391,13 @@ def gen_unpacker(gen_det, com_det):
                     com_det.arch_body += "enable  => enable,\n"
                 com_det.arch_body += "data_in  => %s_word_%i_sel,\n"%(output, word, )
                 com_det.arch_body += "data_out => %s_word_%i_sel_buffered\n"%(output, word, )
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"
 
-                com_det.arch_body += "%s_word_%i_mux : entity work.%s(arch)\>\n"%(output, word, mux_name, )
+                com_det.arch_body += "%s_word_%i_mux : entity work.%s(arch)@>\n"%(output, word, mux_name, )
 
                 com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["data_width"], )
 
-                com_det.arch_body += "port map (\n\>"
+                com_det.arch_body += "port map (\n@>"
 
                 com_det.arch_body += "sel => %s_word_%i_sel_buffered,\n"%(output, word, )
 
@@ -412,4 +414,4 @@ def gen_unpacker(gen_det, com_det):
 
                 com_det.arch_body += "data_out  => %s_word_%i \n"%(output, word, )
 
-                com_det.arch_body += "\<);\n\<\n"
+                com_det.arch_body += "@<);\n@<\n"

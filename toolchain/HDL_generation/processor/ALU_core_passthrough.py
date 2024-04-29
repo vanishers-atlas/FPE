@@ -19,12 +19,11 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    raise NotImplementedError()
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -137,11 +136,11 @@ def gen_passthrough_core(gen_det, com_det):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "delay_reg : entity work.%s(arch)\>\n"%(reg_name, )
+    com_det.arch_body += "delay_reg : entity work.%s(arch)@>\n"%(reg_name, )
 
     com_det.arch_body += "generic map (data_width => %i)\n"%(gen_det.config["operand_widths"][0], )
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "clock => clock,\n"
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => acc_enable and not stall_in,\n"
@@ -150,4 +149,4 @@ def gen_passthrough_core(gen_det, com_det):
     com_det.arch_body += "data_in => operand_0,\n"
     com_det.arch_body += "data_out  => result_0 \n"
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"

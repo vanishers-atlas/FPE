@@ -92,10 +92,10 @@ def _wrap_module_generate_hdl(module_name, module_interface, wrapped_generics, w
             com_det.add_port(port, details["type"], details["direction"])
 
     # Onstancate wrapped module
-    com_det.arch_body +=  "%s : entity work.%s(arch)\n\>"%(wrapped_name, module_name)
+    com_det.arch_body +=  "%s : entity work.%s(arch)\n@>"%(wrapped_name, module_name)
 
     if len(module_interface["generics"]) != 0:
-        com_det.arch_body += "generic map (\>\n"
+        com_det.arch_body += "generic map (@>\n"
 
         for generic, details in module_interface["generics"].items():
             assert "type" in details.keys(), "Misformed module interface"
@@ -112,18 +112,18 @@ def _wrap_module_generate_hdl(module_name, module_interface, wrapped_generics, w
             else:
                 com_det.arch_body += "%s => %s,\n"%(generic, generic)
 
-        com_det.arch_body.drop_last_X(2)
-        com_det.arch_body += "\<\n)\n"
+        com_det.arch_body.drop_last(2)
+        com_det.arch_body += "@<\n)\n"
 
-    com_det.arch_body += "port map (\>\n"
+    com_det.arch_body += "port map (@>\n"
 
     for port, details in module_interface["ports"].items():
         com_det.arch_body += "%s => %s,\n"%(port, port)
 
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\<\n);\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "@<\n);\n"
 
-    com_det.arch_body += "\<\n"
+    com_det.arch_body += "@<\n"
 
     # Generate vhdl
     gen_utils.generate_files(gen_det, com_det)

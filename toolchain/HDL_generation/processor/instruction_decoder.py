@@ -22,10 +22,10 @@ def add_inst_config(instr_id, instr_set, config):
 
     return config
 
-def get_inst_pathways(instr_id, instr_prefix, instr_set, interface, config, lane):
-    pathways = gen_utils.init_datapaths()
+def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
+    dataMesh = gen_utils.DataMesh()
 
-    return pathways
+    return dataMesh
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -145,9 +145,9 @@ def generate_input_signals_delay(gen_det, com_det, stage):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "%s_instr_delay : entity work.%s(arch)\>\n"%(stage, name)
+    com_det.arch_body += "%s_instr_delay : entity work.%s(arch)@>\n"%(stage, name)
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => not stall_in,\n"
@@ -156,7 +156,7 @@ def generate_input_signals_delay(gen_det, com_det, stage):
     com_det.arch_body += "data_in  => %s,\n"%(gen_det.input_signals["instr"], )
     com_det.arch_body += "data_out => %s_instr_delay_out\n"%(stage, )
 
-    com_det.arch_body += "\<);\<\n\n"
+    com_det.arch_body += "@<);@<\n\n"
 
     gen_det.input_signals["instr"] = "%s_instr_delay_out"%(stage, )
 
@@ -175,9 +175,9 @@ def generate_input_signals_delay(gen_det, com_det, stage):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "%s_enable_delay : entity work.%s(arch)\>\n"%(stage, name)
+    com_det.arch_body += "%s_enable_delay : entity work.%s(arch)@>\n"%(stage, name)
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => not stall_in,\n"
@@ -186,7 +186,7 @@ def generate_input_signals_delay(gen_det, com_det, stage):
     com_det.arch_body += "data_in(0) => %s,\n"%(gen_det.input_signals["enable"], )
     com_det.arch_body += "data_out(0) => %s_enable_delay_out\n"%(stage, )
 
-    com_det.arch_body += "\<);\<\n\n"
+    com_det.arch_body += "@<);@<\n\n"
 
     gen_det.input_signals["enable"] = "%s_enable_delay_out"%(stage, )
 
@@ -273,23 +273,23 @@ def implement_decoder_rom(gen_det, com_det, decoder_rom, stage):
     com_det.arch_head += "signal control_signals_%s_buffered : std_logic_vector(%i downto 0);\n"%(stage, rom_width- 1, )
 
     # Instancate ROM
-    com_det.arch_body += "decode_ROM_%s : entity work.%s(arch)\>\n"%(stage, rom_name,)
+    com_det.arch_body += "decode_ROM_%s : entity work.%s(arch)@>\n"%(stage, rom_name,)
 
-    com_det.arch_body += "generic map (\>\n"
+    com_det.arch_body += "generic map (@>\n"
     rev_instr_set = {v : k for k, v in gen_det.config["instr_set"].items()}
     for addr in range(2**rom_interface["addr_width"]):
         try:
             com_det.arch_body += "init_%i => \"%s\",\n"%(addr, decoder_rom["content"][rev_instr_set[addr]][::-1], )
         except Exception as e:
             com_det.arch_body += "init_%i => \"%s\",\n"%(addr, "0"*rom_width, )
-    com_det.arch_body.drop_last_X(2)
-    com_det.arch_body += "\n\<)\n"
+    com_det.arch_body.drop_last(2)
+    com_det.arch_body += "\n@<)\n"
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
     com_det.arch_body += "read_0_addr => %s(%s),\n"%(gen_det.input_signals["instr"], gen_det.instr_sections["opcode"]["range"], )
     com_det.arch_body += "read_0_data => control_signals_%s\n"%(stage, )
 
-    com_det.arch_body += "\<);\n\<\n"
+    com_det.arch_body += "@<);\n@<\n"
 
     # Instancate buffer
     interface, name = delay.generate_HDL(
@@ -305,9 +305,9 @@ def implement_decoder_rom(gen_det, com_det, decoder_rom, stage):
         force_generation=gen_det.force_generation
     )
 
-    com_det.arch_body += "control_signals_%s_delay : entity work.%s(arch)\>\n"%(stage, name)
+    com_det.arch_body += "control_signals_%s_delay : entity work.%s(arch)@>\n"%(stage, name)
 
-    com_det.arch_body += "port map (\n\>"
+    com_det.arch_body += "port map (\n@>"
 
     if gen_det.config["stallable"]:
         com_det.arch_body += "enable => %s and not stall_in,\n"%(gen_det.input_signals["enable"], )
@@ -318,7 +318,7 @@ def implement_decoder_rom(gen_det, com_det, decoder_rom, stage):
     com_det.arch_body += "data_in  => control_signals_%s,\n"%(stage, )
     com_det.arch_body += "data_out => control_signals_%s_buffered\n"%(stage, )
 
-    com_det.arch_body += "\<);\<\n\n"
+    com_det.arch_body += "@<);@<\n\n"
 
     # Slice up ROM output and connect to control ports
     for port, slice in decoder_rom["slices"].items():
