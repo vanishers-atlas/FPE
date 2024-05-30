@@ -581,7 +581,7 @@ def gen_wordwise_block_ROM(gen_det, com_det):
     # Generate BRAM
     if gen_det.config["reads"] <= 2:
         if gen_det.config["BRAM_primitive"] == "RAMB18E1":
-            BRAM_HEAD, BRAM_BODY = gen_RAMB18E1gen_det, (gen_det.config["reads"])
+            BRAM_HEAD, BRAM_BODY = gen_RAMB18E1(gen_det, gen_det.config["reads"])
         else:
             raise ValueError("Unknown BRAM_primitive, %s"%(str(gen_det.config["BRAM_primitive"]), ) )
 
@@ -891,7 +891,7 @@ def gen_RAMB18E1(gen_det, reads):
     BRAM_BODY += "SRVAL_B => X\"00000\",\n"
 
     BRAM_BODY += "\n-- Address Collision Mode: \"PERFORMANCE\" or \"DELAYED_WRITE\"\n"
-    BRAM_BODY += "RDADDR_COLLISION_HWgen_det.config => \"DELAYED_WRITE\",\n"
+    BRAM_BODY += "RDADDR_COLLISION_HWCONFIG => \"DELAYED_WRITE\",\n"
 
     BRAM_BODY += "\n-- Collision check: Values (\"ALL\", \"WARNING_ONLY\", \"GENERATE_X_ONLY\" or \"NONE\")\n"
     BRAM_BODY += "SIM_COLLISION_CHECK => \"NONE\",\n"

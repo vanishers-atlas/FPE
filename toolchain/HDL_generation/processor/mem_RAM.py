@@ -53,10 +53,10 @@ def add_inst_config(instr_id, instr_set, config):
         config["BAPA"] = mem_BAPA_harness.add_inst_config(instr_id, instr_set, { "stallable" : config["stallable"] })
     return config
 
-read_addr_patern = re.compile("read_(\d+)_addr")
-read_data_patern = re.compile("read_(\d+)_data")
-write_addr_patern = re.compile("write_(\d+)_addr")
-write_data_patern = re.compile("write_(\d+)_data")
+read_addr_patern = re.compile("read_(\\d+)_addr")
+read_data_patern = re.compile("read_(\\d+)_data")
+write_addr_patern = re.compile("write_(\\d+)_addr")
+write_data_patern = re.compile("write_(\\d+)_data")
 
 def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane):
     dataMesh = gen_utils.DataMesh()
@@ -143,7 +143,7 @@ def get_inst_dataMesh(instr_id, instr_prefix, instr_set, interface, config, lane
 
     return dataMesh
 
-write_enables_pattern = re.compile("write_(\d+)_enable")
+write_enables_pattern = re.compile("write_(\\d+)_enable")
 
 def get_inst_controls(instr_id, instr_prefix, instr_set, interface, config):
     controls = {}
@@ -411,20 +411,20 @@ def generate_HDL(config, output_path, module_name=None, concat_naming=False, for
 
 hardness_fanin_signals = ["clock", "stall_in"]
 hardness_ripple_up_addrs = [
-    re.compile("read_(\d+)_addr"),
-    re.compile("write_(\d+)_addr"),
+    re.compile("read_(\\d+)_addr"),
+    re.compile("write_(\\d+)_addr"),
 ]
 hardness_ripple_up_signals = [
-    re.compile("read_(\d+)_word_(\d+)"),
-    re.compile("write_(\d+)_word_(\d+)"),
-    re.compile("write_(\d+)_enable_(\d+)"),
+    re.compile("read_(\\d+)_word_(\\d+)"),
+    re.compile("write_(\\d+)_word_(\\d+)"),
+    re.compile("write_(\\d+)_enable_(\\d+)"),
 ]
 hardness_internal_signals = [
-    re.compile("block_(\d+)_read_(\d+)_addr"),
-    re.compile("block_(\d+)_read_(\d+)_data"),
-    re.compile("block_(\d+)_write_(\d+)_addr"),
-    re.compile("block_(\d+)_write_(\d+)_data"),
-    re.compile("block_(\d+)_write_(\d+)_enable"),
+    re.compile("block_(\\d+)_read_(\\d+)_addr"),
+    re.compile("block_(\\d+)_read_(\\d+)_data"),
+    re.compile("block_(\\d+)_write_(\\d+)_addr"),
+    re.compile("block_(\\d+)_write_(\\d+)_data"),
+    re.compile("block_(\\d+)_write_(\\d+)_enable"),
 ]
 
 subblock_fanin_signals = ["clock", "stall_in"]
@@ -432,11 +432,11 @@ subblock_ripple_up_generics = [
     re.compile("init_mif"),
 ]
 subblock_internal_signals = [
-    re.compile("read_(\d+)_addr"),
-    re.compile("read_(\d+)_data"),
-    re.compile("write_(\d+)_addr"),
-    re.compile("write_(\d+)_data"),
-    re.compile("write_(\d+)_enable"),
+    re.compile("read_(\\d+)_addr"),
+    re.compile("read_(\\d+)_data"),
+    re.compile("write_(\\d+)_addr"),
+    re.compile("write_(\\d+)_data"),
+    re.compile("write_(\\d+)_enable"),
 ]
 
 def gen_BAPA_RAM(gen_det, com_det):
@@ -1048,7 +1048,7 @@ def gen_RAMB18E1(gen_det):
     BRAM_BODY += "SRVAL_B => X\"00000\",\n"
 
     BRAM_BODY += "\n-- Address Collision Mode: \"PERFORMANCE\" or \"DELAYED_WRITE\"\n"
-    BRAM_BODY += "RDADDR_COLLISION_HWgen_det.config => \"PERFORMANCE\",\n"
+    BRAM_BODY += "RDADDR_COLLISION_HWCONFIG => \"PERFORMANCE\",\n"
 
     BRAM_BODY += "\n-- Collision check: Values (\"ALL\", \"WARNING_ONLY\", \"GENERATE_X_ONLY\" or \"NONE\")\n"
     BRAM_BODY += "SIM_COLLISION_CHECK => \"NONE\",\n"

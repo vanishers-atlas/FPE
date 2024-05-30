@@ -7,6 +7,7 @@ if __name__ == "__main__":
 
 import itertools as it
 import copy
+import re
 
 from FPE.toolchain import utils as tc_utils
 from FPE.toolchain import FPE_assembly as asm_utils
@@ -384,6 +385,17 @@ mem_predeclared_ports_per_mem = {
     "ROM_B" : { },
 }
 
+
+mem_width_check_addr_ports = [
+    re.compile("read_(\\d+)_addr"),
+    re.compile("write_(\\d+)_addr"),
+]
+
+mem_width_check_data_ports = [
+    re.compile("read_(\\d+)_data"),
+    re.compile("write_(\\d+)_data"),
+]
+
 def gen_data_memories(gen_det, com_det, controls, dataMesh):
 
     com_det.arch_body += "\n-- Memories components\n"
@@ -428,7 +440,7 @@ def gen_data_memories(gen_det, com_det, controls, dataMesh):
 
 
         if gen_det.config["data_memories"][mem]["cross_lane"]:
-            instance_data_mem(gen_det, com_det, mem, mem, sub_name, sub_interface, control_ports, True)
+            instance_data_mem(gen_det, com_det, mem, mem, sub_name, sub_interface, config, control_ports, True)
 
             # Handle dataMesh and controls
             unlaned_dataMesh = mem_lib_lookup[mem].get_inst_dataMesh(mem, mem + "_", gen_det.config["instr_set"], sub_interface, config, gen_det.config["SIMD"]["lanes_names"][0])
@@ -448,7 +460,7 @@ def gen_data_memories(gen_det, com_det, controls, dataMesh):
         else:
             for lane in gen_det.config["SIMD"]["lanes_names"]:
                 inst = lane + mem
-                instance_data_mem(gen_det, com_det, mem, lane + mem, sub_name, sub_interface, control_ports, lane == gen_det.config["SIMD"]["lanes_names"][0])
+                instance_data_mem(gen_det, com_det, mem, lane + mem, sub_name, sub_interface, config, control_ports, lane == gen_det.config["SIMD"]["lanes_names"][0])
 
                 # Handle dataMesh and controls
                 lansd_dataMesh = mem_lib_lookup[mem].get_inst_dataMesh(mem, inst + "_", gen_det.config["instr_set"], sub_interface, config, lane)
@@ -456,7 +468,7 @@ def gen_data_memories(gen_det, com_det, controls, dataMesh):
 
     return controls, dataMesh
 
-def instance_data_mem(gen_det, com_det, mem, inst, sub_name, sub_interface, control_ports, declare_controls):
+def instance_data_mem(gen_det, com_det, mem, inst, sub_name, sub_interface, passed_config, control_ports, declare_controls):
 
     # instantiate memory
     com_det.arch_body += "\n%s : entity work.%s(arch)@>\n"%(inst, sub_name)
@@ -475,6 +487,7 @@ def instance_data_mem(gen_det, com_det, mem, inst, sub_name, sub_interface, cont
     com_det.arch_body += "port map (@>\n"
 
     # Handle all ports
+    post_init_code = ""
     for port in sorted(sub_interface["ports"].keys()):
         # Handle predeclared common to all mems ports
         if   port in mem_predeclared_ports_all_mems.keys():
@@ -496,19 +509,56 @@ def instance_data_mem(gen_det, com_det, mem, inst, sub_name, sub_interface, cont
         elif port.startswith("FIFO_"):
             com_det.ripple_port(inst + "_" + port, sub_interface["ports"][port])
             com_det.arch_body += "%s => %s_%s,\n"%(port, inst, port)
+        # Handle internal port that require declaring
         else:
             detail = sub_interface["ports"][port]
+
             try:
-                com_det.arch_head += "signal %s_%s : %s(%i downto 0);\n"%(inst, port, detail["type"], detail["width"] - 1, )
+                sub_width = detail["width"] # Shlould throw KeyError if using widthless (std_logic) signal
+                req_width = None
+
+                # Check for port that could have been oversized in the return
+                if req_width == None:
+                    for exp in mem_width_check_addr_ports:
+                        if exp.match(port):
+                            req_width = passed_config["addr_width"]
+                            break
+                if req_width == None:
+                    for exp in mem_width_check_data_ports:
+                        if exp.match(port):
+                            req_width = passed_config["data_width"]
+                            break
+
+                if sub_width == req_width:
+                    com_det.arch_head += "signal %s_%s : %s(%i downto 0);\n"%(inst, port, detail["type"],  sub_width - 1)
+                    com_det.arch_body += "%s => %s_%s,\n"%(port, inst, port)
+                else:
+                    assert detail["type"] == "std_logic_vector"
+
+                    sub_signal = "%s_%s_over"%(inst, port, )
+                    req_signal = "%s_%s"%(inst, port, )
+                    com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(sub_signal, sub_width - 1, )
+                    com_det.arch_body += "%s => %s,\n"%(port, sub_signal)
+
+                    com_det.arch_head += "signal %s : std_logic_vector(%i downto 0);\n"%(req_signal, req_width - 1, )
+
+                    if   detail["direction"] == "in":
+                        post_init_code += "%s <= %s;\n"%(sub_signal, gen_utils.connect_signals(req_signal, req_width, sub_width, "unsigned"))
+                    elif detail["direction"] == "out":
+                        post_init_code += "%s <= %s;\n"%(req_signal, gen_utils.connect_signals(sub_signal, sub_width, req_width, "unsigned"))
+                    else:
+                        raise ValueError("Unknown port direction, " + ["direction"])
             except KeyError:
                 com_det.arch_head += "signal %s_%s : %s;\n"%(inst, port, detail["type"])
-
-            com_det.arch_body += "%s => %s_%s,\n"%(port, inst, port)
+                com_det.arch_body += "%s => %s_%s,\n"%(port, inst, port)
 
     com_det.arch_body.drop_last(2)
     com_det.arch_body += "@<\n);\n"
-
     com_det.arch_body += "@<\n"
+
+    com_det.arch_body += post_init_code
+    com_det.arch_body += "\n"
+
 
     # Check for stall out port
     if "stall_out" in sub_interface["ports"].keys():
