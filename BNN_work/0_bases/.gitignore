@@ -1,0 +1,15 @@
+# No generated files bar the results
+**/*.mem
+**/*.vhd
+**/*.fpea
+**/*.json
+**/*.inter
+**/*.tcl
+**/*.mif
+!/utilization_report.txt
+!/timing_data.json
+!/timing_report.txt
+
+# No project files
+**/measuring/
+**/toolchain_files/

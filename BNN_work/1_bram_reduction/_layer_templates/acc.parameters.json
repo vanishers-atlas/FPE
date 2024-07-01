@@ -1,0 +1,59 @@
+{
+  "signal_padding" : "unsigned",
+
+  "external_stall" : false,
+  "report_stall" : false,
+
+  "SIMD": {
+    "lanes": 1
+  },
+  "address_sources": {
+    "BAM_0": {
+      "addr_max": ($INPUT_NEURONS - 1),
+      "offset_max": ($INPUT_NEURONS - 1),
+      "step_max": 1
+    },
+    "BAM_1": {
+      "addr_max": ($OUTPUT_NEURONS * $INPUT_NEURONS - 1) ,
+      "offset_max": ($OUTPUT_NEURONS * $INPUT_NEURONS - 1),
+      "step_max": 1
+    }
+  },
+  "data_memories": {
+    "GET": {
+      "FIFOs": 1,
+      "FIFO_handshakes": false,
+      "data_width": 1
+    },
+    "PUT": {
+      "FIFOs": 1,
+      "FIFO_handshakes": false,
+      "data_width": $POPCOUNT_WIDTH
+    },
+    "RAM": {
+      "data_width": 1,
+      "depth": $INPUT_NEURONS,
+      "type" : $RAM_TYPE
+    },
+    "REG": {
+      "data_width": $POPCOUNT_WIDTH,
+      "depth": 1
+    },
+    "ROM_A": {
+      "data_width": 1,
+      "depth": ($OUTPUT_NEURONS * $INPUT_NEURONS),
+      "type" : $ROM_TYPE
+    }
+  },
+  "execute_units": {
+    "ALU": {
+      "data_width": $POPCOUNT_WIDTH
+    }
+  },
+  "program_flow": {
+    "hidden_ZOLs": {
+      "tracker_type"  : "ripple",
+      "pune_single_iteration" : false
+    }
+  }
+}

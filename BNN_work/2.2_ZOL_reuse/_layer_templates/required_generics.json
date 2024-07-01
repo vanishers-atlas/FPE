@@ -1,0 +1,15 @@
+{
+    "\"input_ZOL_overwrites": "RAM_mem_file",
+    "BAM_0_base": 0,
+    "BAM_0_internal_step_value": 1,
+    "BAM_1_base": 0,
+    "BAM_1_internal_step_value": 1,
+    "IMM_init_mif": "test_FPE_IMM.mem",
+    "PC_end_value": 17,
+    "PM_init_mif": "test_FPE_PM.mem",
+    "ROM_A_init_mif": "..\\ROM.mif",
+    "hidden_ZOL_0_check_value": 16,
+    "hidden_ZOL_0_overwrite_value": 10,
+    "hidden_ZOL_0_overwrites": "00110",
+    "input_ZOL_overwrites": null
+}

@@ -1,0 +1,70 @@
+// ROM A Layout for this program`
+// full: output_neurons repeats of (input_neurons many weights, followed by a gamma)
+
+// ROM B Layout for this program
+// Full : threasholds
+
+// RAM Layout for this program
+// full; red values
+
+// Reg Layout for this program
+// 0 ; popcount acc reg
+
+{
+  // Define layer constants
+  DEF input_neurons  $INPUT_NEURONS ;
+  DEF output_neurons $OUTPUT_NEURONS ;
+
+  // Define meaningfully names for Block access managers
+  DEF acts       0 ;
+  DEF weights    1 ;
+  DEF thresholds 2 ;
+  DEF gammas     1 ;
+
+  // Define meaningfully names for reg addresses
+  DEF popcount 0 ;
+
+  RESET BAM[acts] ;
+  RESET BAM[weights] ;
+  RESET BAM[thresholds] ;
+  //RESET BAM[gammas] ;
+  NOP ;
+
+
+  // Read input data to RAM
+  ZOL (input_neurons)
+  {
+    MOV( GET[0]<ADV>, RAM[BAM[acts]<FORWARD>] ) ;
+  }
+
+
+  // Process each output neuron in turn
+  ZOL (output_neurons)
+  {
+    // assuming input_neurons in a power of 2
+    // BAM[acts] will have wrapped around to 0 at this point
+    // therefore no need to reset
+
+
+    // Clear popcount
+    MOV (0, REG[popcount]);
+
+    // Compute popcount
+    ZOL (input_neurons )
+    {
+      XNOR ( RAM[BAM[acts]<FORWARD>], ROMA[BAM[weights]<FORWARD>], ACC ) ;
+      AND ( ACC, 1, ACC ) ;
+      ADD ( REG[popcount], ACC, REG[popcount]) ;
+    }
+
+    // Perform thresholding
+    SUB(ROMB[BAM[thresholds]<FORWARD>], ACC, ACC);
+    // Move difference sign to bit 0, not masking require as the store to put will remove all but bit 0
+    LRL(ACC, 1, ACC);
+    // Difference and gammas use 2 comp. signing, but XNOR converts that tos mathmatic sign function
+    XNOR ( ACC, ROMA[BAM[gammas]<FORWARD>], PUT[0] ) ;
+
+  }
+  NOP ;
+
+}

@@ -1,0 +1,80 @@
+// ROM Layout for this program`
+// full: output_neurons repeats of (input_neurons many weights, followed by a threashold then a gamma)
+
+// RAM Layout for this program
+// full; red values
+
+// Reg Layout for this program
+// 0 ; popcount acc reg
+
+{
+	DEF input_neurons  $INPUT_NEURONS ;
+	DEF output_neurons $OUTPUT_NEURONS ;
+
+
+	// Define meaningfully names for Block access managers
+	DEF acts       0 ;
+	DEF weights    1 ;
+	DEF thresholds 1 ;
+	DEF gammas     1 ;
+
+	// Define meaningfully names for reg addresses
+	DEF popcount 0 ;
+
+
+	// DEclare seekable ZOLs
+	COM input_ZOL : ZOL_ripple(
+		overwrites : (input_neurons),
+		seekable : true
+	);
+
+	// Setup input_ZOL for data read
+	input_ZOL.SEEK(read_input_loop);
+
+	// Reset BAMs
+	RESET BAM[acts] ;
+	RESET BAM[weights] ;
+	//RESET BAM[thresholds] ;
+	//RESET BAM[gammas] ;
+	NOP ;
+
+	// Read input data to RAM
+	LOOP read_input_loop :
+	{
+		MOV( GET[0]<ADV>, RAM[BAM[acts]<FORWARD>] ) ;
+	}
+
+	// Setup input_ZOL for main computing read
+	input_ZOL.SEEK(Compute_loop);
+	NOP ;
+	NOP ;
+
+	// Process each output neuron in turn
+	ZOL (output_neurons)
+	{
+		// assuming input_neurons in a power of 2
+		// BAM[acts] will have wrapped around to 0 at this point
+		// therefore no need to reset
+
+	// Clear popcount
+	MOV (0, REG[popcount]);
+
+	// Compute popcount
+	LOOP Compute_loop :
+	{
+		XNOR ( RAM[BAM[acts]<FORWARD>], ROMA[BAM[weights]<FORWARD>], ACC ) ;
+		AND ( ACC, 1, ACC ) ;
+		ADD ( REG[popcount], ACC, REG[popcount]) ;
+	}
+
+	// Perform thresholding
+	SUB(ROMA[BAM[thresholds]<FORWARD>], ACC, ACC);
+	// Move difference sign to bit 0, not masking require as the store to put will remove all but bit 0
+	LRL(ACC, 1, ACC);
+	// Difference and gammas use 2 comp. signing, but XNOR converts that tos mathmatic sign function
+	XNOR ( ACC, ROMA[BAM[gammas]<FORWARD>], PUT[0] ) ;
+
+	}
+	NOP ;
+
+}

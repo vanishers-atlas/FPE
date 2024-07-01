@@ -1,0 +1,68 @@
+// ROM Layout for this program`
+// No ROM used
+
+// RAM Layout for this program
+// full; partual pooled values
+
+// Reg Layout for this program
+// No reg used
+
+{
+  DEF input_rows $INPUT_ROWS ;
+  DEF input_cols $INPUT_COLS ;
+  DEF data_depth $DATA_DEPTH ;
+
+  // Define meaningfully names for Block access managers
+  DEF first_element  0 ;
+  DEF second_element 1 ;
+
+  RESET BAM[first_element];
+  RESET BAM[second_element];
+  NOP;
+
+  // Handle each pair of rows
+  ZOL (input_rows / 2)
+  {
+    // Handle upper row of pair
+    ZOL (input_cols / 2)
+    {
+      // Handle Store first upper elements
+      ZOL (data_depth)
+      {
+        MOV (GET[0]<ADV>, RAM[BAM[first_element]<FORWARD>]);
+      }
+
+      // Handle second upper elements
+      ZOL (data_depth)
+      {
+        OR (GET[0]<ADV>, RAM[BAM[second_element]<FORWARD>], RAM[BAM[second_element]<FORWARD>]);
+      }
+      NOP;
+
+    }
+    NOP;
+
+    // Handle lower row of pair
+    ZOL (input_cols / 2)
+    {
+
+      // Handle first lower elements
+      ZOL (data_depth)
+      {
+        OR (GET[0]<ADV>, RAM[BAM[first_element]<FORWARD>], RAM[BAM[first_element]<FORWARD>]);
+      }
+
+      // Handle second lower elements
+      ZOL (data_depth)
+      {
+        OR (GET[0]<ADV>, RAM[BAM[second_element]<FORWARD>], PUT[0]);
+      }
+      NOP;
+
+    }
+    NOP;
+
+  }
+  NOP;
+
+}

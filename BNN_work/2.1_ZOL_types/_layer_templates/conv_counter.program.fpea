@@ -1,0 +1,225 @@
+// ROM A Layout for this program
+// Full : num_kernals repeats for (3*3*data_depth kernal weights, followed a gamma)
+
+// ROM B Layout for this program
+// Full : threasholds
+
+// RAM Layout for this program
+// full: a circlue buffer for padded and red values
+
+// Reg Layout for this program
+// 0 ; padding/packing value
+// 1 ; popcount acc
+
+{
+  // Define layer constants
+  DEF data_rows   $DATA_ROWS;
+  DEF data_cols   $DATA_COLS;
+  DEF data_depth  $DATA_DEPTH;
+  DEF num_kernals $NUM_KERNALS;
+
+  // Define meaningfully names for Block access managers
+  DEF act_write  0 ;
+  DEF act_row_0  1 ;
+  DEF act_row_1  2 ;
+  DEF act_row_2  3 ;
+  DEF kernels    4 ;
+  DEF thresholds 5 ;
+  DEF gammas     4 ;
+
+  // Define meaningfully names for reg addresses
+  DEF packing  0 ;
+  DEF popcount  1 ;
+
+  // Reset BAMs
+  RESET BAM[act_write];
+  RESET BAM[act_row_0];
+  RESET BAM[act_row_1];
+  RESET BAM[act_row_2];
+  //RESET BAM[gammas];
+
+
+  // Set Regfile,
+  MOV(0, REG[packing]) ;
+
+  // Pad first row,
+  MOV(0, ACC) ;
+  ZOL (data_cols + 2)
+  {
+    ZOL (data_depth)
+    {
+      NOT(ACC, RAM[BAM[act_write]<FORWARD>] ) ;
+    }
+    NOT(ACC, ACC) ;
+  }
+
+
+  // Handle second row,
+
+  // pad first col
+  MOV(REG[packing], RAM[BAM[act_write]<FORWARD>]) ;
+  ZOL (data_depth - 1)
+  {
+    NOT(ACC, RAM[BAM[act_write]<FORWARD>] ) ;
+  }
+  MOV(ACC, REG[packing]) ;
+
+  // read of middle cols
+  ZOL (data_depth * data_cols)
+  {
+    MOV( GET[0]<ADV>, RAM[BAM[act_write]<FORWARD>] ) ;
+  }
+
+  // pad last col
+  MOV(REG[packing], RAM[BAM[act_write]<FORWARD>]) ;
+  ZOL (data_depth - 1)
+  {
+    NOT(ACC, RAM[BAM[act_write]<FORWARD>] ) ;
+  }
+
+  // Process all but last row
+  ZOL (data_rows - 1)
+  {
+
+    // Read in next row,
+
+    // pad first col
+    MOV(REG[packing], RAM[BAM[act_write]<FORWARD>]) ;
+    ZOL (data_depth - 1)
+    {
+      NOT(ACC, RAM[BAM[act_write]<FORWARD>] ) ;
+    }
+    MOV(ACC, REG[packing]) ;
+
+    // read of middle cols
+    ZOL (data_depth * data_cols)
+    {
+      MOV( GET[0]<ADV>, RAM[BAM[act_write]<FORWARD>] ) ;
+    }
+
+    // pad last col
+    MOV(REG[packing], RAM[BAM[act_write]<FORWARD>]) ;
+    ZOL (data_depth - 1)
+    {
+      NOT(ACC, RAM[BAM[act_write]<FORWARD>] ) ;
+    }
+
+
+    // Slide window across rows
+    ZOL (data_cols)
+    {
+      // Reset kenral BAM to start at first kernel
+      RESET BAM[kernels];
+
+      // Process each kernel
+      RESET BAM[thresholds];
+      ZOL (num_kernals)
+      {
+
+        // Clear popcount
+        MOV (0, REG[popcount]);
+
+        // Compute popcount
+        // * 3 for each col of the kernel
+        ZOL (3 * data_depth )
+        {
+          XNOR ( RAM[BAM[act_row_0]<FORWARD>], ROMA[BAM[kernels]<FORWARD>], ACC ) ;
+          AND ( ACC, 1, ACC ) ;
+          ADD ( REG[popcount], ACC, REG[popcount]) ;
+          XNOR ( RAM[BAM[act_row_1]<FORWARD>], ROMA[BAM[kernels]<FORWARD>], ACC ) ;
+          AND ( ACC, 1, ACC ) ;
+          ADD ( REG[popcount], ACC, REG[popcount]) ;
+          XNOR ( RAM[BAM[act_row_2]<FORWARD>], ROMA[BAM[kernels]<FORWARD>], ACC ) ;
+          AND ( ACC, 1, ACC ) ;
+          ADD ( REG[popcount], ACC, REG[popcount]) ;
+        }
+
+        // Perform thresholding
+        SUB(ROMB[BAM[thresholds]<FORWARD>], ACC, ACC);
+        // Move difference sign to bit 0, not masking require as the store to put will remove all but bit 0
+        LRL(ACC, 1, ACC);
+        // Difference and gammas use 2 comp. signing, but XNOR converts that tos mathmatic sign function
+        XNOR ( ACC, ROMA[BAM[gammas]<FORWARD>], PUT[0] ) ;
+
+        // Knock acc_row BAMs back for next kernal
+        SEEK BAM[act_row_0] (3 * data_depth)<BACKWARD>;
+        SEEK BAM[act_row_1] (3 * data_depth)<BACKWARD>;
+        SEEK BAM[act_row_2] (3 * data_depth)<BACKWARD>;
+      }
+
+      // Seek acc_row BAMs forward for next col
+      SEEK BAM[act_row_0] (data_depth)<FORWARD>;
+      SEEK BAM[act_row_1] (data_depth)<FORWARD>;
+      SEEK BAM[act_row_2] (data_depth)<FORWARD>;
+    }
+
+    // Seek acc_row BAMs forward for next row
+    SEEK BAM[act_row_0] (2 * data_depth)<FORWARD>;
+    SEEK BAM[act_row_1] (2 * data_depth)<FORWARD>;
+    SEEK BAM[act_row_2] (2 * data_depth)<FORWARD>;
+  }
+
+  // Handle last row,
+
+  // Pad first row,
+  MOV(1, ACC) ;
+  ZOL (data_cols + 2)
+  {
+    ZOL (data_depth)
+    {
+      NOT(ACC, RAM[BAM[act_write]<FORWARD>] ) ;
+    }
+    NOT(ACC, ACC) ;
+  }
+
+
+
+  // Slide window across rows
+  ZOL (data_cols)
+  {
+    // Reset kenral BAM to start at first kernel
+    RESET BAM[kernels];
+
+    // Process each kernel
+    RESET BAM[thresholds];
+    ZOL (num_kernals)
+    {
+      // Clear popcount
+      MOV (0, REG[popcount]);
+
+      // Compute popcount
+      // * 3 for each col of the kernel
+      ZOL (3 * data_depth )
+      {
+        XNOR ( RAM[BAM[act_row_0]<FORWARD>], ROMA[BAM[kernels]<FORWARD>], ACC ) ;
+        AND ( ACC, 1, ACC ) ;
+        ADD ( REG[popcount], ACC, REG[popcount]) ;
+        XNOR ( RAM[BAM[act_row_1]<FORWARD>], ROMA[BAM[kernels]<FORWARD>], ACC ) ;
+        AND ( ACC, 1, ACC ) ;
+        ADD ( REG[popcount], ACC, REG[popcount]) ;
+        XNOR ( RAM[BAM[act_row_2]<FORWARD>], ROMA[BAM[kernels]<FORWARD>], ACC ) ;
+        AND ( ACC, 1, ACC ) ;
+        ADD ( REG[popcount], ACC, REG[popcount]) ;
+      }
+
+      // Perform thresholding
+      SUB(ROMB[BAM[thresholds]<FORWARD>], ACC, ACC);
+      // Move difference sign to bit 0, not masking require as the store to put will remove all but bit 0
+      LRL(ACC, 1, ACC);
+      // Difference and gammas use 2 comp. signing, but XNOR converts that tos mathmatic sign function
+      XNOR ( ACC, ROMA[BAM[gammas]<FORWARD>], PUT[0] ) ;
+
+      // Knock acc_row BAMs back for next kernal
+      SEEK BAM[act_row_0] (3 * data_depth)<BACKWARD>;
+      SEEK BAM[act_row_1] (3 * data_depth)<BACKWARD>;
+      SEEK BAM[act_row_2] (3 * data_depth)<BACKWARD>;
+    }
+
+    // Seek acc_row BAMs forward for next col
+    SEEK BAM[act_row_0] (data_depth)<FORWARD>;
+    SEEK BAM[act_row_1] (data_depth)<FORWARD>;
+    SEEK BAM[act_row_2] (data_depth)<FORWARD>;
+  }
+
+  NOP;
+}

@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="testbench_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="glbl" />
+            <top_module name="testbench" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0.000000000 ms"></ZoomStartTime>
+      <ZoomEndTime time="62.000000001 ms"></ZoomEndTime>
+      <Cursor1Time time="5.636666667 ms"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="231"></NameColumnWidth>
+      <ValueColumnWidth column_width="68"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="60" />
+   <wvobject fp_name="/testbench/clock" type="logic">
+      <obj_property name="ElementShortName">clock</obj_property>
+      <obj_property name="ObjectShortName">clock</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/input_data" type="array">
+      <obj_property name="ElementShortName">input_data[0:0]</obj_property>
+      <obj_property name="ObjectShortName">input_data[0:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/input_ready" type="array">
+      <obj_property name="ElementShortName">input_ready[0:0]</obj_property>
+      <obj_property name="ObjectShortName">input_ready[0:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/input_write" type="logic">
+      <obj_property name="ElementShortName">input_write</obj_property>
+      <obj_property name="ObjectShortName">input_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_0_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_0_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_0_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_0_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_0_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_0_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_0_running" type="logic">
+      <obj_property name="ElementShortName">layer_0_running</obj_property>
+      <obj_property name="ObjectShortName">layer_0_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_0_frame" type="other">
+      <obj_property name="ElementShortName">layer_0_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_0_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_1_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_1_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_1_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_1_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_1_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_1_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_1_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_1_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_1_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_1_running" type="logic">
+      <obj_property name="ElementShortName">layer_1_running</obj_property>
+      <obj_property name="ObjectShortName">layer_1_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_1_frame" type="other">
+      <obj_property name="ElementShortName">layer_1_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_1_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_2_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_2_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_2_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_2_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_2_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_2_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_2_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_2_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_2_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_2_running" type="logic">
+      <obj_property name="ElementShortName">layer_2_running</obj_property>
+      <obj_property name="ObjectShortName">layer_2_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_2_frame" type="other">
+      <obj_property name="ElementShortName">layer_2_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_2_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_3_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_3_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_3_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_3_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_3_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_3_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_3_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_3_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_3_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_3_running" type="logic">
+      <obj_property name="ElementShortName">layer_3_running</obj_property>
+      <obj_property name="ObjectShortName">layer_3_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_3_frame" type="other">
+      <obj_property name="ElementShortName">layer_3_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_3_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_4_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_4_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_4_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_4_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_4_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_4_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_4_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_4_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_4_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_4_running" type="logic">
+      <obj_property name="ElementShortName">layer_4_running</obj_property>
+      <obj_property name="ObjectShortName">layer_4_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_4_frame" type="other">
+      <obj_property name="ElementShortName">layer_4_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_4_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_5_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_5_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_5_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_5_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_5_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_5_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_5_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_5_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_5_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_5_running" type="logic">
+      <obj_property name="ElementShortName">layer_5_running</obj_property>
+      <obj_property name="ObjectShortName">layer_5_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_5_frame" type="other">
+      <obj_property name="ElementShortName">layer_5_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_5_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_6_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_6_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_6_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_6_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_6_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_6_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_6_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_6_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_6_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_6_running" type="logic">
+      <obj_property name="ElementShortName">layer_6_running</obj_property>
+      <obj_property name="ObjectShortName">layer_6_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_6_frame" type="other">
+      <obj_property name="ElementShortName">layer_6_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_6_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_7_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_7_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_7_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_7_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_7_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_7_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_7_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_7_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_7_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_7_running" type="logic">
+      <obj_property name="ElementShortName">layer_7_running</obj_property>
+      <obj_property name="ObjectShortName">layer_7_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_7_frame" type="other">
+      <obj_property name="ElementShortName">layer_7_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_7_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_8_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_8_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_8_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_8_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_8_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_8_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_8_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_8_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_8_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_8_running" type="logic">
+      <obj_property name="ElementShortName">layer_8_running</obj_property>
+      <obj_property name="ObjectShortName">layer_8_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_8_frame" type="other">
+      <obj_property name="ElementShortName">layer_8_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_8_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_9_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_9_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_9_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_9_space_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_9_space_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_9_space_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_9_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_9_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_9_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_9_running" type="logic">
+      <obj_property name="ElementShortName">layer_9_running</obj_property>
+      <obj_property name="ObjectShortName">layer_9_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_9_frame" type="other">
+      <obj_property name="ElementShortName">layer_9_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_9_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_10_data_ready_Q" type="logic">
+      <obj_property name="ElementShortName">layer_10_data_ready_Q</obj_property>
+      <obj_property name="ObjectShortName">layer_10_data_ready_Q</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/UUT/network_i/layer_10_kickoff_reduce_Res" type="logic">
+      <obj_property name="ElementShortName">layer_10_kickoff_reduce_Res</obj_property>
+      <obj_property name="ObjectShortName">layer_10_kickoff_reduce_Res</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_10_running" type="logic">
+      <obj_property name="ElementShortName">layer_10_running</obj_property>
+      <obj_property name="ObjectShortName">layer_10_running</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/layer_10_frame" type="other">
+      <obj_property name="ElementShortName">layer_10_frame</obj_property>
+      <obj_property name="ObjectShortName">layer_10_frame</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/output_data" type="array">
+      <obj_property name="ElementShortName">output_data[7:0]</obj_property>
+      <obj_property name="ObjectShortName">output_data[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/output_read" type="logic">
+      <obj_property name="ElementShortName">output_read</obj_property>
+      <obj_property name="ObjectShortName">output_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/testbench/output_valid" type="array">
+      <obj_property name="ElementShortName">output_valid[0:0]</obj_property>
+      <obj_property name="ObjectShortName">output_valid[0:0]</obj_property>
+   </wvobject>
+</wave_config>

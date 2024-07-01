@@ -1,0 +1,7 @@
+# Overwrite super rules for safe the layer template files
+!*.generics.json
+!*.parameters.json
+!*.program.fpea
+
+# No project files
+**/simulation_files/

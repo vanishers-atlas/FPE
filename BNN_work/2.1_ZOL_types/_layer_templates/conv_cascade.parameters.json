@@ -1,0 +1,86 @@
+{
+  "signal_padding" : "unsigned",
+  "external_stall" : false,
+  "report_stall" : false,
+
+  "SIMD": {
+    "lanes": 1
+  },
+  "address_sources": {
+    "BAM_0": {
+      "addr_max": ($RAM_DEPTH - 1),
+      "offset_max": ($RAM_DEPTH - 1),
+      "step_max": 1
+    },
+    "BAM_1": {
+      "addr_max": ($RAM_DEPTH - 1),
+      "offset_max": ($RAM_DEPTH - 1),
+      "step_max": (3 * $DATA_DEPTH * ($DATA_COLS + 2))
+    },
+    "BAM_2": {
+      "addr_max": ($RAM_DEPTH - 1),
+      "offset_max": ($RAM_DEPTH - 1),
+      "step_max": (3 * $DATA_DEPTH * ($DATA_COLS + 2))
+    },
+    "BAM_3": {
+      "addr_max": ($RAM_DEPTH - 1),
+      "offset_max": ($RAM_DEPTH - 1),
+      "step_max": (3 * $DATA_DEPTH * ($DATA_COLS + 2))
+    },
+    "BAM_4": {
+      "addr_max": ($ROMA_DEPTH - 1),
+      "offset_max": ($ROMA_DEPTH - 1),
+      "step_max": 1
+    },
+    "BAM_5": {
+      "addr_max": ($ROMB_DEPTH - 1),
+      "offset_max": ($ROMB_DEPTH - 1),
+      "step_max": 1
+    }
+  },
+
+  "data_memories": {
+    "GET": {
+      "FIFOs": 1,
+      "FIFO_handshakes": false,
+      "data_width": 1
+    },
+    "PUT": {
+      "FIFOs": 1,
+      "FIFO_handshakes": false,
+      "data_width": 1
+    },
+    "RAM": {
+      "data_width": 1,
+      "depth": $RAM_DEPTH,
+      "type" : $RAM_TYPE
+    },
+    "REG": {
+      "data_width": $POPCOUNT_WIDTH,
+      "depth": 2
+    },
+    "ROM_A": {
+      "data_width": 1,
+      "depth": $ROMA_DEPTH,
+      "type" : $ROM_TYPE
+    },
+    "ROM_B": {
+      "data_width": $POPCOUNT_WIDTH,
+      "depth": $ROMB_DEPTH,
+      "type" : $ROM_TYPE
+    }
+  },
+
+  "execute_units": {
+    "ALU": {
+      "data_width": ($POPCOUNT_WIDTH + 1)
+    }
+  },
+
+  "program_flow": {
+    "hidden_ZOLs": {
+      "tracker_type"  : "cascade",
+      "pune_single_iteration" : false
+    }
+  }
+}
