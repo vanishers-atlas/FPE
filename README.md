@@ -1,6 +1,6 @@
 # Introduction
 
-This repo sorts the state of the FPE (FPGE processing element) and related tools development at the time of myself, withdrawing for my PhD on the development of this lean, highly configable softprocessor.
+This repo stores the state of the FPE (FPGE processing element) and related tools development at the time of myself, withdrawing for my PhD on the development of this lean, highly configable softprocessor.
 
 ## Tools
 
